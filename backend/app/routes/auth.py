@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 import re
 from app.schemas.user import UserCreate, UserLogin
-from app.database import supabase_auth_request, supabase_admin_auth_request
+from app.database import supabase_auth_request, supabase_admin_auth_request, supabase_admin_request
 from app.config import settings
 from app.utils.logger import app_logger
 from app.utils.rate_limit import check_rate_limit
@@ -72,6 +72,13 @@ async def signup(user: UserCreate, request: Request):
                     raise e
                 
                 session = resp.get("session")
+                user_obj = resp.get("user") or (session.get("user") if session else None)
+                if user_obj:
+                    try:
+                        await supabase_admin_request("users", "POST", {"id": user_obj["id"], "email": user_obj["email"], "role": role})
+                    except Exception as db_e:
+                        app_logger.warning(f"Failed to create public record for {user.email}: {db_e}")
+                
                 if session:
                     return {
                         "message": "Signup successful! Welcome to Breathometer.",
@@ -81,7 +88,7 @@ async def signup(user: UserCreate, request: Request):
                 return {
                     "message": "Account created! Please check your email to verify your account.",
                     "email_confirmation_required": True,
-                    "user": resp.get("user", {})
+                    "user": user_obj or {}
                 }
             
             # Using Admin API to create a confirmed user
@@ -106,6 +113,14 @@ async def signup(user: UserCreate, request: Request):
                 "email": user.email,
                 "password": user.password
             })
+            
+            user_obj = login_resp.get("user")
+            if user_obj:
+                try:
+                    await supabase_admin_request("users", "POST", {"id": user_obj["id"], "email": user_obj["email"], "role": role})
+                except Exception as db_e:
+                    app_logger.warning(f"Failed to create public record for {user.email}: {db_e}")
+
             
             return {
                 "message": "Signup successful! Welcome to Breathometer.",
@@ -150,10 +165,17 @@ async def signup(user: UserCreate, request: Request):
             if not email_sent:
                 raise HTTPException(status_code=503, detail="Email service temporarily unavailable. Please try again later.")
                 
+            user_obj = gen_resp.get("user")
+            if user_obj:
+                try:
+                    await supabase_admin_request("users", "POST", {"id": user_obj["id"], "email": user_obj["email"], "role": role})
+                except Exception as db_e:
+                    app_logger.warning(f"Failed to create public record for {user.email}: {db_e}")
+
             return {
                 "message": "Account created! Please check your email to verify your account.",
                 "email_confirmation_required": True,
-                "user": gen_resp.get("user", {})
+                "user": user_obj or {}
             }
 
     except HTTPException:
@@ -278,3 +300,19 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
     }
 
 
+@router.get("/patients")
+async def list_patients(user=Depends(get_current_user)):
+    """
+    Returns all users with role='patient'.
+    Accessible by authenticated users (doctors).
+    """
+    try:
+        patients = await supabase_admin_request(
+            "users",
+            "GET",
+            query_params={"role": "eq.patient", "order": "created_at.desc"}
+        )
+        return {"patients": patients or []}
+    except Exception as e:
+        app_logger.error(f"Failed to list patients: {e}")
+        raise HTTPException(status_code=500, detail="Could not retrieve patient list.")

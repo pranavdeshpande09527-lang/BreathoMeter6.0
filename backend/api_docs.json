@@ -1,0 +1,1528 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Breathometer 4.0 Backend",
+    "description": "Real-time backend API for Breathometer 4.0 health assessment platform.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Read Root",
+        "operationId": "read_root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health Check",
+        "description": "Liveness probe for monitoring and deployment health checks.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/system-status": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "System Status",
+        "description": "Readiness probe \u2014 checks connectivity to critical services.",
+        "operationId": "system_status_system_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Signup",
+        "description": "Handles user signup with environment-based verification bypass.\nLimits: 5 requests per minute per IP.",
+        "operationId": "signup_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login",
+        "description": "Handles user login with standard Supabase Auth.",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get Profile",
+        "description": "Generic profile fetcher using JWT.",
+        "operationId": "get_profile_auth_profile_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Update Profile",
+        "description": "Update the authenticated user's profile fields.",
+        "operationId": "update_profile_auth_profile_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/environment": {
+      "post": {
+        "tags": [
+          "environment"
+        ],
+        "summary": "Store Environment Data",
+        "operationId": "store_environment_data_environment_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/environment/aqi": {
+      "get": {
+        "tags": [
+          "environment"
+        ],
+        "summary": "Get Aqi",
+        "description": "Fetch real AQI for a lat/lon coordinate via AQICN.",
+        "operationId": "get_aqi_environment_aqi_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0.0,
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0.0,
+              "title": "Lon"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/environment/aqi-by-city": {
+      "get": {
+        "tags": [
+          "environment"
+        ],
+        "summary": "Get Aqi By City",
+        "description": "Fetch real AQI for a city name via AQICN.",
+        "operationId": "get_aqi_by_city_environment_aqi_by_city_get",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "City"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/environment/weather": {
+      "get": {
+        "tags": [
+          "environment"
+        ],
+        "summary": "Get Weather",
+        "description": "Fetch real weather data for a lat/lon coordinate via OpenWeatherMap.",
+        "operationId": "get_weather_environment_weather_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0.0,
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0.0,
+              "title": "Lon"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/input": {
+      "post": {
+        "tags": [
+          "Health Data"
+        ],
+        "summary": "Submit Health Data",
+        "description": "Store health data for the authenticated user.",
+        "operationId": "submit_health_data_health_input_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealthDataCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/health/latest": {
+      "get": {
+        "tags": [
+          "Health Data"
+        ],
+        "summary": "Get Latest Health Data",
+        "description": "Fetch the latest health data for the authenticated user (real-time dashboard).",
+        "operationId": "get_latest_health_data_health_latest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/breath-test": {
+      "post": {
+        "tags": [
+          "breath"
+        ],
+        "summary": "Submit Breath Test",
+        "operationId": "submit_breath_test_breath_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BreathTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/breath-test/{user_id_param}": {
+      "get": {
+        "tags": [
+          "breath"
+        ],
+        "summary": "Get Breath History",
+        "operationId": "get_breath_history_breath_test__user_id_param__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id_param",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id Param"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prediction/store": {
+      "post": {
+        "tags": [
+          "prediction"
+        ],
+        "summary": "Store Prediction",
+        "operationId": "store_prediction_prediction_store_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__routes__prediction__PredictionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/prediction/{user_id_param}": {
+      "get": {
+        "tags": [
+          "prediction"
+        ],
+        "summary": "Get Prediction History",
+        "operationId": "get_prediction_history_prediction__user_id_param__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id_param",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id Param"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/explanation": {
+      "post": {
+        "tags": [
+          "AI Explanations"
+        ],
+        "summary": "Get Explanation",
+        "operationId": "get_explanation_ai_explanation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExplanationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplanationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/chatbot/message": {
+      "post": {
+        "tags": [
+          "Hava AI Chatbot"
+        ],
+        "summary": "Send Message",
+        "description": "User sends a message to Hava AI Chatbot.\nReturns the AI-generated response.",
+        "operationId": "send_message_chatbot_message_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/reports/summary": {
+      "get": {
+        "tags": [
+          "Health Reports"
+        ],
+        "summary": "Get Report Summary",
+        "description": "Returns a JSON summary report combining all user metrics.",
+        "operationId": "get_report_summary_reports_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/inference/predict": {
+      "post": {
+        "tags": [
+          "Prediction Engine"
+        ],
+        "summary": "Get Risk Prediction",
+        "operationId": "get_risk_prediction_inference_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__routes__inference_api__PredictionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/alerts/{user_id}": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Get User Alerts",
+        "operationId": "get_user_alerts_alerts__user_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts/doctor/{doctor_id}": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Get Doctor Alerts",
+        "description": "Aggregate high priority alerts across all patients for the doctor dashboard",
+        "operationId": "get_doctor_alerts_alerts_doctor__doctor_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "doctor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doctor Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Store Chat",
+        "operationId": "store_chat_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BreathTestRequest": {
+        "properties": {
+          "lung_capacity": {
+            "type": "number",
+            "title": "Lung Capacity"
+          },
+          "breath_duration": {
+            "type": "number",
+            "title": "Breath Duration"
+          },
+          "breath_strength": {
+            "type": "number",
+            "title": "Breath Strength"
+          },
+          "test_accuracy": {
+            "type": "number",
+            "title": "Test Accuracy"
+          },
+          "peak_airflow": {
+            "type": "number",
+            "title": "Peak Airflow",
+            "default": 0.0
+          },
+          "signal_stability": {
+            "type": "number",
+            "title": "Signal Stability",
+            "default": 0.0
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "default": true
+          },
+          "background_noise_detected": {
+            "type": "boolean",
+            "title": "Background Noise Detected",
+            "default": false
+          },
+          "cough_detected": {
+            "type": "boolean",
+            "title": "Cough Detected",
+            "default": false
+          },
+          "raw_attempts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Raw Attempts",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "lung_capacity",
+          "breath_duration",
+          "breath_strength",
+          "test_accuracy"
+        ],
+        "title": "BreathTestRequest"
+      },
+      "ChatMessage": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "user_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Context",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ChatMessage"
+      },
+      "ChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "response": {
+            "type": "string",
+            "title": "Response"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "response"
+        ],
+        "title": "ChatRequest"
+      },
+      "ChatResponse": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "title": "Reply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reply"
+        ],
+        "title": "ChatResponse"
+      },
+      "EnvironmentRequest": {
+        "properties": {
+          "pm25": {
+            "type": "number",
+            "title": "Pm25"
+          },
+          "pm10": {
+            "type": "number",
+            "title": "Pm10"
+          },
+          "aqi": {
+            "type": "number",
+            "title": "Aqi"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pm25",
+          "pm10",
+          "aqi"
+        ],
+        "title": "EnvironmentRequest"
+      },
+      "EnvironmentalData": {
+        "properties": {
+          "AQI": {
+            "type": "number",
+            "title": "Aqi"
+          },
+          "PM10": {
+            "type": "number",
+            "title": "Pm10"
+          },
+          "PM2_5": {
+            "type": "number",
+            "title": "Pm2 5"
+          },
+          "NO2": {
+            "type": "number",
+            "title": "No2"
+          },
+          "SO2": {
+            "type": "number",
+            "title": "So2"
+          },
+          "O3": {
+            "type": "number",
+            "title": "O3"
+          },
+          "Temperature": {
+            "type": "number",
+            "title": "Temperature"
+          },
+          "Humidity": {
+            "type": "number",
+            "title": "Humidity"
+          },
+          "WindSpeed": {
+            "type": "number",
+            "title": "Windspeed"
+          },
+          "RespiratoryCases": {
+            "type": "number",
+            "title": "Respiratorycases"
+          },
+          "CardiovascularCases": {
+            "type": "number",
+            "title": "Cardiovascularcases"
+          },
+          "HospitalAdmissions": {
+            "type": "number",
+            "title": "Hospitaladmissions"
+          },
+          "HealthImpactScore": {
+            "type": "number",
+            "title": "Healthimpactscore"
+          }
+        },
+        "type": "object",
+        "required": [
+          "AQI",
+          "PM10",
+          "PM2_5",
+          "NO2",
+          "SO2",
+          "O3",
+          "Temperature",
+          "Humidity",
+          "WindSpeed",
+          "RespiratoryCases",
+          "CardiovascularCases",
+          "HospitalAdmissions",
+          "HealthImpactScore"
+        ],
+        "title": "EnvironmentalData"
+      },
+      "ExplanationRequest": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "user_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Context",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic"
+        ],
+        "title": "ExplanationRequest"
+      },
+      "ExplanationResponse": {
+        "properties": {
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "explanation"
+        ],
+        "title": "ExplanationResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthDataCreate": {
+        "properties": {
+          "age": {
+            "type": "integer",
+            "exclusiveMaximum": 120.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Age"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height",
+            "description": "Height in cm"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight",
+            "description": "Weight in kg"
+          },
+          "smoking_history": {
+            "type": "boolean",
+            "title": "Smoking History"
+          },
+          "activity_level": {
+            "type": "string",
+            "title": "Activity Level",
+            "description": "Low, Moderate, High"
+          },
+          "respiratory_symptoms": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Respiratory Symptoms"
+          },
+          "baseline_symptoms": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Symptoms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "age",
+          "height",
+          "weight",
+          "smoking_history",
+          "activity_level"
+        ],
+        "title": "HealthDataCreate"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "blood_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blood Group"
+          },
+          "known_conditions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known Conditions"
+          }
+        },
+        "type": "object",
+        "title": "ProfileUpdate"
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role",
+            "default": "patient"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserCreate"
+      },
+      "UserLogin": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserLogin"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "app__routes__inference_api__PredictionRequest": {
+        "properties": {
+          "environmental_data": {
+            "$ref": "#/components/schemas/EnvironmentalData"
+          },
+          "optional_patient_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optional Patient Data",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "environmental_data"
+        ],
+        "title": "PredictionRequest"
+      },
+      "app__routes__prediction__PredictionRequest": {
+        "properties": {
+          "final_risk_score": {
+            "type": "number",
+            "title": "Final Risk Score",
+            "default": 0.0
+          },
+          "risk_category": {
+            "type": "string",
+            "title": "Risk Category"
+          },
+          "ai_explanation": {
+            "type": "string",
+            "title": "Ai Explanation"
+          },
+          "top_risk_factors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top Risk Factors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "risk_category",
+          "ai_explanation",
+          "top_risk_factors"
+        ],
+        "title": "PredictionRequest"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

@@ -61,6 +61,56 @@ async def supabase_request(
         return response.json()
 
 
+async def supabase_admin_request(
+    table: str,
+    method: str = "GET",
+    data: Optional[Dict[str, Any]] = None,
+    query_params: Optional[Dict[str, str]] = None
+) -> Union[List[Dict], Dict, None]:
+    """
+    Generic async function to interact with Supabase PostgREST API using the Service Role Key.
+    Bypasses Row Level Security (RLS).
+    """
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        raise Exception("SUPABASE_SERVICE_ROLE_KEY is not configured on the server.")
+
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+
+    req_headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        if method == "GET":
+            response = await client.get(url, headers=req_headers, params=query_params)
+        elif method == "POST":
+            response = await client.post(url, headers=req_headers, json=data)
+        elif method == "PATCH":
+            response = await client.patch(url, headers=req_headers, json=data, params=query_params)
+        elif method == "DELETE":
+            response = await client.delete(url, headers=req_headers, params=query_params)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+
+        if response.status_code >= 400:
+            error_detail = response.text
+            try:
+                error_json = response.json()
+                error_detail = error_json.get("message", error_json.get("hint", response.text))
+            except Exception:
+                pass
+            raise Exception(f"Supabase Admin DB error ({response.status_code}): {error_detail}")
+
+        # Handle empty 204 responses
+        if response.status_code == 204 or not response.text.strip():
+            return []
+
+        return response.json()
+
+
 async def supabase_auth_request(
     endpoint: str,
     method: str = "GET",

@@ -1,0 +1,8 @@
+Starting test...
+Logged in as user: 9a472251-ef4d-493a-b9d1-0896e4a48718
+
+Success users: [{"id":"9a472251-ef4d-493a-b9d1-0896e4a48718","first_name":null,"last_name":null,"email":"pranavdeshpande09527@gmail.com","date_of_birth":null,"role":null,"created_at":"2026-03-14T05:48:47.900333+00:00"}]
+
+Success risk_predictions: [{"id":"c7978061-1bb3-4498-a348-389d2abbd6f3","user_id":"9a472251-ef4d-493a-b9d1-0896e4a48718","predicted_condition":"Low Risk","risk_level":null,"confidence_score":null,"created_at":"2026-03-14T05:48:48.527982+00:00","final_risk_score":0.5,"risk_category":"Low Risk","ai_explanation":"Test","top_risk_factors":["Test 1"]}]
+
+Success breath_tests: [{"id":"34a9631a-a416-46c3-8739-6eea7b14d58c","user_id":"9a472251-ef4d-493a-b9d1-0896e4a48718","lung_capacity":3.0,"breath_duration":15.0,"breath_strength":80.0,"test_accuracy":95.0,"created_at":"2026-03-14T05:48:49.0759+00:00","peak_airflow":0.0,"signal_stability":0.0,"is_valid":true,"background_noise_detected":false,"cough_detected":false,"raw_attempts":[]}]

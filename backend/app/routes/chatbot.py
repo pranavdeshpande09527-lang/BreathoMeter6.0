@@ -14,7 +14,7 @@ class ChatResponse(BaseModel):
     reply: str
 
 @router.post("/message", response_model=ChatResponse)
-async def send_message(request: ChatMessage, user_id: str = Depends(get_current_user)):
+async def send_message(request: ChatMessage, user = Depends(get_current_user)):
     """
     User sends a message to Hava AI Chatbot.
     Returns the AI-generated response.
@@ -27,7 +27,7 @@ async def send_message(request: ChatMessage, user_id: str = Depends(get_current_
     # 1. Fetch user health profile
     health_profile = {}
     try:
-        prof_res = supabase.table("health_profiles").select("*").eq("user_id", user_id).execute()
+        prof_res = supabase.table("health_profiles").select("*").eq("user_id", user.id).execute()
         if prof_res.data:
             health_profile = prof_res.data[0]
     except Exception as e:
@@ -36,7 +36,7 @@ async def send_message(request: ChatMessage, user_id: str = Depends(get_current_
     # 2. Fetch latest breath test
     latest_test = {}
     try:
-        test_res = supabase.table("breath_tests").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+        test_res = supabase.table("breath_tests").select("*").eq("user_id", user.id).order("created_at", desc=True).limit(1).execute()
         if test_res.data:
             latest_test = test_res.data[0]
     except Exception as e:
@@ -45,7 +45,7 @@ async def send_message(request: ChatMessage, user_id: str = Depends(get_current_
     # 3. Fetch latest prediction
     latest_pred = {}
     try:
-        pred_res = supabase.table("risk_predictions").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+        pred_res = supabase.table("risk_predictions").select("*").eq("user_id", user.id).order("created_at", desc=True).limit(1).execute()
         if pred_res.data:
             latest_pred = pred_res.data[0]
     except Exception as e:
@@ -54,7 +54,7 @@ async def send_message(request: ChatMessage, user_id: str = Depends(get_current_
     # 4. Fetch latest environment data
     latest_env = {}
     try:
-        env_res = supabase.table("environment_data").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+        env_res = supabase.table("environment_data").select("*").eq("user_id", user.id).order("created_at", desc=True).limit(1).execute()
         if env_res.data:
             latest_env = env_res.data[0]
     except Exception as e:

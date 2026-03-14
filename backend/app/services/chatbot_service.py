@@ -4,7 +4,7 @@ from app.config import settings
 class ChatbotService:
     def __init__(self):
         self.client = AsyncGroq(api_key=settings.groq_api_key)
-        self.model_name = "llama3-8b-8192"
+        self.model_name = "llama-3.1-8b-instant"
 
     async def get_response(self, message: str, context: dict) -> str:
         """

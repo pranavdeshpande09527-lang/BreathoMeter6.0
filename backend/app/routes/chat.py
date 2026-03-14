@@ -14,11 +14,11 @@ class ChatRequest(BaseModel):
 
 @router.post("")
 @limiter.limit("20/minute")
-async def store_chat(request: Request, data: ChatRequest, user_id: str = Depends(get_current_user)):
+async def store_chat(request: Request, data: ChatRequest, user = Depends(get_current_user)):
     supabase = get_db()
     try:
         res = supabase.table("chat_history").insert({
-            "user_id": user_id,
+            "user_id": user.id,
             "message": data.message,
             "response": data.response
         }).execute()

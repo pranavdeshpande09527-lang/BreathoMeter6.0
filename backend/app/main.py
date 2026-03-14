@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.errors import setup_error_handlers
 from app.core.rate_limit import setup_rate_limiting
+import logging
+
+logger = logging.getLogger("breathometer")
 
 app = FastAPI(
     title="Breathometer 4.0 Backend",
@@ -12,22 +15,63 @@ app = FastAPI(
 setup_error_handlers(app)
 setup_rate_limiting(app)
 
-# Configure CORS for real-time frontend dashboard
+# Configure CORS — restrict in production, allow localhost for development
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "*" # Add wildcard temporarily to completely eliminate CORS as the cause
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust for production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
+# --- Health & System Status Endpoints ---
+
+@app.get("/", tags=["System"])
 def read_root():
-    return {"message": "Welcome to the Breathometer 4.0 Backend API"}
+    return {"message": "Welcome to the Breathometer 4.0 Backend API", "status": "healthy"}
 
-from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts
+@app.get("/health", tags=["System"])
+def health_check():
+    """Liveness probe for monitoring and deployment health checks."""
+    return {"status": "ok", "service": "breathometer-backend", "version": "1.0.0"}
 
-# Routers will be included here as they are developed
+@app.get("/system-status", tags=["System"])
+async def system_status():
+    """Readiness probe — checks connectivity to critical services."""
+    status = {"api": "ok", "database": "unknown", "ml_models": "unknown"}
+    
+    # Check Supabase connectivity
+    try:
+        from app.database import supabase_request
+        await supabase_request("health_data", "GET", query_params={"limit": "1"})
+        status["database"] = "ok"
+    except Exception as e:
+        status["database"] = f"error: {str(e)[:100]}"
+        logger.warning(f"System status: DB check failed: {e}")
+    
+    # Check ML models loaded
+    try:
+        from app.routes.inference_api import calibrated_model, preprocessor
+        status["ml_models"] = "loaded" if calibrated_model and preprocessor else "not_loaded"
+    except Exception:
+        status["ml_models"] = "not_loaded"
+    
+    return status
+
+# --- Register All API Routers ---
+
+from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat
+
 app.include_router(auth.router)
 app.include_router(environment.router)
 app.include_router(health.router)
@@ -38,4 +82,4 @@ app.include_router(chatbot.router)
 app.include_router(reports.router)
 app.include_router(inference_api.router)
 app.include_router(alerts.router)
-
+app.include_router(chat.router)

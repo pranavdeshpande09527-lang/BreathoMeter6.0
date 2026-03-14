@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pydantic
 pydantic-settings
 python-dotenv
@@ -10,3 +10,18 @@ scikit-learn
 pandas
 numpy
 python-multipart
+# AI / LLM
+groq
+# Rate limiting
+slowapi
+# ML pipeline
+joblib
+catboost
+xgboost
+lightgbm
+shap
+imbalanced-learn
+# Database
+supabase
+# Email validation for Pydantic EmailStr
+email-validator

@@ -17,7 +17,7 @@ class ReportService:
             breath_data = breath_res[0] if breath_res else None
 
             # Fetch latest prediction
-            pred_res = await supabase_request("predictions", "GET", query_params={"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": "1"})
+            pred_res = await supabase_request("risk_predictions", "GET", query_params={"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": "1"})
             prediction_data = pred_res[0] if pred_res else None
 
             return {

@@ -7,6 +7,8 @@ import httpx
 import logging
 from app.config import settings
 
+from app.services.aqi_service import aqi_service
+
 router = APIRouter(prefix="/environment", tags=["environment"])
 logger = logging.getLogger(__name__)
 
@@ -19,11 +21,11 @@ class EnvironmentRequest(BaseModel):
 
 
 @router.post("")
-async def store_environment_data(data: EnvironmentRequest, user_id: str = Depends(get_current_user)):
+async def store_environment_data(data: EnvironmentRequest, user = Depends(get_current_user)):
     supabase = get_db()
     try:
         res = supabase.table("environment_data").insert({
-            "user_id": user_id,
+            "user_id": user.id,
             "pm25": data.pm25,
             "pm10": data.pm10,
             "aqi": data.aqi,
@@ -37,30 +39,11 @@ async def store_environment_data(data: EnvironmentRequest, user_id: str = Depend
 
 @router.get("/aqi")
 async def get_aqi(lat: float = 0.0, lon: float = 0.0):
-    """Fetch real AQI for a lat/lon coordinate via AQICN."""
+    """Fetch real AQI for a lat/lon coordinate via AQIService."""
     try:
-        url = f"http://api.waqi.info/feed/geo:{lat};{lon}/?token={settings.aqicn_api_key}"
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url)
-            data = response.json()
-
-            if data.get("status") == "ok":
-                aqi_val = data["data"]["aqi"]
-                iaqi = data["data"].get("iaqi", {})
-                return {
-                    "aqi": aqi_val,
-                    "pm25": iaqi.get("pm25", {}).get("v", None),
-                    "pm10": iaqi.get("pm10", {}).get("v", None),
-                    "no2": iaqi.get("no2", {}).get("v", None),
-                    "so2": iaqi.get("so2", {}).get("v", None),
-                    "o3": iaqi.get("o3", {}).get("v", None),
-                    "co": iaqi.get("co", {}).get("v", None),
-                    "location_name": data["data"]["city"]["name"]
-                }
-
-            logger.error(f"AQICN returned non-ok status: {data}")
-            raise HTTPException(status_code=503, detail="AQI service returned invalid response")
-
+        if lat == 0.0 and lon == 0.0:
+            return await aqi_service.get_aqi("here")
+        return await aqi_service.get_aqi(f"geo:{lat};{lon}")
     except HTTPException:
         raise
     except Exception as e:
@@ -70,32 +53,11 @@ async def get_aqi(lat: float = 0.0, lon: float = 0.0):
 
 @router.get("/aqi-by-city")
 async def get_aqi_by_city(city: str):
-    """Fetch real AQI for a city name via AQICN."""
+    """Fetch real AQI for a city name via AQIService."""
     if not city or len(city.strip()) < 2:
         raise HTTPException(status_code=400, detail="City name must be at least 2 characters")
     try:
-        url = f"http://api.waqi.info/feed/{city.strip()}/?token={settings.aqicn_api_key}"
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url)
-            data = response.json()
-
-            if data.get("status") == "ok":
-                aqi_val = data["data"]["aqi"]
-                iaqi = data["data"].get("iaqi", {})
-                return {
-                    "aqi": aqi_val,
-                    "pm25": iaqi.get("pm25", {}).get("v", None),
-                    "pm10": iaqi.get("pm10", {}).get("v", None),
-                    "no2": iaqi.get("no2", {}).get("v", None),
-                    "so2": iaqi.get("so2", {}).get("v", None),
-                    "o3": iaqi.get("o3", {}).get("v", None),
-                    "co": iaqi.get("co", {}).get("v", None),
-                    "location_name": data["data"]["city"]["name"]
-                }
-
-            logger.error(f"AQICN city search returned non-ok: {data}")
-            raise HTTPException(status_code=503, detail=f"AQI data not available for city: {city}")
-
+        return await aqi_service.get_aqi(city.strip())
     except HTTPException:
         raise
     except Exception as e:

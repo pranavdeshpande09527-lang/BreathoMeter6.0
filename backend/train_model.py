@@ -122,7 +122,13 @@ class OOFWeightedStacker(BaseEstimator, ClassifierMixin):
 
 def main():
     print("Loading data...")
-    data_path = r"C:\Users\prana\.gemini\antigravity\scratch\breathometer4\dataset\air_quality_health_impact_data\air_quality_health_impact_data.csv"
+    data_path = os.path.join(os.path.dirname(__file__), "dataset", "air_quality_health_impact_data.csv")
+    if not os.path.exists(data_path):
+        # Fallback: try the scratch dir path used during initial development
+        data_path = r"C:\Users\prana\.gemini\antigravity\scratch\breathometer4\dataset\air_quality_health_impact_data\air_quality_health_impact_data.csv"
+    if not os.path.exists(data_path):
+        print(f"ERROR: Dataset not found at {data_path}. Please place it in backend/dataset/")
+        return
     df = pd.read_csv(data_path)
     
     print("Preprocessing target...")
@@ -260,7 +266,7 @@ def main():
     except Exception as e:
         print(f"SHAP explanation failed. Skipping. Error: {e}")
 
-    models_dir = r"C:\Users\prana\.gemini\antigravity\scratch\breathometer4-backend\app\ml_models"
+    models_dir = os.path.join(os.path.dirname(__file__), "app", "ml_models")
     os.makedirs(models_dir, exist_ok=True)
     
     pipeline_data = {

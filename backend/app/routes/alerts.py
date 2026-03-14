@@ -5,6 +5,8 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_authenticated_db, require_role
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
+import logging
+logger = logging.getLogger(__name__)
 
 @router.get("/{user_id}")
 async def get_user_alerts(user_id: str, current_user = Depends(get_current_user), supabase = Depends(get_authenticated_db)):
@@ -35,7 +37,7 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
             elif latest_env.get("aqi", 0) > 50:
                 add_alert("moderate", "AQI Alert — Moderate Risk", f"AQI is {latest_env['aqi']}. Unusually sensitive individuals should consider limiting prolonged outdoor exertion.")
     except Exception as e:
-        print("Error checking AQI alerts:", e)
+        logger.error(f"Error checking AQI alerts: {e}")
 
     # 2. High Risk Model Prediction Alert
     try:
@@ -47,7 +49,7 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
             elif latest_pred.get("risk_level", "").lower() == "moderate" or latest_pred.get("risk_level", "").lower() == "elevated":
                 add_alert("moderate", "Elevated Risk Detected", f"Your latest analysis shows elevated risk patterns. Consider taking a preventative inhaler dose if prescribed.")
     except Exception as e:
-        print("Error checking prediction alerts:", e)
+        logger.error(f"Error checking prediction alerts: {e}")
 
     # 3. Performance Drop Alert
     try:
@@ -67,7 +69,7 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
             elif latest_accuracy < (avg_accuracy - 5):
                 add_alert("moderate", "Slight Performance Decline", f"Your breathing performance is slightly below your weekly average. Stay hydrated and rest.")
     except Exception as e:
-        print("Error checking performance alerts:", e)
+        logger.error(f"Error checking performance alerts: {e}")
         
     # If no critical alerts, add an informational one
     if not alerts:
@@ -100,7 +102,7 @@ async def get_doctor_alerts(doctor_id: str, current_user = Depends(require_role(
                 })
                 alert_id += 1
     except Exception as e:
-        print("Error fetching doctor alerts:", e)
+        logger.error(f"Error fetching doctor alerts: {e}")
         
     if not alerts:
         alerts.append({

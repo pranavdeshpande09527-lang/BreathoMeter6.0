@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.services.report_service import report_service
-from app.routes.auth import get_current_user
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/reports", tags=["Health Reports"])
 
