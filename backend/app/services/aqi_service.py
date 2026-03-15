@@ -47,6 +47,8 @@ class AQIService:
                 "no2": iaqi.get("no2", {}).get("v") if "no2" in iaqi else None,
                 "so2": iaqi.get("so2", {}).get("v") if "so2" in iaqi else None,
                 "co": iaqi.get("co", {}).get("v") if "co" in iaqi else None,
+                "temperature": iaqi.get("t", {}).get("v") if "t" in iaqi else None,
+                "humidity": iaqi.get("h", {}).get("v") if "h" in iaqi else None,
                 "timestamp": data["data"]["time"].get("s")
             }
             return result
