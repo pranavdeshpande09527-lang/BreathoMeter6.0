@@ -9,10 +9,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 @router.get("/{user_id}")
-async def get_user_alerts(user_id: str, current_user = Depends(get_current_user), supabase = Depends(get_authenticated_db)):
+async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)):
     if current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to view these alerts")
         
+    from app.database import supabase_request
     alerts = []
     alert_id = 1
     
@@ -29,9 +30,14 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
 
     # 1. AQI Dangerous Alert
     try:
-        env_res = supabase.table("environment_data").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
-        if env_res.data:
-            latest_env = env_res.data[0]
+        res = await supabase_request(
+            "environment_data", 
+            "GET", 
+            query_params={"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": "1"}, 
+            token=current_user.token
+        )
+        if res:
+            latest_env = res[0]
             if latest_env.get("aqi", 0) > 100:
                 add_alert("high", "AQI Alert — Dangerous Levels", f"AQI in your area is {latest_env['aqi']} (Unhealthy). Minimize outdoor activity and keep windows closed.")
             elif latest_env.get("aqi", 0) > 50:
@@ -41,12 +47,18 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
 
     # 2. High Risk Model Prediction Alert
     try:
-        pred_res = supabase.table("risk_predictions").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
-        if pred_res.data:
-            latest_pred = pred_res.data[0]
-            if latest_pred.get("risk_level", "").lower() == "high":
+        res = await supabase_request(
+            "risk_predictions", 
+            "GET", 
+            query_params={"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": "1"}, 
+            token=current_user.token
+        )
+        if res:
+            latest_pred = res[0]
+            risk_lvl = latest_pred.get("risk_level", "").lower()
+            if risk_lvl == "high":
                 add_alert("high", "Critical AI Risk Assessment", f"The AI engine detected a high risk for {latest_pred.get('predicted_condition', 'respiratory issues')}. Please consult a doctor immediately.")
-            elif latest_pred.get("risk_level", "").lower() == "moderate" or latest_pred.get("risk_level", "").lower() == "elevated":
+            elif risk_lvl in ["moderate", "elevated"]:
                 add_alert("moderate", "Elevated Risk Detected", f"Your latest analysis shows elevated risk patterns. Consider taking a preventative inhaler dose if prescribed.")
     except Exception as e:
         logger.error(f"Error checking prediction alerts: {e}")
@@ -54,10 +66,15 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
     # 3. Performance Drop Alert
     try:
         seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
-        test_res = supabase.table("breath_tests").select("*").eq("user_id", user_id).gte("created_at", seven_days_ago).order("created_at", desc=False).execute()
+        res = await supabase_request(
+            "breath_tests", 
+            "GET", 
+            query_params={"user_id": f"eq.{user_id}", "created_at": f"gte.{seven_days_ago}", "order": "created_at.asc"}, 
+            token=current_user.token
+        )
         
-        if test_res.data and len(test_res.data) >= 2:
-            tests = test_res.data
+        if res and len(res) >= 2:
+            tests = res
             latest_test = tests[-1]
             previous_tests = tests[:-1]
             
@@ -79,20 +96,25 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
     return alerts
 
 @router.get("/doctor/{doctor_id}")
-async def get_doctor_alerts(doctor_id: str, current_user = Depends(require_role(["doctor"])), supabase = Depends(get_authenticated_db)):
+async def get_doctor_alerts(doctor_id: str, current_user = Depends(require_role(["doctor"]))):
     """Aggregate high priority alerts across all patients for the doctor dashboard"""
     if current_user.id != doctor_id:
         raise HTTPException(status_code=403, detail="Not authorized")
         
+    from app.database import supabase_request
     alerts = []
     alert_id = 1
     
-    # Ideally, we would fetch only patients assigned to this doctor.
-    # For now, we fetch a few recent high-risk predictions across the platform.
+    # Fetch recent high-risk predictions across the platform (doctor RLS allows this)
     try:
-        pred_res = supabase.table("risk_predictions").select("user_id, risk_level, predicted_condition, created_at").eq("risk_level", "High").order("created_at", desc=True).limit(5).execute()
-        if pred_res.data:
-            for pred in pred_res.data:
+        res = await supabase_request(
+            "risk_predictions", 
+            "GET", 
+            query_params={"risk_level": "eq.High", "order": "created_at.desc", "limit": "5"}, 
+            token=current_user.token
+        )
+        if res:
+            for pred in res:
                 alerts.append({
                     "id": alert_id,
                     "severity": "high",

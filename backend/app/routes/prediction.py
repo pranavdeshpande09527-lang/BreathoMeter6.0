@@ -16,6 +16,11 @@ class PredictionRequest(BaseModel):
     risk_category: str
     ai_explanation: str
     top_risk_factors: List[str]
+    disease_risks: Optional[List[dict]] = None
+    ml_score: Optional[float] = None
+    ai_score: Optional[float] = None
+    agreement_score: Optional[float] = None
+    confidence_score: Optional[float] = None
 
 @router.post("/store")
 @limiter.limit("10/minute")
@@ -29,8 +34,13 @@ async def store_prediction(request: Request, data: PredictionRequest, user = Dep
             "predicted_condition": data.risk_category,
             "risk_category": data.risk_category,
             "ai_explanation": data.ai_explanation,
-            "top_risk_factors": data.top_risk_factors
+            "top_risk_factors": data.top_risk_factors,
+            "disease_risks": data.disease_risks
         }
+        if data.ml_score is not None: payload["ml_score"] = data.ml_score
+        if data.ai_score is not None: payload["ai_score"] = data.ai_score
+        if data.agreement_score is not None: payload["agreement_score"] = data.agreement_score
+        if data.confidence_score is not None: payload["confidence_score"] = data.confidence_score
         res = await supabase_request("risk_predictions", "POST", data=payload, token=user.token)
         # SUPABASE REST API returns the created object when Prefer=return=representation
         return {"message": "Prediction saved successfully", "data": res[0] if isinstance(res, list) and res else res}

@@ -304,15 +304,73 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
 async def list_patients(user=Depends(get_current_user)):
     """
     Returns all users with role='patient'.
-    Accessible by authenticated users (doctors).
+    Requires the caller to be a doctor (enforced by RLS policies).
     """
+    from app.database import supabase_request
+    
     try:
-        patients = await supabase_admin_request(
-            "users",
-            "GET",
-            query_params={"role": "eq.patient", "order": "created_at.desc"}
+        # We use the user's token so RLS policies for doctors are applied
+        res = await supabase_request(
+            "users", 
+            "GET", 
+            query_params={"role": "eq.patient", "order": "created_at.desc"}, 
+            token=user.token
         )
-        return {"patients": patients or []}
+        return {"patients": res or []}
     except Exception as e:
-        app_logger.error(f"Failed to list patients: {e}")
-        raise HTTPException(status_code=500, detail="Could not retrieve patient list.")
+        app_logger.error(f"Failed to list patients: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Could not retrieve patient list: {str(e)}")
+
+
+@router.get("/patients/{patient_id}")
+async def get_patient_detail(patient_id: str, user=Depends(get_current_user)):
+    """
+    Returns detailed patient info including latest risk prediction and breath tests.
+    Requires the caller to be a doctor (enforced by RLS policies).
+    """
+    from app.database import supabase_request
+    
+    try:
+        # 1. Get patient profile from users table
+        user_res = await supabase_request("users", "GET", query_params={"id": f"eq.{patient_id}"}, token=user.token)
+        patient = user_res[0] if user_res else {}
+        
+        # 2. Get health profile if exists
+        try:
+            hp_res = await supabase_request("health_profiles", "GET", query_params={"user_id": f"eq.{patient_id}", "limit": "1"}, token=user.token)
+            health_profile = hp_res[0] if hp_res else {}
+        except Exception:
+            health_profile = {}
+        
+        # 3. Get latest risk prediction
+        try:
+            pred_res = await supabase_request("risk_predictions", "GET", query_params={"user_id": f"eq.{patient_id}", "order": "created_at.desc", "limit": "1"}, token=user.token)
+            latest_prediction = pred_res[0] if pred_res else {}
+        except Exception:
+            latest_prediction = {}
+        
+        # 4. Get latest breath test
+        try:
+            bt_res = await supabase_request("breath_tests", "GET", query_params={"user_id": f"eq.{patient_id}", "order": "created_at.desc", "limit": "1"}, token=user.token)
+            latest_breath_test = bt_res[0] if bt_res else {}
+        except Exception:
+            latest_breath_test = {}
+        
+        # 5. Get recent prediction history (for trend)
+        try:
+            trend_res = await supabase_request("risk_predictions", "GET", query_params={"user_id": f"eq.{patient_id}", "select": "final_risk_score,created_at", "order": "created_at.desc", "limit": "6"}, token=user.token)
+            prediction_trend = trend_res or []
+        except Exception:
+            prediction_trend = []
+        
+        return {
+            "patient": patient,
+            "health_profile": health_profile,
+            "latest_prediction": latest_prediction,
+            "latest_breath_test": latest_breath_test,
+            "prediction_trend": prediction_trend
+        }
+    except Exception as e:
+        app_logger.error(f"Failed to get patient detail for {patient_id}: {e}")
+        raise HTTPException(status_code=500, detail="Could not retrieve patient details.")
+

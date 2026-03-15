@@ -110,16 +110,17 @@ async def get_risk_prediction(request: PredictionRequest, user = Depends(get_cur
 
     # Call AI reasoning service
     ai_prompt = f"""
-You are an AI Clinical Assistant. The ML model has predicted a disease risk probability of {ml_score:.2f} based on the following environmental data:
+You are an AI Clinical Assistant. The ML model has predicted an overall disease risk probability of {ml_score:.2f} based on the following environmental data:
 {json.dumps(input_dict, indent=2)}.
 Optional patient data contextual factors: {json.dumps(request.optional_patient_data)}.
 
 Please provide:
-1. An AI risk score between 0.0 and 1.0 evaluating the clinical risk based on these parameters.
+1. An AI risk score between 0.0 and 1.0 evaluating the overall clinical respiratory risk based on these parameters.
 2. A short explanation for this score (1-2 sentences).
+3. A list of specific respiratory diseases (e.g., Asthma, COPD, Pneumonia, Bronchitis) and their estimated risk percentages based on the inputs.
 
 Return EXACTLY in this JSON format, do not include markdown blocks or any other text:
-{{"ai_score": 0.65, "explanation": "High PM2.5 and humidity increase asthma risk."}}
+{{"ai_score": 0.65, "explanation": "High PM2.5 and humidity increase respiratory risk.", "disease_risks": [{{"disease": "Asthma", "risk_percentage": 75}}, {{"disease": "COPD", "risk_percentage": 20}}]}}
 """
     
     try:
@@ -136,10 +137,12 @@ Return EXACTLY in this JSON format, do not include markdown blocks or any other 
         ai_data = json.loads(cleaned_response.strip())
         ai_score = float(ai_data.get("ai_score", ml_score))
         ai_explanation = ai_data.get("explanation", "AI reasoning unavailable.")
+        disease_risks = ai_data.get("disease_risks", [])
     except Exception as e:
         logger.error(f"AI Service Call failed: {e}")
         ai_score = ml_score # fallback
         ai_explanation = "Failed to parse AI response or AI service unavailable."
+        disease_risks = []
         
     # Fusion Logic
     final_risk_score = 0.8 * ml_score + 0.2 * ai_score
@@ -198,6 +201,7 @@ Return EXACTLY in this JSON format, do not include markdown blocks or any other 
         "agreement_score": round(agreement_score, 4),
         "top_risk_factors": list(selected_features)[:5],
         "ai_explanation": ai_explanation,
+        "disease_risks": disease_risks,
         "safety_flag": final_safety_flag,
         "medical_disclaimer": medical_disclaimer
     }

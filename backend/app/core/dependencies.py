@@ -34,30 +34,37 @@ def get_authenticated_db(user = Depends(get_current_user)):
 def require_role(allowed_roles: list[str]):
     """
     Dependency to enforce Role-Based Access Control (RBAC).
-    Checks the user_roles table or user_profiles metadata.
+    Checks the public.users table for the user's role, with JWT metadata fallback.
     """
     async def role_checker(current_user = Depends(get_current_user)):
-        from app.core.database import get_db
-        supabase = get_db()
+        user_role = None
         
+        # 1. Try to get role from the public.users table using httpx-based request
         try:
-            # Check user role from profiles
-            res = supabase.table("user_profiles").select("role").eq("id", current_user.id).execute()
-            if not res.data:
-                raise HTTPException(status_code=403, detail="User profile not found")
-                
-            user_role = res.data[0].get("role", "patient").lower()
-            
-            if user_role not in [role.lower() for role in allowed_roles]:
-                app_logger.warning(f"SECURITY: Unauthorized access attempt by {current_user.id} (Role: {user_role}) to resource requiring {allowed_roles}")
-                raise HTTPException(status_code=403, detail="Access denied. Insufficient privileges.")
-                
-            return current_user
+            from app.database import supabase_request
+            res = await supabase_request(
+                "users", 
+                "GET", 
+                query_params={"id": f"eq.{current_user.id}", "select": "role"}, 
+                token=current_user.token
+            )
+            if res and len(res) > 0:
+                user_role = res[0].get("role", "").lower()
         except Exception as e:
-            if isinstance(e, HTTPException):
-                raise e
-            app_logger.error(f"Error checking RBAC: {e}")
-            raise HTTPException(status_code=500, detail="Internal server error during authorization")
+            from app.utils.logger import app_logger
+            app_logger.warning(f"RBAC: Could not query users table for {current_user.id}: {e}")
+        
+        # 2. Fallback: extract role from JWT user_metadata
+        if not user_role:
+            metadata = getattr(current_user, 'user_metadata', {}) or {}
+            user_role = metadata.get('role', 'patient').lower()
+        
+        if user_role not in [role.lower() for role in allowed_roles]:
+            from app.utils.logger import app_logger
+            app_logger.warning(f"SECURITY: Unauthorized access attempt by {current_user.id} (Role: {user_role}) to resource requiring {allowed_roles}")
+            raise HTTPException(status_code=403, detail="Access denied. Insufficient privileges.")
+            
+        return current_user
     
     return role_checker
 
