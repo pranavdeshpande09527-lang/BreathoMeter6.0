@@ -24,7 +24,7 @@ def is_strong_password(password: str) -> bool:
 @router.post("/signup")
 async def signup(user: UserCreate, request: Request):
     """
-    Handles user signup with environment-based verification bypass.
+    Handles user signup with pseudo-email to enforce unique identity.
     Limits: 5 requests per minute per IP.
     """
     # 1. Backend Rate Limiting (Sliding Window)
@@ -33,165 +33,125 @@ async def signup(user: UserCreate, request: Request):
     # 2. Security Validations
     role = user.role.lower() if user.role else "patient"
     if role not in ["patient", "doctor"]:
-        app_logger.warning(f"Signup attempt with invalid role: {role} for email: {user.email}")
+        app_logger.warning(f"Signup attempt with invalid role: {role} for username: {user.username}")
         raise HTTPException(status_code=400, detail="Invalid role. Must be 'patient' or 'doctor'.")
         
     if not is_strong_password(user.password):
-        app_logger.warning(f"Signup attempt with weak password for email: {user.email}")
+        app_logger.warning(f"Signup attempt with weak password for username: {user.username}")
         raise HTTPException(
             status_code=400, 
             detail="Password must be at least 8 characters long, contain a number, and an uppercase letter."
         )
     
-    app_logger.info(f"Processing {role} signup for: {user.email} (Env: {settings.environment})")
+    app_logger.info(f"Processing {role} signup for: {user.username} (Env: {settings.environment})")
     
     user_metadata = {
         "full_name": user.full_name,
-        "role": role
+        "role": role,
+        "username": user.username,
+        "specialty": getattr(user, "specialty", None),
+        "experience": getattr(user, "experience", None),
+        "availability": getattr(user, "availability", None)
     }
+    
+    pseudo_email = f"{user.username}@breathometer.local"
 
     try:
-        if settings.environment == "development":
-            # --- Development Mode: Bypass Email Verification ---
-            app_logger.info(f"Dev Mode: Creating confirmed user for {user.email}")
-            
-            if not settings.supabase_service_role_key:
-                app_logger.warning("SUPABASE_SERVICE_ROLE_KEY missing. Falling back to standard signup.")
-                try:
-                    resp = await supabase_auth_request("signup", "POST", {
-                        "email": user.email,
-                        "password": user.password,
-                        "data": user_metadata
-                    })
-                except Exception as e:
-                    error_msg = str(e).lower()
-                    if "already registered" in error_msg:
-                        raise HTTPException(status_code=400, detail="User already registered.")
-                    if "rate limit" in error_msg:
-                        raise HTTPException(status_code=429, detail="Signup rate limit exceeded. Please try again later.")
-                    raise e
-                
-                session = resp.get("session")
-                user_obj = resp.get("user") or (session.get("user") if session else None)
-                if user_obj:
-                    try:
-                        await supabase_admin_request("users", "POST", {"id": user_obj["id"], "email": user_obj["email"], "role": role})
-                    except Exception as db_e:
-                        app_logger.warning(f"Failed to create public record for {user.email}: {db_e}")
-                
-                if session:
-                    return {
-                        "message": "Signup successful! Welcome to Breathometer.",
-                        "email_confirmation_required": False,
-                        "session": session
-                    }
-                return {
-                    "message": "Account created! Please check your email to verify your account.",
-                    "email_confirmation_required": True,
-                    "user": user_obj or {}
-                }
-            
-            # Using Admin API to create a confirmed user
-            try:
-                # Note: Supabase Admin API endpoint for user creation is /users
-                create_resp = await supabase_admin_auth_request("users", "POST", {
-                    "email": user.email,
-                    "password": user.password,
-                    "email_confirm": True,
-                    "user_metadata": user_metadata
-                })
-            except Exception as e:
-                error_msg = str(e).lower()
-                if "already registered" in error_msg:
-                    raise HTTPException(status_code=400, detail="User already registered.")
-                if "rate limit" in error_msg:
-                    raise HTTPException(status_code=429, detail="Signup rate limit exceeded. Please try again later.")
-                raise e
-            
-            # Automatically log the user in to return a session
-            login_resp = await supabase_auth_request("token?grant_type=password", "POST", {
-                "email": user.email,
-                "password": user.password
+        # We bypass SMTP entirely by using the Admin API and enforcing confirmation.
+        app_logger.info(f"Creating confirmed user for {user.username} via Admin API")
+        
+        try:
+            create_resp = await supabase_admin_auth_request("users", "POST", {
+                "email": pseudo_email,
+                "password": user.password,
+                "email_confirm": True,
+                "user_metadata": user_metadata
             })
-            
-            user_obj = login_resp.get("user")
-            if user_obj:
-                try:
-                    await supabase_admin_request("users", "POST", {"id": user_obj["id"], "email": user_obj["email"], "role": role})
-                except Exception as db_e:
-                    app_logger.warning(f"Failed to create public record for {user.email}: {db_e}")
-
-            
-            return {
-                "message": "Signup successful! Welcome to Breathometer.",
-                "email_confirmation_required": False,
-                "session": {
-                    "access_token": login_resp.get("access_token"),
-                    "token_type": login_resp.get("token_type"),
-                    "expires_in": login_resp.get("expires_in"),
-                    "refresh_token": login_resp.get("refresh_token"),
-                    "user": login_resp.get("user")
-                }
-            }
-            
-        else:
-            # --- Production Mode: Secure SMTP Verification ---
-            app_logger.info(f"Prod Mode: Generating verification link for {user.email}")
-            
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "already registered" in error_msg:
+                raise HTTPException(status_code=400, detail="Username already registered.")
+            if "rate limit" in error_msg:
+                raise HTTPException(status_code=429, detail="Signup rate limit exceeded. Please try again later.")
+            raise e
+        
+        # Automatically log the user in to return a session
+        login_resp = await supabase_auth_request("token?grant_type=password", "POST", {
+            "email": pseudo_email,
+            "password": user.password
+        })
+        
+        user_obj = login_resp.get("user")
+        if user_obj:
             try:
-                # Generate a signup verification link
-                gen_resp = await supabase_admin_auth_request("generate_link", "POST", {
-                    "type": "signup",
-                    "email": user.email,
-                    "password": user.password,
-                    "data": user_metadata
+                # 1. Create entry in users table
+                first_name, *last_name_parts = user.full_name.split(" ") if user.full_name else ("", "")
+                last_name = " ".join(last_name_parts) if last_name_parts else ""
+                
+                await supabase_admin_request("users", "POST", {
+                    "id": user_obj["id"], 
+                    "email": pseudo_email, 
+                    "role": role,
+                    "first_name": first_name,
+                    "last_name": last_name
                 })
-            except Exception as e:
-                error_msg = str(e).lower()
-                if "already registered" in error_msg:
-                    raise HTTPException(status_code=400, detail="User already registered.")
-                if "rate limit" in error_msg:
-                    raise HTTPException(status_code=429, detail="Signup rate limit exceeded. Please try again later.")
-                raise e
                 
-            action_link = gen_resp.get("properties", {}).get("action_link") or gen_resp.get("action_link")
-            
-            if not action_link:
-                app_logger.error(f"Failed to generate link for {user.email}: {gen_resp}")
-                raise HTTPException(status_code=500, detail="Internal server error generating verification link.")
-                
-            # Send HTML email via SMTP
-            email_sent = await send_verification_email(user.email, action_link)
-            if not email_sent:
-                raise HTTPException(status_code=503, detail="Email service temporarily unavailable. Please try again later.")
-                
-            user_obj = gen_resp.get("user")
-            if user_obj:
-                try:
-                    await supabase_admin_request("users", "POST", {"id": user_obj["id"], "email": user_obj["email"], "role": role})
-                except Exception as db_e:
-                    app_logger.warning(f"Failed to create public record for {user.email}: {db_e}")
+                # 2. Create entry in health_profiles table if it's a patient
+                if role == "patient":
+                    profile_data = {
+                        "user_id": user_obj["id"],
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "age": user.age,
+                        "gender": user.gender,
+                        "height": user.height,
+                        "weight": user.weight,
+                        "smoking_status": user.smoking_status,
+                        "activity_level": user.activity_level
+                    }
+                    # Remove None values
+                    profile_data = {k: v for k, v in profile_data.items() if v is not None}
+                    await supabase_admin_request("health_profiles", "POST", profile_data)
+                    
+            except Exception as db_e:
+                app_logger.warning(f"Failed to create public/profile record for {user.username}: {db_e}")
 
-            return {
-                "message": "Account created! Please check your email to verify your account.",
-                "email_confirmation_required": True,
-                "user": user_obj or {}
+        # Construct final user object with profile
+        final_user = login_resp.get("user", {})
+        final_user["username"] = user.username
+        
+        return {
+            "message": "Signup successful! Welcome to Breathometer.",
+            "email_confirmation_required": False,
+            "session": {
+                "access_token": login_resp.get("access_token"),
+                "token_type": login_resp.get("token_type"),
+                "expires_in": login_resp.get("expires_in"),
+                "refresh_token": login_resp.get("refresh_token"),
+                "user": final_user
             }
+        }
 
     except HTTPException:
         raise
     except Exception as e:
-        app_logger.error(f"Unexpected signup error for {user.email}: {str(e)}")
+        app_logger.error(f"Unexpected signup error for {user.username}: {str(e)}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred during signup.")
 
 @router.post("/login")
 async def login(user: UserLogin):
     """Handles user login with standard Supabase Auth."""
+    pseudo_email = f"{user.username}@breathometer.local"
     try:
         response = await supabase_auth_request("token?grant_type=password", "POST", {
-            "email": user.email,
+            "email": pseudo_email,
             "password": user.password
         })
+        
+        user_obj = response.get("user", {})
+        if user_obj:
+            user_obj["username"] = user.username
+            
         return {
             "message": "Login successful",
             "session": {
@@ -199,7 +159,7 @@ async def login(user: UserLogin):
                 "token_type": response.get("token_type"),
                 "expires_in": response.get("expires_in"),
                 "refresh_token": response.get("refresh_token"),
-                "user": response.get("user")
+                "user": user_obj
             }
         }
     except Exception as e:
@@ -207,25 +167,37 @@ async def login(user: UserLogin):
         if "Email not confirmed" in error_msg:
             raise HTTPException(
                 status_code=403,
-                detail="Email not confirmed. Please check your inbox and confirm your email before logging in."
+                detail="Account not confirmed. Please contact support."
             )
         if "rate limit" in error_msg.lower():
             raise HTTPException(
                 status_code=429,
                 detail="Too many login attempts. Please try again later."
             )
-        app_logger.error(f"Login error for email {user.email}: {e}")
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
+        app_logger.error(f"Login error for username {user.username}: {e}")
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
 
 @router.get("/profile")
 async def get_profile(user=Depends(get_current_user)):
-    """Generic profile fetcher using JWT."""
+    """Generic profile fetcher using JWT. Includes health profile if applicable."""
+    from app.database import supabase_request
+    username = user.email.replace("@breathometer.local", "") if user.email else None
+    
+    profile_data = {}
+    try:
+        hp_res = await supabase_request("health_profiles", "GET", query_params={"user_id": f"eq.{user.id}", "limit": "1"}, token=user.token)
+        if hp_res:
+            profile_data = hp_res[0]
+    except Exception as e:
+        app_logger.warning(f"Failed to fetch health profile for user {user.id}: {e}")
+
     return {
         "user": {
             "id": user.id,
-            "email": user.email,
+            "username": username,
             "full_name": user.full_name,
-            "role": user.role
+            "role": user.role,
+            "profile": profile_data
         }
     }
 
@@ -237,6 +209,12 @@ class ProfileUpdate(BaseModel):
     date_of_birth: Optional[str] = None
     blood_group: Optional[str] = None
     known_conditions: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    height: Optional[float] = None
+    weight: Optional[float] = None
+    smoking_status: Optional[str] = None
+    activity_level: Optional[str] = None
 
 
 @router.patch("/profile")
@@ -266,6 +244,12 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "date_of_birth": data.date_of_birth,
             "blood_group": data.blood_group,
             "known_conditions": data.known_conditions,
+            "age": data.age,
+            "gender": data.gender,
+            "height": data.height,
+            "weight": data.weight,
+            "smoking_status": data.smoking_status,
+            "activity_level": data.activity_level,
         }
         # Remove None values to allow partial updates
         profile_record = {k: v for k, v in profile_record.items() if v is not None}
@@ -296,8 +280,49 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "date_of_birth": data.date_of_birth,
             "blood_group": data.blood_group,
             "known_conditions": data.known_conditions,
+            "age": data.age,
+            "gender": data.gender,
+            "height": data.height,
+            "weight": data.weight,
+            "smoking_status": data.smoking_status,
+            "activity_level": data.activity_level
         }
     }
+
+
+@router.get("/doctors")
+async def list_doctors(user=Depends(get_current_user)):
+    """
+    Returns all users with role='doctor'.
+    """
+    from app.database import supabase_admin_auth_request
+    
+    try:
+        users_resp = await supabase_admin_auth_request("users", "GET")
+        doctors = []
+        for u in users_resp.get("users", []):
+            meta = u.get("user_metadata", {})
+            role_meta = str(meta.get("role", "")).lower()
+            name_meta = str(meta.get("full_name", "")).lower()
+            email_u = str(u.get("email", "")).lower()
+            
+            # Use robust heuristic MATCHING is_doctor and frontend logic
+            is_doc = role_meta == "doctor" or name_meta.startswith("dr. ") or email_u.startswith("dr.")
+            
+            if is_doc:
+                doctors.append({
+                    "id": u["id"],
+                    "email": u.get("email"),
+                    "full_name": meta.get("full_name") or u.get("email"),
+                    "specialty": meta.get("specialty"),
+                    "experience": meta.get("experience"),
+                    "availability": meta.get("availability")
+                })
+        return {"doctors": doctors}
+    except Exception as e:
+        from app.utils.logger import app_logger
+        app_logger.error(f"Failed to list doctors: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Could not retrieve doctor list: {str(e)}")
 
 
 @router.get("/patients")
@@ -316,7 +341,25 @@ async def list_patients(user=Depends(get_current_user)):
             query_params={"role": "eq.patient", "order": "created_at.desc"}, 
             token=user.token
         )
-        return {"patients": res or []}
+        patients = res or []
+        
+        # Enrich patients with the latest risk category
+        try:
+            for p in patients:
+                pred_res = await supabase_request(
+                    "risk_predictions", 
+                    "GET", 
+                    query_params={"user_id": f"eq.{p.get('id')}", "select": "risk_category,final_risk_score", "order": "created_at.desc", "limit": "1"}, 
+                    token=user.token
+                )
+                if pred_res:
+                    p['risk_category'] = pred_res[0].get("risk_category")
+                    p['risk'] = pred_res[0].get("risk_category")
+                    p['risk_score'] = pred_res[0].get("final_risk_score")
+        except Exception as inner_e:
+            app_logger.warning(f"Failed to fetch risk data for patients: {inner_e}")
+
+        return {"patients": patients}
     except Exception as e:
         app_logger.error(f"Failed to list patients: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Could not retrieve patient list: {str(e)}")

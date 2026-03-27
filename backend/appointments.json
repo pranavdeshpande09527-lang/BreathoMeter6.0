@@ -1,0 +1,71 @@
+[
+    {
+        "id": "041c5d95-780c-4877-9147-dd4bc795fcd5",
+        "patient_id": "41057ea1-56c8-4f77-9929-ed9bdf2482c3",
+        "patient_name": "pranavd",
+        "doctor_id": "a5eb02d7-57be-4d69-8860-747fa0d092c3",
+        "disease": "Chronic Bronchitis",
+        "status": "pending",
+        "created_at": "2026-03-26T11:27:34.245711",
+        "messages": []
+    },
+    {
+        "id": "dbba1bf8-cbc3-4934-aeac-45f228ab3271",
+        "patient_id": "41057ea1-56c8-4f77-9929-ed9bdf2482c3",
+        "patient_name": "pranavd",
+        "doctor_id": "27ab38ce-5d9a-4ea7-95a2-eb44403ac556",
+        "disease": "Cardiovascular Disease",
+        "status": "pending",
+        "created_at": "2026-03-26T11:30:42.334441",
+        "messages": []
+    },
+    {
+        "id": "bdef34be-607d-40dd-8279-b49e4a422597",
+        "patient_id": "b40c24b6-acda-416f-bc69-38ebb670288f",
+        "patient_name": "pranav",
+        "doctor_id": "a5eb02d7-57be-4d69-8860-747fa0d092c3",
+        "disease": "Chronic Bronchitis",
+        "status": "pending",
+        "created_at": "2026-03-26T11:35:37.861749",
+        "messages": []
+    },
+    {
+        "id": "9227210f-7697-46aa-827d-5e4877acabc7",
+        "patient_id": "b40c24b6-acda-416f-bc69-38ebb670288f",
+        "patient_name": "pranav",
+        "doctor_id": "499741e7-73fd-416f-b36b-8a3b879059d3",
+        "disease": "Chronic Bronchitis",
+        "status": "accepted",
+        "created_at": "2026-03-26T11:36:22.707450",
+        "messages": [
+            {
+                "sender_id": "499741e7-73fd-416f-b36b-8a3b879059d3",
+                "role": "authenticated",
+                "content": "hello",
+                "timestamp": "2026-03-26T12:18:16.055169"
+            },
+            {
+                "sender_id": "499741e7-73fd-416f-b36b-8a3b879059d3",
+                "role": "authenticated",
+                "content": "how are you feelling ",
+                "timestamp": "2026-03-26T12:18:36.291754"
+            },
+            {
+                "sender_id": "b40c24b6-acda-416f-bc69-38ebb670288f",
+                "role": "authenticated",
+                "content": "i am fine how about you",
+                "timestamp": "2026-03-26T12:19:37.976771"
+            }
+        ]
+    },
+    {
+        "id": "a3ca266f-22ef-4f07-a76d-a246b83843cc",
+        "patient_id": "499741e7-73fd-416f-b36b-8a3b879059d3",
+        "patient_name": "dr.pulmo",
+        "doctor_id": "499741e7-73fd-416f-b36b-8a3b879059d3",
+        "disease": "Chronic Bronchitis",
+        "status": "accepted",
+        "created_at": "2026-03-26T11:59:45.086514",
+        "messages": []
+    }
+]

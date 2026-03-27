@@ -1,10 +1,18 @@
 import logging
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("breathometer")
+
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation error on {request.method} {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+    )
 
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
@@ -22,5 +30,6 @@ async def auth_exception_handler(request: Request, exc: Exception):
     )
     
 def setup_error_handlers(app):
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, global_exception_handler)
     # FastApi handles HTTPException natively, but we can override if needed

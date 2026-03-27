@@ -70,7 +70,7 @@ async def system_status():
 
 # --- Register All API Routers ---
 
-from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat
+from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat, appointments, doctors
 
 app.include_router(auth.router)
 app.include_router(environment.router)
@@ -83,3 +83,5 @@ app.include_router(reports.router)
 app.include_router(inference_api.router)
 app.include_router(alerts.router)
 app.include_router(chat.router)
+app.include_router(appointments.router)
+app.include_router(doctors.router)

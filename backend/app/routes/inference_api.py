@@ -70,13 +70,17 @@ def apply_feature_engineering(df):
     return df
 
 @router.post("/predict")
-async def get_risk_prediction(request: PredictionRequest, user = Depends(get_current_user)):
+async def get_risk_prediction(environmental_data: EnvironmentalData, optional_patient_data: Optional[dict] = None, user = Depends(get_current_user)):
+    """
+    ML + AI Reasoning Prediction Endpoint.
+    Fused inference from XGBoost/Stacking ensemble and LangChain-based AI.
+    """
     if calibrated_model is None or preprocessor is None:
         raise HTTPException(status_code=500, detail="ML Models not loaded setup failed.")
         
     try:
         # Convert input to dataframe
-        input_dict = request.environmental_data.dict()
+        input_dict = environmental_data.dict()
         
         # Out-of-Distribution (OOD) Detection
         ood_flags = []
@@ -108,38 +112,128 @@ async def get_risk_prediction(request: PredictionRequest, user = Depends(get_cur
         logger.error(f"ML Prediction failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to run ML prediction")
 
-    # Call AI reasoning service
+    # --- AI Ensembling Integration ---
+    patient_data = optional_patient_data or {}
+    
     ai_prompt = f"""
-You are an AI Clinical Assistant. The ML model has predicted an overall disease risk probability of {ml_score:.2f} based on the following environmental data:
-{json.dumps(input_dict, indent=2)}.
-Optional patient data contextual factors: {json.dumps(request.optional_patient_data)}.
+You are an advanced clinical AI specializing in environmental health, air pollution exposure, and related respiratory and cardiovascular diseases.
 
-Please provide:
-1. An AI risk score between 0.0 and 1.0 evaluating the overall clinical respiratory risk based on these parameters.
-2. A short explanation for this score (1-2 sentences).
-3. A list of specific respiratory diseases (e.g., Asthma, COPD, Pneumonia, Bronchitis) and their estimated risk percentages based on the inputs.
+Your goal is to generate a HIGH-CONFIDENCE, medically logical risk assessment based strictly on the given data.
 
-Return EXACTLY in this JSON format, do not include markdown blocks or any other text:
-{{"ai_score": 0.65, "explanation": "High PM2.5 and humidity increase respiratory risk.", "disease_risks": [{{"disease": "Asthma", "risk_percentage": 75}}, {{"disease": "COPD", "risk_percentage": 20}}]}}
+-------------------------------------
+INPUT DATA
+-------------------------------------
+Environmental Data:
+- AQI: {input_dict.get('AQI', 'N/A')}
+- PM2.5: {input_dict.get('PM2_5', 'N/A')}
+- PM10: {input_dict.get('PM10', 'N/A')}
+- NO2: {input_dict.get('NO2', 'N/A')}
+- SO2: {input_dict.get('SO2', 'N/A')}
+- CO: {input_dict.get('CO', 'N/A')}
+- O3: {input_dict.get('O3', 'N/A')}
+
+Patient Data:
+- Age: {patient_data.get('age', 'N/A')}
+- Gender: {patient_data.get('gender', 'N/A')}
+- Symptoms: {patient_data.get('symptoms', 'None reported')}
+- Smoking Status: {patient_data.get('lifestyle', {}).get('smoking_habits', 'Unknown')}
+- Medical History: {patient_data.get('medical_history', 'Unknown')}
+- Exposure Duration: {patient_data.get('lifestyle', {}).get('outdoor_time_hours', 'Unknown')} hours/day
+
+-------------------------------------
+TASK
+-------------------------------------
+1. Identify the MOST LIKELY pollution-related diseases affecting this individual.
+   - Focus ONLY on respiratory and cardiovascular conditions
+   - DO NOT use any predefined or fixed disease list
+   - Only include conditions that are strongly supported by the data
+
+2. Assign a realistic risk percentage (0-100) for each condition based on:
+   - Pollution severity (AQI and pollutants)
+   - Pollutant-specific effects (e.g., PM2.5 -> lung inflammation, NO2 -> cardiovascular stress)
+   - Patient vulnerability (age, smoking, medical history)
+   - Symptom correlation
+
+3. For EACH condition provide clear clinical reasoning:
+   - Explicitly explain: pollutant -> biological effect -> disease
+   - Connect symptoms (if present)
+   - Avoid repetition across conditions
+
+4. Provide a detailed overall explanation:
+   - Identify the most harmful pollutants in this case
+   - Explain short-term vs long-term health impact
+   - Highlight the strongest risk drivers
+
+-------------------------------------
+STRICT RULES (ANTI-HALLUCINATION)
+-------------------------------------
+- DO NOT generate rare, unrelated, or unsupported diseases
+- DO NOT guess if data is insufficient
+- If uncertain, LOWER the risk score instead of inventing conditions
+- DO NOT use generic statements like "air pollution is harmful"
+- Each condition MUST have unique reasoning
+- Be conservative and clinically realistic
+
+-------------------------------------
+CONSISTENCY & CONFIDENCE GUIDELINES
+-------------------------------------
+- Only include conditions that you are reasonably confident about
+- Exclude conditions with weak or no evidence from the data
+- Prefer common pollution-related diseases over rare ones
+- Ensure the output is stable and not overly sensitive to minor data variations
+
+-------------------------------------
+OUTPUT CONSTRAINTS
+-------------------------------------
+- Include ONLY top 4-6 conditions
+- Exclude any condition with risk < 20%
+- Keep reasoning concise but meaningful (2-3 lines per condition)
+- Overall explanation should be 5-8 lines
+
+-------------------------------------
+OUTPUT FORMAT (STRICT JSON ONLY)
+-------------------------------------
+{{
+  "conditions": [
+    {{
+      "name": "Condition name",
+      "risk": 0,
+      "reason": "Specific clinical reasoning (pollutant -> effect -> disease)"
+    }}
+  ],
+  "explanation": "Detailed clinical explanation covering pollutants, risks, and impact"
+}}
 """
     
     try:
-        ai_response_text = await chatbot_service.get_response(ai_prompt, request.optional_patient_data)
-        # Clean response
-        cleaned_response = ai_response_text.strip()
-        if cleaned_response.startswith("```json"):
-            cleaned_response = cleaned_response[7:]
-        if cleaned_response.startswith("```"):
-            cleaned_response = cleaned_response[3:]
-        if cleaned_response.endswith("```"):
-            cleaned_response = cleaned_response[:-3]
+        # Fetch fused ensemble response from Groq + Gemini
+        ai_data = await chatbot_service.get_ensemble_response(ai_prompt)
+        
+        if not ai_data or len(ai_data.get("conditions", [])) == 0:
+            raise Exception("AI reasoning returned bad schema or empty conditions.")
             
-        ai_data = json.loads(cleaned_response.strip())
-        ai_score = float(ai_data.get("ai_score", ml_score))
+        # Optional AI Score fallback since prompt no longer asks for it
+        # Assume an AI risk score based on the highest condition probability
+        highest_risk = 0.0
+        disease_risks = []
+        
+        for c in ai_data.get("conditions", []):
+            risk_val = float(c.get("risk", 0)) / 100.0
+            if risk_val > highest_risk:
+                highest_risk = risk_val
+                
+            # Map backend model output to legacy frontend schema
+            disease_risks.append({
+                "disease": c.get("name", "Unknown Risk"),
+                "risk_percentage": round(c.get("risk", 0)),
+                "reason": c.get("reason", "")
+            })
+            
+        ai_score = highest_risk if highest_risk > 0 else ml_score
         ai_explanation = ai_data.get("explanation", "AI reasoning unavailable.")
-        disease_risks = ai_data.get("disease_risks", [])
+        
     except Exception as e:
-        logger.error(f"AI Service Call failed: {e}")
+        logger.error(f"Ensemble AI Service Call failed: {e}")
         ai_score = ml_score # fallback
         ai_explanation = "Failed to parse AI response or AI service unavailable."
         disease_risks = []

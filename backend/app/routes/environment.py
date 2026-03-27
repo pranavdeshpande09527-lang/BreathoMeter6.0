@@ -38,16 +38,18 @@ async def store_environment_data(data: EnvironmentRequest, user = Depends(get_cu
 
 
 @router.get("/aqi")
-async def get_aqi(lat: float = 0.0, lon: float = 0.0):
-    """Fetch real AQI for a lat/lon coordinate via AQIService."""
+async def get_aqi(lat: float = 0.0, lon: float = 0.0, location: str = ""):
+    """Fetch real AQI for a lat/lon coordinate or location via AQIService."""
     try:
+        if location:
+            return await aqi_service.get_aqi(location)
         if lat == 0.0 and lon == 0.0:
             return await aqi_service.get_aqi("here")
         return await aqi_service.get_aqi(f"geo:{lat};{lon}")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching AQI by coordinates: {e}")
+        logger.error(f"Error fetching AQI: {e}")
         raise HTTPException(status_code=503, detail="AQI service unavailable")
 
 
@@ -66,10 +68,14 @@ async def get_aqi_by_city(city: str):
 
 
 @router.get("/weather")
-async def get_weather(lat: float = 0.0, lon: float = 0.0):
-    """Fetch real weather data for a lat/lon coordinate via OpenWeatherMap."""
+async def get_weather(lat: float = 0.0, lon: float = 0.0, location: str = ""):
+    """Fetch real weather data for a lat/lon coordinate or city via OpenWeatherMap."""
     try:
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={settings.openweather_api_key}&units=metric"
+        if location:
+            url = f"https://api.openweathermap.org/data/2.5/weather?q={location}&appid={settings.openweather_api_key}&units=metric"
+        else:
+            url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={settings.openweather_api_key}&units=metric"
+            
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(url)
             data = response.json()

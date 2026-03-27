@@ -56,14 +56,14 @@ async def main():
 
     # 5. Signup
     signup_result = await test_endpoint("Auth Signup", "POST", f"{BASE_URL}/auth/signup", json_data={
-        "email": "integrationtest@breathometer.com",
+        "username": "integrationtest",
         "password": "TestPass1234!",
         "full_name": "Integration Test"
     })
     
     # 6. Login
     login_result = await test_endpoint("Auth Login", "POST", f"{BASE_URL}/auth/login", json_data={
-        "email": "integrationtest@breathometer.com",
+        "username": "integrationtest",
         "password": "TestPass1234!"
     })
     

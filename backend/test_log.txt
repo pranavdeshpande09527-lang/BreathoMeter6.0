@@ -1,0 +1,20 @@
+﻿Sending request to ensemble model...
+DEBUG: Calling Groq...
+DEBUG: Calling Gemini (models/gemini-1.5-flash)...
+DEBUG: Gemini Error: 404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+DEBUG: Groq Success. Got 4 conditions.
+
+--- Final Prediction Result ---
+
+Explanation:
+The most harmful pollutants in this case are PM2.5, NO2, and O3, which contribute to both short-term and long-term health impacts. Short-term exposure can exacerbate existing respiratory and cardiovascular conditions, while long-term exposure increases the risk of developing new diseases. The strongest risk drivers are the patient's age, former smoking status, and pre-existing hypertension. The combination of pollutant exposure and individual vulnerability factors contributes to the elevated risk of these conditions.
+
+Disease Risks:
+- Chronic Obstructive Pulmonary Disease (COPD) Exacerbation: 60%
+  Reason: PM2.5-induced lung inflammation and oxidative stress -> airway obstruction -> COPD exacerbation, correlated with mild cough and shortness of breath
+- Cardiovascular Disease (Hypertension Exacerbation): 55%
+  Reason: NO2 and PM2.5 exposure -> endothelial dysfunction and vascular inflammation -> increased blood pressure, linked to patient's hypertension history
+- Asthma: 40%
+  Reason: O3 and PM2.5 exposure -> airway hyperresponsiveness and inflammation -> asthma symptoms, consistent with shortness of breath on exertion
+- Acute Coronary Syndrome: 30%
+  Reason: CO and NO2 exposure -> myocardial ischemia and increased cardiovascular stress -> acute coronary syndrome risk, heightened by patient's age and former smoking status
