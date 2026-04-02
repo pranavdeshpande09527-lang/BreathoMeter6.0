@@ -1,0 +1,64 @@
+{
+  "ml_score": 0.4714,
+  "ai_score": 0.9,
+  "final_risk_score": 0.6057,
+  "risk_category": "High Risk",
+  "confidence_score": 0.4571,
+  "confidence_tier": "low",
+  "primary_prediction": null,
+  "recommended_specialty": "General Physician",
+  "agreement_score": 0.5714,
+  "top_risk_factors": [
+    "age",
+    "gender",
+    "smoking_status",
+    "occupation",
+    "bmi"
+  ],
+  "ai_explanation": "The patient's heavy smoking history, poor air quality exposure, and symptoms such as chronic cough, shortness of breath, and chest pain increase the risk of various lung and respiratory diseases. The low SpO2 levels and breath hold time also indicate compromised lung function.",
+  "disease_risks": [
+    {
+      "disease": "Chronic Obstructive Pulmonary Disease (COPD)",
+      "risk_percentage": 90,
+      "reason": "Heavy smoking history, chronic cough, shortness of breath, and wheezing are all indicative of COPD."
+    },
+    {
+      "disease": "Bronchitis",
+      "risk_percentage": 85,
+      "reason": "Chronic cough, wheezing, and shortness of breath are common symptoms of bronchitis, which can be exacerbated by heavy smoking and poor air quality."
+    },
+    {
+      "disease": "Asthma",
+      "risk_percentage": 80,
+      "reason": "Wheezing, shortness of breath, and chest pain are common symptoms of asthma, which can be exacerbated by poor air quality."
+    },
+    {
+      "disease": "Lung Cancer",
+      "risk_percentage": 70,
+      "reason": "Heavy smoking history and symptoms such as chronic cough and chest pain increase the risk of lung cancer."
+    },
+    {
+      "disease": "Pneumonia",
+      "risk_percentage": 60,
+      "reason": "Low SpO2 levels and symptoms such as chest pain and shortness of breath may indicate pneumonia, especially in an elderly patient with a history of heavy smoking."
+    },
+    {
+      "disease": "Acute Respiratory Distress Syndrome (ARDS)",
+      "risk_percentage": 50,
+      "reason": "Poor air quality, low SpO2 levels, and symptoms such as shortness of breath may contribute to the development of ARDS."
+    }
+  ],
+  "warnings": [
+    "The model has low confidence in this specific prediction. We strongly advise consulting a General Physician.",
+    "Confidence reliability may be limited due to small reference dataset size."
+  ],
+  "similar_cases_distribution": {
+    "Lung Cancer - Type II": 1,
+    "No Lung Cancer Detected": 14,
+    "Lung Cancer": 15,
+    "COPD": 12,
+    "Pneumonia": 4
+  },
+  "safety_flag": "Significant disparity between clinical model and AI reasoning. | Low confidence: Clinical profile is ambiguous.",
+  "medical_disclaimer": "AI report for informational purposes. Consult a doctor for diagnosis."
+}

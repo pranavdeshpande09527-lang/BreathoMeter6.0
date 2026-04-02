@@ -8,6 +8,7 @@ httpx
 google-generativeai
 scikit-learn
 pandas
+openpyxl
 numpy
 python-multipart
 # AI / LLM
@@ -25,3 +26,6 @@ imbalanced-learn
 supabase
 # Email validation for Pydantic EmailStr
 email-validator
+# Email delivery
+resend
+aiosmtplib

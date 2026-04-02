@@ -1,0 +1,11 @@
+[
+    "spo2_level",
+    "age",
+    "bmi",
+    "aqi_exposure",
+    "severity_index",
+    "is_smoker",
+    "shortness_of_breath",
+    "cough_severity",
+    "severe_cough"
+]

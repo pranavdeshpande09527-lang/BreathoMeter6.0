@@ -1,0 +1,27 @@
+{
+  "id": "9f75ff88-b03b-4bb6-b3a5-933d4e021095",
+  "user_id": "b40c24b6-acda-416f-bc69-38ebb670288f",
+  "predicted_condition": "High Risk",
+  "risk_level": null,
+  "confidence_score": null,
+  "created_at": "2026-03-29T10:21:18.5254+00:00",
+  "final_risk_score": 0.8,
+  "risk_category": "High Risk",
+  "ai_explanation": "Test explanation",
+  "top_risk_factors": [
+    "Smoking History"
+  ],
+  "disease_risks": [
+    {
+      "reason": "Smoker",
+      "disease": "COPD",
+      "risk_percentage": 85.0
+    }
+  ],
+  "ml_score": null,
+  "ai_score": null,
+  "agreement_score": null,
+  "confidence_tier": null,
+  "primary_prediction": null,
+  "recommended_specialty": null
+}

@@ -1,8 +1,16 @@
+import os
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.errors import setup_error_handlers
 from app.core.rate_limit import setup_rate_limiting
 import logging
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
 
 logger = logging.getLogger("breathometer")
 
@@ -15,16 +23,28 @@ app = FastAPI(
 setup_error_handlers(app)
 setup_rate_limiting(app)
 
+import os
+
 # Configure CORS — restrict in production, allow localhost for development
+# Allowed production domains are Firebase Hosting URLs
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-    "*" # Add wildcard temporarily to completely eliminate CORS as the cause
+    "https://breathometer6.web.app",
+    "https://breathometer6.firebaseapp.com"
 ]
+
+# Keep the environment as development until frontend domain is finalized and env=production
+# Do not fallback to localhost in production mode.
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+if ENVIRONMENT == "development":
+    ALLOWED_ORIGINS.extend([
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ])
 
 app.add_middleware(
     CORSMiddleware,
@@ -70,7 +90,7 @@ async def system_status():
 
 # --- Register All API Routers ---
 
-from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat, appointments, doctors
+from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat, appointments, doctors, feedback, email
 
 app.include_router(auth.router)
 app.include_router(environment.router)
@@ -85,3 +105,5 @@ app.include_router(alerts.router)
 app.include_router(chat.router)
 app.include_router(appointments.router)
 app.include_router(doctors.router)
+app.include_router(feedback.router)
+app.include_router(email.router)

@@ -1,0 +1,64 @@
+{
+  "ml_score": 0.4711,
+  "ai_score": 0.8,
+  "final_risk_score": 0.5756,
+  "risk_category": "Moderate",
+  "confidence_score": 0.5369,
+  "confidence_tier": "low",
+  "primary_prediction": null,
+  "recommended_specialty": "General Physician",
+  "agreement_score": 0.6711,
+  "top_risk_factors": [
+    "age",
+    "gender",
+    "smoking_status",
+    "occupation",
+    "bmi"
+  ],
+  "ai_explanation": "The predicted conditions are based on the patient's symptoms, environmental data, and smoking status. The high AQI and PM2.5 levels increase the risk of respiratory diseases, while the patient's current smoking status and severe symptoms contribute to the high risk of COPD and lung cancer.",
+  "disease_risks": [
+    {
+      "disease": "Chronic Obstructive Pulmonary Disease (COPD)",
+      "risk_percentage": 80,
+      "reason": "Current smoking status, severe cough and breathlessness symptoms"
+    },
+    {
+      "disease": "Asthma",
+      "risk_percentage": 60,
+      "reason": "High AQI and PM2.5 levels, severe cough and breathlessness symptoms"
+    },
+    {
+      "disease": "Bronchitis",
+      "risk_percentage": 50,
+      "reason": "Severe cough and breathlessness symptoms, potential exposure to poor air quality"
+    },
+    {
+      "disease": "Pneumonia",
+      "risk_percentage": 40,
+      "reason": "Severe cough and chest pain symptoms, potential exposure to poor air quality"
+    },
+    {
+      "disease": "Lung Cancer",
+      "risk_percentage": 30,
+      "reason": "Current smoking status, severe cough and chest pain symptoms"
+    },
+    {
+      "disease": "Acute Respiratory Distress Syndrome (ARDS)",
+      "risk_percentage": 20,
+      "reason": "Severe breathlessness and chest pain symptoms, potential exposure to poor air quality"
+    }
+  ],
+  "warnings": [
+    "The model has low confidence in this specific prediction. We strongly advise consulting a General Physician.",
+    "Confidence reliability may be limited due to small reference dataset size."
+  ],
+  "similar_cases_distribution": {
+    "Benign Lung Lesion": 2,
+    "Lung Cancer": 1,
+    "Asthma": 9,
+    "No Respiratory Disease": 2,
+    "Occupational Lung Disease": 6
+  },
+  "safety_flag": "",
+  "medical_disclaimer": "AI report for informational purposes. Consult a doctor for diagnosis."
+}

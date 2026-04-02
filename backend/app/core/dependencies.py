@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.database import supabase_auth_request
+# Move imports inside functions where needed to avoid circular dependencies
 from app.utils.logger import app_logger
 import types
 
@@ -16,20 +16,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Invalid authentication token")
 
     try:
+        from app.database import supabase_auth_request
         user_data = await supabase_auth_request("user", "GET", token=token)
         # return user as object so we can use user.id, user.email etc.
         return types.SimpleNamespace(**user_data, token=token)
     except Exception as e:
         app_logger.error(f"Authentication failure: {str(e)}")
         raise HTTPException(status_code=401, detail="Session expired or invalid")
-
-def get_authenticated_db(user = Depends(get_current_user)):
-    """
-    Dependency to get a Supabase client authenticated with the current user's JWT.
-    This ensures RLS policies are satisfied.
-    """
-    from app.core.database import Database
-    return Database.get_client(token=user.token)
 
 def require_role(allowed_roles: list[str]):
     """
@@ -51,7 +44,6 @@ def require_role(allowed_roles: list[str]):
             if res and len(res) > 0:
                 user_role = res[0].get("role", "").lower()
         except Exception as e:
-            from app.utils.logger import app_logger
             app_logger.warning(f"RBAC: Could not query users table for {current_user.id}: {e}")
         
         # 2. Fallback: extract role from JWT user_metadata
@@ -60,7 +52,6 @@ def require_role(allowed_roles: list[str]):
             user_role = metadata.get('role', 'patient').lower()
         
         if user_role not in [role.lower() for role in allowed_roles]:
-            from app.utils.logger import app_logger
             app_logger.warning(f"SECURITY: Unauthorized access attempt by {current_user.id} (Role: {user_role}) to resource requiring {allowed_roles}")
             raise HTTPException(status_code=403, detail="Access denied. Insufficient privileges.")
             
@@ -72,10 +63,7 @@ async def check_patient_consent(doctor_id: str, patient_id: str) -> bool:
     """
     Validates if a patient has granted consent for a specific doctor to view their PHI.
     In a real system, this queries a 'patient_consents' table. 
-    Here we implement a mock boolean check based on the requirement: 'Require patient consent for doctor access (mock boolean or DB schema)'
     """
-    # Mocking that patient consent is granted. In production, a DB check happens here.
-    from app.utils.logger import app_logger
     app_logger.info(f"SECURITY: Checking consent for doctor {doctor_id} to view patient {patient_id}... Granted.")
     return True
 
@@ -83,16 +71,14 @@ async def log_medical_access(doctor_id: str, patient_id: str, resource_type: str
     """
     Secure medical data logging to maintain an audit trail of PHI access
     """
-    from app.core.database import get_db
-    supabase = get_db()
+    from app.database import supabase_admin_request
     try:
-        supabase.table("audit_logs").insert({
+        await supabase_admin_request("audit_logs", "POST", {
             "actor_id": doctor_id,
             "target_id": patient_id,
             "action": "ACCESS_PHI",
             "resource": resource_type
-        }).execute()
+        })
         app_logger.info(f"AUDIT: Doctor {doctor_id} accessed {resource_type} for patient {patient_id}")
     except Exception as e:
-        # We log the error but don't fail the request if audit logging fails momentarily
         app_logger.error(f"AUDIT LOGGING FAILED: {e}")

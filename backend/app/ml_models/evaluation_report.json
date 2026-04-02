@@ -1,0 +1,218 @@
+{
+    "accuracy": 0.7946450871671912,
+    "precision": 0.7476753708934818,
+    "recall": 0.7946450871671912,
+    "f1_score": 0.7682140383768227,
+    "train_f1_score": 0.7874851616632729,
+    "average_confidence": 0.6850217396576985,
+    "classes": [
+        "Asthma",
+        "Benign Lung Lesion",
+        "COPD",
+        "Lung Cancer",
+        "Lung Cancer - Type II",
+        "Lung Cancer - Type III",
+        "No Lung Cancer Detected",
+        "No Respiratory Disease",
+        "Pneumonia",
+        "Tuberculosis"
+    ],
+    "classification_report": {
+        "Asthma": {
+            "precision": 0.7718468324490187,
+            "recall": 0.7884288885986679,
+            "f1-score": 0.780049746422457,
+            "support": 15314.0
+        },
+        "Benign Lung Lesion": {
+            "precision": 0.7992926613616269,
+            "recall": 0.7188866799204772,
+            "f1-score": 0.7569604354197195,
+            "support": 2515.0
+        },
+        "COPD": {
+            "precision": 0.8005267448422901,
+            "recall": 0.8637347767253045,
+            "f1-score": 0.8309304520454324,
+            "support": 14780.0
+        },
+        "Lung Cancer": {
+            "precision": 0.8089964308209112,
+            "recall": 0.938758108231568,
+            "f1-score": 0.8690602049590505,
+            "support": 32837.0
+        },
+        "Lung Cancer - Type II": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 2424.0
+        },
+        "Lung Cancer - Type III": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 3067.0
+        },
+        "No Lung Cancer Detected": {
+            "precision": 0.6866709594333548,
+            "recall": 0.7391183809259773,
+            "f1-score": 0.7119300353828694,
+            "support": 7214.0
+        },
+        "No Respiratory Disease": {
+            "precision": 0.9046087888531619,
+            "recall": 0.9248145650708024,
+            "f1-score": 0.9146000916934106,
+            "support": 11864.0
+        },
+        "Pneumonia": {
+            "precision": 0.6194801127466333,
+            "recall": 0.4102883219249118,
+            "f1-score": 0.4936361367606688,
+            "support": 4821.0
+        },
+        "Tuberculosis": {
+            "precision": 0.7490102929532858,
+            "recall": 0.7195284274576915,
+            "f1-score": 0.7339734264377848,
+            "support": 5259.0
+        },
+        "accuracy": 0.7946450871671912,
+        "macro avg": {
+            "precision": 0.6140432823460282,
+            "recall": 0.6103558148855401,
+            "f1-score": 0.6091140529121393,
+            "support": 100095.0
+        },
+        "weighted avg": {
+            "precision": 0.7476753708934818,
+            "recall": 0.7946450871671912,
+            "f1-score": 0.7682140383768227,
+            "support": 100095.0
+        }
+    },
+    "confusion_matrix": [
+        [
+            12074,
+            0,
+            1067,
+            21,
+            0,
+            0,
+            0,
+            846,
+            567,
+            739
+        ],
+        [
+            0,
+            1808,
+            0,
+            595,
+            0,
+            0,
+            112,
+            0,
+            0,
+            0
+        ],
+        [
+            745,
+            0,
+            12766,
+            31,
+            0,
+            0,
+            0,
+            137,
+            609,
+            492
+        ],
+        [
+            0,
+            309,
+            0,
+            30826,
+            0,
+            0,
+            1702,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            24,
+            0,
+            1926,
+            0,
+            0,
+            474,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            14,
+            0,
+            2908,
+            0,
+            0,
+            145,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            107,
+            0,
+            1775,
+            0,
+            0,
+            5332,
+            0,
+            0,
+            0
+        ],
+        [
+            735,
+            0,
+            79,
+            6,
+            0,
+            0,
+            0,
+            10972,
+            35,
+            37
+        ],
+        [
+            1465,
+            0,
+            1276,
+            12,
+            0,
+            0,
+            0,
+            90,
+            1978,
+            0
+        ],
+        [
+            624,
+            0,
+            759,
+            4,
+            0,
+            0,
+            0,
+            84,
+            4,
+            3784
+        ]
+    ],
+    "warnings": []
+}

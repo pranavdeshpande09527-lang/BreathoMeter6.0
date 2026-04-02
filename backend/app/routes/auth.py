@@ -51,6 +51,8 @@ async def signup(user: UserCreate, request: Request):
         "username": user.username,
         "specialty": getattr(user, "specialty", None),
         "experience": getattr(user, "experience", None),
+        "medical_license": getattr(user, "medical_license", None),
+        "date_of_birth": getattr(user, "date_of_birth", None),
         "availability": getattr(user, "availability", None)
     }
     

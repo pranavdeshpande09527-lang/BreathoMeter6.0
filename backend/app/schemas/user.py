@@ -32,7 +32,10 @@ class UserCreate(UserBase):
     activity_level: Optional[str] = None
     specialty: Optional[str] = None
     experience: Optional[str] = None
+    medical_license: Optional[str] = None
     availability: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 class UserLogin(BaseModel):
     username: str

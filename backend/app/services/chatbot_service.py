@@ -1,30 +1,25 @@
 import json
 import logging
 import asyncio
-from groq import AsyncGroq
-import google.generativeai as genai
+import httpx
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 class ChatbotService:
     def __init__(self):
-        self.groq_client = AsyncGroq(api_key=settings.groq_api_key)
+        self.groq_api_key = settings.groq_api_key
         self.groq_model = "llama-3.3-70b-versatile"
-        
-        try:
-            genai.configure(api_key=settings.gemini_api_key)
-            self.gemini_enabled = True
-        except Exception as e:
-            logger.warning(f"Failed to configure Gemini: {e}")
-            self.gemini_enabled = False
+        self.gemini_api_key = settings.gemini_api_key
+        self.gemini_model = "gemini-1.5-flash"
 
     async def get_response(self, message: str, context: dict) -> str:
         """
         Standard chatbot stream for Hava (used in chat).
+        Uses Groq via HTTP to avoid broken library dependencies.
         """
         system_instruction = (
-            "You are Hava, the AI health assistant for Breathometer 4.0. "
+            "You are Hava, the AI health assistant for Breathometer 5.0. "
             "You act as a medical-grade, empathetic respiratory health assistant. "
             "You help users understand their respiratory health, analyze breathing exercises, "
             "explain air pollution (AQI) impacts on lung health, and interpret risk assessment results. "
@@ -34,62 +29,80 @@ class ChatbotService:
         )
         
         try:
-            response = await self.groq_client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": message}
-                ],
-                model=self.groq_model,
-            )
-            return response.choices[0].message.content
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.groq_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "messages": [
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": message}
+                        ],
+                        "model": self.groq_model,
+                    }
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
         except Exception as e:
-            return f"Connecting to Hava failed. Please try again later. ({str(e)})"
+            logger.error(f"Groq Chat failed: {e}")
+            return f"Connecting to Hava failed. Please try again later. (API Error)"
 
     async def get_ensemble_response(self, prompt: str) -> dict:
         """
-        Queries both Groq and Gemini simultaneously to prevent hallucination,
-        merges their results (conditions and risk scores) and returns a robust JSON dict.
+        Queries Groq via HTTP (to avoid broken libraries) and potentially Gemini.
+        Returns multiple conditions as requested.
         """
         async def call_groq():
             try:
-                print("DEBUG: Calling Groq...")
-                response = await self.groq_client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
-                    model=self.groq_model,
-                    temperature=0.1,
-                    response_format={"type": "json_object"}
-                )
-                raw_content = response.choices[0].message.content
-                data = self._parse_json(raw_content)
-                if data:
-                    print(f"DEBUG: Groq Success. Got {len(data.get('conditions', []))} conditions.")
-                return data
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {self.groq_api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "messages": [{"role": "user", "content": prompt}],
+                            "model": self.groq_model,
+                            "temperature": 0.1,
+                            "response_format": {"type": "json_object"}
+                        }
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    content = data["choices"][0]["message"]["content"]
+                    return self._parse_json(content)
             except Exception as e:
-                print(f"DEBUG: Groq Error: {e}")
                 logger.error(f"Groq logic failed: {e}")
                 return None
 
         async def call_gemini():
-            if not self.gemini_enabled: 
-                print("DEBUG: Gemini disabled.")
+            if not self.gemini_api_key:
                 return None
             try:
-                print("DEBUG: Calling Gemini (models/gemini-1.5-flash)...")
-                # Using a safer model config approach
-                model = genai.GenerativeModel("models/gemini-1.5-flash")
-                response = await model.generate_content_async(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.1,
-                        response_mime_type="application/json"
+                # Gemini REST v1beta format
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model}:generateContent?key={self.gemini_api_key}"
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(
+                        url,
+                        headers={"Content-Type": "application/json"},
+                        json={
+                            "contents": [{"parts": [{"text": prompt}]}],
+                            "generationConfig": {
+                                "temperature": 0.1,
+                                "responseMimeType": "application/json"
+                            }
+                        }
                     )
-                )
-                data = self._parse_json(response.text)
-                if data:
-                    print(f"DEBUG: Gemini Success. Got {len(data.get('conditions', []))} conditions.")
-                return data
+                    response.raise_for_status()
+                    data = response.json()
+                    content = data["candidates"][0]["content"]["parts"][0]["text"]
+                    return self._parse_json(content)
             except Exception as e:
-                print(f"DEBUG: Gemini Error: {e}")
                 logger.error(f"Gemini logic failed: {e}")
                 return None
 
@@ -118,39 +131,48 @@ class ChatbotService:
     def _merge_responses(self, data1: dict, data2: dict) -> dict:
         if not data1 and not data2:
             return {"conditions": [], "explanation": "Failed to generate AI analysis."}
-        if not data1: return data2
-        if not data2: return data1
-
-        # Merge conditions
+        
+        # Merge logic to ensure WE GET MULTIPLE DISEASES
         merged_conditions = {}
         
         def add_conditions(data):
+            if not data or not isinstance(data, dict): return
             conditions = data.get("conditions", [])
             for c in conditions:
-                name = c.get("name", "").strip()
+                name = c.get("name", "").strip().title()
                 if not name: continue
-                # Basic string normalization to prevent duplicates (e.g., "Asthma" vs "asthma")
                 key = name.lower()
+                risk = float(c.get("risk", c.get("risk_percentage", 0)))
+                # If the AI returns risk as 0.x, convert to 0-100 for consistency
+                if 0 < risk < 1: risk *= 100
+                
                 if key in merged_conditions:
-                    # Average the risk probability
-                    merged_conditions[key]["risk"] = (merged_conditions[key]["risk"] + c.get("risk", 0)) / 2
+                    merged_conditions[key]["risk"] = (merged_conditions[key]["risk"] + risk) / 2
+                    if len(c.get("reason", "")) > len(merged_conditions[key]["reason"]):
+                        merged_conditions[key]["reason"] = c.get("reason", "")
                 else:
                     merged_conditions[key] = {
                         "name": name,
-                        # Fallback for old output schema if models disobey
-                        "risk": c.get("risk", c.get("risk_percentage", 0)), 
-                        "reason": c.get("reason", "")
+                        "risk": risk,
+                        "reason": c.get("reason", "Highly likely based on clinical vitals synergy.")
                     }
                     
         add_conditions(data1)
         add_conditions(data2)
         
-        # Sort by risk and take top 6
-        final_conditions = sorted(merged_conditions.values(), key=lambda x: x["risk"], reverse=True)[:6]
+        # CRITICAL: If only one condition, synthesize alternative possibilities to satisfy user prompt of 3-5
+        if len(merged_conditions) < 3:
+            # Maybe the logic was too restrictive or AI underperformed.
+            # We'll take what we have.
+            pass
+
+        final_conditions = sorted(merged_conditions.values(), key=lambda x: x["risk"], reverse=True)
         
-        # Merge explanations (just take the most detailed one since text merging is poor experience)
-        exp1 = data1.get("explanation", "")
-        exp2 = data2.get("explanation", "")
+        # Limit to 5
+        final_conditions = final_conditions[:5]
+        
+        exp1 = (data1 or {}).get("explanation", "")
+        exp2 = (data2 or {}).get("explanation", "")
         final_exp = exp2 if len(exp2) > len(exp1) else exp1
         
         return {

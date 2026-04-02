@@ -1,0 +1,1 @@
+{"environmental_data": {"AQI": 150, "PM10": 40, "PM2_5": 80, "NO2": 20, "SO2": 10, "O3": 50}, "optional_patient_data": {"age": 55, "gender": "Male", "lifestyle": {"smoking_habits": "Daily"}, "symptoms": ["Wheezing", "Chest Pain", "Fatigue", "Shortness of Breath", "Coughing"], "vitals": {"spo2": 92, "breath_hold_time": 20}}}

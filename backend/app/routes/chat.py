@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from app.core.database import get_db
+from app.database import supabase_request
 from app.core.dependencies import get_current_user
 from app.core.rate_limit import limiter
 import logging
@@ -15,14 +15,13 @@ class ChatRequest(BaseModel):
 @router.post("")
 @limiter.limit("20/minute")
 async def store_chat(request: Request, data: ChatRequest, user = Depends(get_current_user)):
-    supabase = get_db()
     try:
-        res = supabase.table("chat_history").insert({
+        res = await supabase_request("chat_history", "POST", data={
             "user_id": user.id,
             "message": data.message,
             "response": data.response
-        }).execute()
-        return {"message": "Chat stored successfully", "data": res.data}
+        }, token=user.token)
+        return {"message": "Chat stored successfully", "data": res}
     except Exception as e:
         logger.error(f"Error storing chat: {e}")
         raise HTTPException(status_code=500, detail="Failed to store chat history")

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
-from app.core.database import get_db
+from app.database import supabase_request
 from app.core.dependencies import get_current_user
 import httpx
 import logging
@@ -21,17 +21,33 @@ class EnvironmentRequest(BaseModel):
 
 
 @router.post("")
-async def store_environment_data(data: EnvironmentRequest, user = Depends(get_current_user)):
-    supabase = get_db()
+async def store_environment_data(data: EnvironmentRequest, background_tasks: BackgroundTasks, user = Depends(get_current_user)):
     try:
-        res = supabase.table("environment_data").insert({
+        res = await supabase_request("environment_data", "POST", data={
             "user_id": user.id,
             "pm25": data.pm25,
             "pm10": data.pm10,
             "aqi": data.aqi,
             "location": data.location
-        }).execute()
-        return {"message": "Environment data saved", "data": res.data}
+        }, token=user.token)
+
+        # ── Auto danger alert ──────────────────────────────────────────────
+        if data.aqi > 150:
+            try:
+                from app.routes.email import trigger_danger_alert
+                user_email = getattr(user, "email", None)
+                user_name = getattr(user, "full_name", None) or getattr(user, "name", None) or "Valued User"
+                if user_email:
+                    aqi_data = {
+                        "aqi": int(data.aqi),
+                        "location_name": data.location or "Your Location",
+                        "pollution_category": _classify_aqi(int(data.aqi)),
+                    }
+                    background_tasks.add_task(trigger_danger_alert, user_email, user_name, aqi_data)
+            except Exception as alert_err:
+                logger.warning(f"Could not schedule danger alert: {alert_err}")
+
+        return {"message": "Environment data saved", "data": res}
     except Exception as e:
         logger.error(f"Error saving environment data: {e}")
         raise HTTPException(status_code=500, detail="Failed to store environment data")
@@ -97,3 +113,14 @@ async def get_weather(lat: float = 0.0, lon: float = 0.0, location: str = ""):
     except Exception as e:
         logger.error(f"Error fetching weather: {e}")
         raise HTTPException(status_code=503, detail="Weather service unavailable")
+
+
+# ── Helper ────────────────────────────────────────────────────────────────────
+
+def _classify_aqi(aqi: int) -> str:
+    if aqi <= 50:   return "Good"
+    if aqi <= 100:  return "Moderate"
+    if aqi <= 150:  return "Unhealthy for Sensitive Groups"
+    if aqi <= 200:  return "Unhealthy"
+    if aqi <= 300:  return "Very Unhealthy"
+    return "Hazardous"

@@ -1,0 +1,46 @@
+[
+    {
+        "Feature": "spo2_level",
+        "Importance": 0.2297535588179095
+    },
+    {
+        "Feature": "age",
+        "Importance": 0.203124304965906
+    },
+    {
+        "Feature": "bmi",
+        "Importance": 0.1652893008237513
+    },
+    {
+        "Feature": "aqi_exposure",
+        "Importance": 0.09543199768718665
+    },
+    {
+        "Feature": "severity_index",
+        "Importance": 0.07636747597853692
+    },
+    {
+        "Feature": "is_smoker",
+        "Importance": 0.07395386167586476
+    },
+    {
+        "Feature": "shortness_of_breath",
+        "Importance": 0.07380637243550578
+    },
+    {
+        "Feature": "cough_severity",
+        "Importance": 0.045339886464261146
+    },
+    {
+        "Feature": "severe_cough",
+        "Importance": 0.028188081873993992
+    },
+    {
+        "Feature": "is_male",
+        "Importance": 0.008745159277083962
+    },
+    {
+        "Feature": "symptom_duration",
+        "Importance": 0.0
+    }
+]

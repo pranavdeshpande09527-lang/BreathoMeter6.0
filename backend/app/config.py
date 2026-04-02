@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     supabase_service_role_key: Optional[str] = None
     google_maps_api_key: Optional[str] = None
+    brevo_api_key: Optional[str] = None
     
     # SMTP settings for production
     smtp_host: Optional[str] = None
