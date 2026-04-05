@@ -11,7 +11,7 @@ from app.utils.rate_limit import check_rate_limit
 from app.utils.email import send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_role
 
 
 def is_strong_password(password: str) -> bool:
@@ -71,7 +71,7 @@ async def signup(user: UserCreate, request: Request):
             })
         except Exception as e:
             error_msg = str(e).lower()
-            if "already registered" in error_msg:
+            if "already registered" in error_msg or "already been registered" in error_msg or "email_exists" in error_msg:
                 raise HTTPException(status_code=400, detail="Username already registered.")
             if "rate limit" in error_msg:
                 raise HTTPException(status_code=429, detail="Signup rate limit exceeded. Please try again later.")
@@ -204,6 +204,54 @@ async def get_profile(user=Depends(get_current_user)):
     }
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, request: Request):
+    """
+    Triggers a password-reset email via Supabase Admin API.
+    Always returns 200 to prevent email enumeration attacks.
+    """
+    await check_rate_limit(request, limit=3, window_seconds=60)
+    try:
+        email = req.email.strip().lower()
+        # Use the Supabase Admin auth endpoint to generate a recovery link
+        await supabase_admin_auth_request(
+            "recover",
+            "POST",
+            {"email": email}
+        )
+        app_logger.info(f"Password reset requested for: {email}")
+    except Exception as e:
+        # Log but never reveal whether the email exists (security: enumeration prevention)
+        app_logger.warning(f"Forgot-password error (suppressed): {e}")
+    return {"message": "If that email is registered, a password reset link has been sent."}
+
+
+@router.post("/refresh")
+async def refresh_token(req: RefreshTokenRequest):
+    """
+    Silently exchanges a Supabase refresh_token for a new access_token.
+    Called by the frontend proactively ~5 minutes before expiry.
+    """
+    try:
+        response = await supabase_auth_request("token?grant_type=refresh_token", "POST", {
+            "refresh_token": req.refresh_token
+        })
+        return {
+            "access_token": response.get("access_token"),
+            "refresh_token": response.get("refresh_token"),
+            "expires_in": response.get("expires_in"),
+            "user": response.get("user")
+        }
+    except Exception as e:
+        app_logger.warning(f"Token refresh failed: {e}")
+        raise HTTPException(status_code=401, detail="Token refresh failed. Please log in again.")
+
 class ProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -328,7 +376,7 @@ async def list_doctors(user=Depends(get_current_user)):
 
 
 @router.get("/patients")
-async def list_patients(user=Depends(get_current_user)):
+async def list_patients(user=Depends(require_role(["doctor"]))):
     """
     Returns all users with role='patient'.
     Requires the caller to be a doctor (enforced by RLS policies).
@@ -368,7 +416,7 @@ async def list_patients(user=Depends(get_current_user)):
 
 
 @router.get("/patients/{patient_id}")
-async def get_patient_detail(patient_id: str, user=Depends(get_current_user)):
+async def get_patient_detail(patient_id: str, user=Depends(require_role(["doctor"]))):
     """
     Returns detailed patient info including latest risk prediction and breath tests.
     Requires the caller to be a doctor (enforced by RLS policies).

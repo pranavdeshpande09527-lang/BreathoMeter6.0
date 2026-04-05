@@ -5,7 +5,7 @@ import json
 import os
 import uuid
 from datetime import datetime
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_role
 from app.database import supabase_request, supabase_admin_request, supabase_admin_auth_request
 from app.utils.logger import app_logger
 
@@ -20,18 +20,10 @@ class AppointmentMessage(BaseModel):
     content: str
 
 def is_doctor(user):
-    """Robust role detection matching frontend heuristics."""
+    """Role detection: trusts user_metadata.role set by backend at signup."""
     metadata = getattr(user, 'user_metadata', {}) or {}
     role = str(metadata.get('role', '')).lower()
-    full_name = str(metadata.get('full_name', '')).lower()
-    email = str(getattr(user, 'email', '')).lower()
-    
-    if role == 'doctor':
-        return True
-    # Heuristic for cases where Supabase metadata isn't set yet but name is Dr.
-    if full_name.startswith('dr. ') or email.startswith('dr.'):
-        return True
-    return False
+    return role == 'doctor'
 
 @router.post("/message/{appointment_id}")
 async def post_message(appointment_id: str, msg: AppointmentMessage, user = Depends(get_current_user)):
@@ -112,11 +104,7 @@ async def request_appointment(req: AppointmentRequest, user = Depends(get_curren
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/doctor")
-async def get_doctor_appointments(user = Depends(get_current_user)):
-    if not is_doctor(user):
-        app_logger.warning(f"Unauthorized doctor check by {user.id}")
-        raise HTTPException(status_code=403, detail="Not authorized as doctor")
-        
+async def get_doctor_appointments(user = Depends(require_role(["doctor"]))):
     try:
         res = await supabase_request("appointments", "GET", query_params={
             "doctor_id": "eq." + user.id,
@@ -151,10 +139,7 @@ async def get_patient_appointments(user = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/accept/{appointment_id}")
-async def accept_appointment(appointment_id: str, user = Depends(get_current_user)):
-    if not is_doctor(user):
-        raise HTTPException(status_code=403, detail="Not authorized")
-        
+async def accept_appointment(appointment_id: str, user = Depends(require_role(["doctor"]))):
     try:
         # Verify ownership and update status
         res = await supabase_request("appointments", "PATCH", 
@@ -166,3 +151,4 @@ async def accept_appointment(appointment_id: str, user = Depends(get_current_use
     except Exception as e:
         app_logger.error(f"Failed to accept appointment {appointment_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
