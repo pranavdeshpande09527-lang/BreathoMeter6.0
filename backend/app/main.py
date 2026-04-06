@@ -1,10 +1,13 @@
 import os
+import logging
+from contextlib import asynccontextmanager
+
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.errors import setup_error_handlers
 from app.core.rate_limit import setup_rate_limiting
-import logging
+from app.database import init_db_clients, close_db_clients
 
 sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
@@ -14,10 +17,19 @@ sentry_sdk.init(
 
 logger = logging.getLogger("breathometer")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage startup/shutdown of shared resources (DB connection pools)."""
+    await init_db_clients()   # Open persistent HTTP pools on startup
+    yield
+    await close_db_clients()  # Gracefully drain pools on shutdown
+
+
 app = FastAPI(
     title="Breathometer 4.0 Backend",
     description="Real-time backend API for Breathometer 4.0 health assessment platform.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 setup_error_handlers(app)
