@@ -59,9 +59,8 @@ async def signup(user: UserCreate, request: Request):
     pseudo_email = f"{user.username}@breathometer.local"
 
     try:
-        # We bypass SMTP entirely by using the Admin API and enforcing confirmation.
-        app_logger.info(f"Creating confirmed user for {user.username} via Admin API")
-        
+        # Step 1: Create the auth user via Admin API (bypasses email confirmation)
+        app_logger.info(f"[SIGNUP] Step 1 — Creating auth user for: {user.username}")
         try:
             create_resp = await supabase_admin_auth_request("users", "POST", {
                 "email": pseudo_email,
@@ -69,37 +68,52 @@ async def signup(user: UserCreate, request: Request):
                 "email_confirm": True,
                 "user_metadata": user_metadata
             })
+            app_logger.info(f"[SIGNUP] Step 1 OK — auth user created, id={create_resp.get('id')}")
         except Exception as e:
             error_msg = str(e).lower()
+            app_logger.error(f"[SIGNUP] Step 1 FAILED — admin auth create error: {e}")
             if "already registered" in error_msg or "already been registered" in error_msg or "email_exists" in error_msg:
                 raise HTTPException(status_code=400, detail="Username already registered.")
             if "rate limit" in error_msg:
                 raise HTTPException(status_code=429, detail="Signup rate limit exceeded. Please try again later.")
-            raise e
-        
-        # Automatically log the user in to return a session
-        login_resp = await supabase_auth_request("token?grant_type=password", "POST", {
-            "email": pseudo_email,
-            "password": user.password
-        })
-        
+            raise HTTPException(status_code=500, detail=f"Account creation failed: {str(e)}")
+
+        # Step 2: Immediately log in to get a session token
+        app_logger.info(f"[SIGNUP] Step 2 — Logging in for: {user.username}")
+        try:
+            login_resp = await supabase_auth_request("token?grant_type=password", "POST", {
+                "email": pseudo_email,
+                "password": user.password
+            })
+            app_logger.info(f"[SIGNUP] Step 2 OK — session obtained")
+        except Exception as e:
+            app_logger.error(f"[SIGNUP] Step 2 FAILED — auto-login failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Login after signup failed: {str(e)}")
+
+        # Step 3: Insert into public tables (non-fatal — signup still succeeds if these fail)
         user_obj = login_resp.get("user")
         if user_obj:
+            first_name, *last_name_parts = user.full_name.split(" ") if user.full_name else ("", "")
+            last_name = " ".join(last_name_parts) if last_name_parts else ""
+
+            # 3a. Insert into public.users
+            app_logger.info(f"[SIGNUP] Step 3a — Inserting into public.users")
             try:
-                # 1. Create entry in users table
-                first_name, *last_name_parts = user.full_name.split(" ") if user.full_name else ("", "")
-                last_name = " ".join(last_name_parts) if last_name_parts else ""
-                
                 await supabase_admin_request("users", "POST", {
-                    "id": user_obj["id"], 
-                    "email": pseudo_email, 
+                    "id": user_obj["id"],
+                    "email": pseudo_email,
                     "role": role,
                     "first_name": first_name,
                     "last_name": last_name
                 })
-                
-                # 2. Create entry in health_profiles table if it's a patient
-                if role == "patient":
+                app_logger.info(f"[SIGNUP] Step 3a OK")
+            except Exception as db_e:
+                app_logger.error(f"[SIGNUP] Step 3a FAILED — public.users insert: {db_e}")
+
+            # 3b. Insert into health_profiles (patients only)
+            if role == "patient":
+                app_logger.info(f"[SIGNUP] Step 3b — Inserting into health_profiles")
+                try:
                     profile_data = {
                         "user_id": user_obj["id"],
                         "first_name": first_name,
@@ -109,19 +123,19 @@ async def signup(user: UserCreate, request: Request):
                         "height": user.height,
                         "weight": user.weight,
                         "smoking_status": user.smoking_status,
-                        "activity_level": user.activity_level
+                        "activity_level": user.activity_level,
                     }
-                    # Remove None values
                     profile_data = {k: v for k, v in profile_data.items() if v is not None}
                     await supabase_admin_request("health_profiles", "POST", profile_data)
-                    
-            except Exception as db_e:
-                app_logger.warning(f"Failed to create public/profile record for {user.username}: {db_e}")
+                    app_logger.info(f"[SIGNUP] Step 3b OK")
+                except Exception as db_e:
+                    app_logger.error(f"[SIGNUP] Step 3b FAILED — health_profiles insert: {db_e}")
 
-        # Construct final user object with profile
+        # Step 4: Return the session
         final_user = login_resp.get("user", {})
         final_user["username"] = user.username
-        
+        app_logger.info(f"[SIGNUP] Complete — user {user.username} signed up successfully.")
+
         return {
             "message": "Signup successful! Welcome to Breathometer.",
             "email_confirmation_required": False,
@@ -137,8 +151,9 @@ async def signup(user: UserCreate, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        app_logger.error(f"Unexpected signup error for {user.username}: {str(e)}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred during signup.")
+        import traceback
+        app_logger.error(f"[SIGNUP] Unhandled error for {user.username}: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 @router.post("/login")
 async def login(user: UserLogin):
