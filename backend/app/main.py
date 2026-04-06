@@ -100,6 +100,19 @@ async def system_status():
     
     return status
 
+@app.get("/debug/config", tags=["System"])
+def debug_config():
+    """Shows which environment variables are configured (not their values). For diagnostics only."""
+    from app.config import settings
+    return {
+        "supabase_url_set": bool(settings.supabase_url),
+        "supabase_anon_key_set": bool(settings.supabase_key),
+        "supabase_service_role_key_set": bool(settings.supabase_service_role_key),
+        "environment": settings.environment,
+        "gemini_key_set": bool(settings.gemini_api_key),
+        "groq_key_set": bool(settings.groq_api_key),
+    }
+
 # --- Register All API Routers ---
 
 from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat, appointments, doctors, feedback, email
