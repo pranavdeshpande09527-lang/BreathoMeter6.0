@@ -15,10 +15,9 @@ import requests
 logger = logging.getLogger("breathometer")
 logger.info("Initializing Hybrid Doctor Recommendation Engine...")
 
-# Paths and Keys
-LOCAL_DATASET_PATH = r"c:\Users\prana\.antigravity\breathomeater4.0\BreathoMeter5.0\maharashtra_doctors_master.json"
-GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "AIzaSyCb_V3gEE1FLLD-gnd0oTA3ZpSgKqTYOkw")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "AIzaSyCb_V3gEE1FLLD-gnd0oTA3ZpSgKqTYOkw")
+# Path is relative to this file — works both locally and on Render
+LOCAL_DATASET_PATH = os.path.join(os.path.dirname(__file__), "maharashtra_doctors_master.json")
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 
 DEFAULT_CITY = "Nagpur"
 
@@ -43,19 +42,23 @@ DISEASE_SPECIALTY_MAP = {
 _LOADED_DOCTORS = None
 
 def _get_local_doctors() -> List[Dict]:
-    """Load the master dataset into cache."""
+    """Load the master dataset into cache. Tries multiple encodings for robustness."""
     global _LOADED_DOCTORS
     if _LOADED_DOCTORS is None:
-        try:
-            if os.path.exists(LOCAL_DATASET_PATH):
-                with open(LOCAL_DATASET_PATH, 'r', encoding='utf-8') as f:
+        if not os.path.exists(LOCAL_DATASET_PATH):
+            logger.error(f"Master dataset NOT FOUND at: {LOCAL_DATASET_PATH}")
+            _LOADED_DOCTORS = []
+            return _LOADED_DOCTORS
+        for enc in ("utf-8-sig", "utf-8", "latin-1"):
+            try:
+                with open(LOCAL_DATASET_PATH, 'r', encoding=enc) as f:
                     _LOADED_DOCTORS = json.load(f)
-                logger.info(f"Loaded local specialist dataset: {len(_LOADED_DOCTORS)} records.")
-            else:
-                logger.warning(f"Master dataset file not found at {LOCAL_DATASET_PATH}")
-                _LOADED_DOCTORS = []
-        except Exception as e:
-            logger.error(f"Failed to load master dataset: {e}")
+                logger.info(f"Loaded {len(_LOADED_DOCTORS)} doctor records (encoding={enc}).")
+                break
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+        else:
+            logger.error("Failed to decode maharashtra_doctors_master.json with any encoding.")
             _LOADED_DOCTORS = []
     return _LOADED_DOCTORS
 
@@ -191,31 +194,50 @@ def get_live_fallback(disease: str, city: str) -> List[Dict]:
 
 # --- Main Entry Point ---
 
+def _is_maharashtra_city(city: str) -> bool:
+    """Check if the given city exists in the local Maharashtra dataset."""
+    known = {d.get("City", "").lower() for d in _get_local_doctors() if d.get("City")}
+    return city.lower() in known
+
+
 def get_doctors(disease: str, city: Optional[str] = None, min_results: int = 3) -> Dict:
     """
     Main Recommendation Logic:
-    1. Local Search (User's City)
-    2. Local Search (Expanded: All Maharashtra)
-    3. Emergency Live API Fallback
+    1. Validate city against Maharashtra dataset — if not found, skip to state-wide search.
+    2. Local City Search
+    3. Expand to all Maharashtra
+    4. Emergency Live API Fallback
     """
-    city_used = city.strip() if city else DEFAULT_CITY
-    
-    # Pass 1: Local City
-    results = _find_local_matches(disease, city_used, expanded=False)
-    expanded_state = False
-    message = f"Found {len(results)} matches in {city_used}."
+    raw_city = city.strip() if city else None
     source = ["Curated Maharashtra Dataset"]
-    
-    # Pass 2: Expand to state if few results
-    if len(results) < min_results:
-        logger.info(f"Expanding search for {disease} beyond {city_used}...")
+
+    # --- City Validation ---
+    # If IP-detected city is not a Maharashtra city (e.g. 'Boardman', 'Columbus'),
+    # skip straight to all-Maharashtra search to avoid empty results.
+    if raw_city and not _is_maharashtra_city(raw_city):
+        logger.info(f"City '{raw_city}' not found in Maharashtra dataset — expanding to all Maharashtra.")
+        city_used = DEFAULT_CITY   # Display name only
         results = _find_local_matches(disease, city_used, expanded=True)
         expanded_state = True
-        message = f"Top respiratory specialists across Maharashtra (No local matches for {disease} in {city_used})."
-        
-    # Pass 3: Emergency Live Fallback (only if totally empty)
+        message = f"Showing top specialists across Maharashtra ('{raw_city}' is outside our coverage area)."
+    else:
+        city_used = raw_city or DEFAULT_CITY
+
+        # Pass 1: Local City
+        results = _find_local_matches(disease, city_used, expanded=False)
+        expanded_state = False
+        message = f"Found {len(results)} specialist(s) in {city_used}."
+
+        # Pass 2: Expand to state if too few results
+        if len(results) < min_results:
+            logger.info(f"Expanding search for '{disease}' beyond {city_used}...")
+            results = _find_local_matches(disease, city_used, expanded=True)
+            expanded_state = True
+            message = f"Top specialists across Maharashtra (limited results in {city_used})."
+
+    # Pass 3: Emergency Live Fallback (only if dataset totally empty)
     if not results:
-        logger.info("Local dataset yields no matches. Using emergency Live API...")
+        logger.info("Local dataset yields no matches. Attempting emergency live fallback...")
         results = get_live_fallback(disease, city_used)
         source = ["Google Maps Live"]
         message = f"Live search results for {disease} in {city_used}."
