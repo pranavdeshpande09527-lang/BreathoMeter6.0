@@ -162,8 +162,6 @@ def _find_local_matches(disease: str, city: str, expanded: bool = False) -> List
 
 # --- Legacy/Emergency Live Fallback (optional) ---
 
-from groq import Groq
-
 def call_google_places(query: str) -> List[Dict]:
     url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?query={requests.utils.quote(query)}&key={GOOGLE_MAPS_API_KEY}"
     try:

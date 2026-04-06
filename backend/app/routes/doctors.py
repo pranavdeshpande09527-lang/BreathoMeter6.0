@@ -1,60 +1,48 @@
 """
 Doctors Router — Dataset-Driven Recommendations
 ================================================
-All recommendations come from the local Maharashtra doctors XLSX dataset.
-No external API calls (Google Maps, Groq, etc.) are required or made.
+All recommendations come from the local Maharashtra doctors dataset (441+ records).
+No external API calls, no IP geolocation — server-side IP detection was returning
+the Render server's US location, not the user's location. City is now entirely
+user-supplied or defaults to all-Maharashtra results.
 """
 
+import asyncio
 from fastapi import APIRouter, Query
-from typing import Optional, List
+from typing import Optional
+from functools import partial
 from app.services.doctor_dataset import get_doctors, get_available_cities, get_specialty_for_disease
 from app.utils.logger import app_logger
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
 
-def _detect_city_from_ip() -> Optional[str]:
-    """
-    Attempt to detect user's city via a free IP geolocation service.
-    Returns None if detection fails (caller should fall back to default).
-    Only used as a best-effort hint — not critical to functionality.
-    """
-    try:
-        import requests
-        resp = requests.get("http://ip-api.com/json/?fields=city,status", timeout=2)
-        data = resp.json()
-        if data.get("status") == "success" and data.get("city"):
-            return data["city"]
-    except Exception:
-        pass
-    return None
+def _run_get_doctors(disease: str, city: Optional[str]) -> dict:
+    """Synchronous wrapper — runs in a thread pool to avoid blocking the event loop."""
+    return get_doctors(disease=disease, city=city)
 
 
 @router.get("/recommend")
 async def recommend_doctors(
     disease: str = Query(..., description="The predicted disease name"),
-    city: Optional[str] = Query(None, description="Optional city override"),
+    city: Optional[str] = Query(None, description="Optional city override (Maharashtra city name)"),
 ):
     """
     Returns scored, ranked doctor recommendations from the Maharashtra dataset.
-    
+
     - Disease is mapped to the best-matching medical specialty.
-    - Doctors are filtered by city (auto-detected if not provided).
+    - If city is provided and found in the dataset, filters by city first.
+    - If city is not a known Maharashtra city (or not provided), returns all-Maharashtra results.
     - Scored by: 60% rating + 40% experience (both normalized).
-    - If < 3 local results, expands to all Maharashtra.
     """
-    # Try city resolution: provided → IP detection → fallback inside service
-    resolved_city = city
-    if not resolved_city:
-        resolved_city = _detect_city_from_ip()
-    
-    result = get_doctors(disease=disease, city=resolved_city)
-    
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, partial(_run_get_doctors, disease, city or None))
+
     doctors = result["doctors"]
-    
+
     # Annotate top performers
     if doctors:
-        max_exp = max(d["experience"] for d in doctors) if doctors else 0
+        max_exp = max((d["experience"] for d in doctors), default=0)
         for d in doctors:
             tags = []
             if d.get("experience", 0) == max_exp and max_exp > 0:
@@ -65,7 +53,7 @@ async def recommend_doctors(
         f"Doctor recommendation: disease={disease}, city_used={result['city_used']}, "
         f"expanded={result['expanded']}, results={len(doctors)}"
     )
-    
+
     return {
         "disease": disease,
         "specialty": result["specialty"],
@@ -77,22 +65,11 @@ async def recommend_doctors(
     }
 
 
-@router.get("/debug")
-def debug_dataset(reload: bool = Query(False)):
-    return {
-        "loaded": True,
-        "error": None,
-        "dataset_path": "Live API Pipeline",
-        "all_doctors_count": "Dynamic",
-        "available_cities": ["Live API Search"],
-        "index_keys": [],
-    }
-
-
 @router.get("/cities")
 async def list_available_cities():
     """Returns the list of cities present in the Maharashtra doctor dataset."""
-    cities = get_available_cities()
+    loop = asyncio.get_event_loop()
+    cities = await loop.run_in_executor(None, get_available_cities)
     return {"cities": cities}
 
 
@@ -103,9 +80,18 @@ async def get_specialty(disease: str = Query(...)):
     return {"disease": disease, "specialties": specs}
 
 
+@router.get("/debug")
+def debug_dataset():
+    return {
+        "loaded": True,
+        "error": None,
+        "dataset_path": "backend/app/services/maharashtra_doctors_master.json",
+        "all_doctors_count": "441+",
+    }
+
+
 # ──────────────────────────────────────────────
 # Backward-compatible legacy endpoint
-# (was using Google Maps + Groq — now routes to dataset)
 # ──────────────────────────────────────────────
 @router.get("/find")
 async def find_specialized_doctors(
@@ -114,19 +100,15 @@ async def find_specialized_doctors(
 ):
     """
     Legacy endpoint kept for backward compatibility.
-    Now powered by the local Maharashtra dataset instead of external APIs.
+    Powered by the local Maharashtra dataset.
     """
-    resolved_city = city
-    if not resolved_city:
-        resolved_city = _detect_city_from_ip()
-
-    result = get_doctors(disease=disease, city=resolved_city)
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, partial(_run_get_doctors, disease, city or None))
     doctors = result["doctors"]
 
     # Map to legacy response shape expected by old frontend
-    mapped = []
-    for d in doctors:
-        mapped.append({
+    mapped = [
+        {
             "full_name": d["doctor_name"],
             "specialty": d["specialty"],
             "address": d["address"],
@@ -134,12 +116,14 @@ async def find_specialized_doctors(
             "contact_number": d["phone"],
             "rating": d["rating"],
             "experience": d["experience"],
-            "latitude": d.get("latitude"),
-            "longitude": d.get("longitude"),
+            "latitude": d.get("geo_coordinates", {}).get("lat"),
+            "longitude": d.get("geo_coordinates", {}).get("lng"),
             "score": d.get("score"),
             "doctor_type": "dataset",
             "action": "view_contact",
-        })
+        }
+        for d in doctors
+    ]
 
     return {
         "specialty": result["specialty"],
