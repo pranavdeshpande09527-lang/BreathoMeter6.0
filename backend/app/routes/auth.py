@@ -59,53 +59,87 @@ async def signup(user: UserCreate, request: Request):
     pseudo_email = f"{user.username}@breathometer.local"
 
     try:
-        # Step 1: Create the auth user via Admin API (bypasses email confirmation)
+        # ── Step 1: Create user via the PUBLIC Supabase signup endpoint ───────
+        # No SUPABASE_SERVICE_ROLE_KEY needed here.
         app_logger.info(f"[SIGNUP] Step 1 — Creating auth user for: {user.username}")
         try:
-            create_resp = await supabase_admin_auth_request("users", "POST", {
+            create_resp = await supabase_auth_request("signup", "POST", {
                 "email": pseudo_email,
                 "password": user.password,
-                "email_confirm": True,
-                "user_metadata": user_metadata
+                "data": user_metadata
             })
-            app_logger.info(f"[SIGNUP] Step 1 OK — auth user created, id={create_resp.get('id')}")
+            created_user_id = create_resp.get("id")
+            app_logger.info(f"[SIGNUP] Step 1 OK — auth user created, id={created_user_id}")
         except Exception as e:
             error_msg = str(e).lower()
-            app_logger.error(f"[SIGNUP] Step 1 FAILED — admin auth create error: {e}")
-            if "already registered" in error_msg or "already been registered" in error_msg or "email_exists" in error_msg:
+            app_logger.error(f"[SIGNUP] Step 1 FAILED — signup error: {e}")
+            if "already registered" in error_msg or "email_exists" in error_msg or "user already registered" in error_msg:
                 raise HTTPException(status_code=400, detail="Username already registered.")
             if "rate limit" in error_msg:
                 raise HTTPException(status_code=429, detail="Signup rate limit exceeded. Please try again later.")
             raise HTTPException(status_code=500, detail=f"Account creation failed: {str(e)}")
 
-        # Step 2: Immediately log in to get a session token
+        # ── Step 2: Attempt to log in immediately ─────────────────────────────
+        # Works when Supabase "Confirm email" is DISABLED (preferred for username-based apps).
+        # If it fails due to email confirmation, Step 2b uses admin API as fallback.
         app_logger.info(f"[SIGNUP] Step 2 — Logging in for: {user.username}")
+        login_resp = None
         try:
             login_resp = await supabase_auth_request("token?grant_type=password", "POST", {
                 "email": pseudo_email,
                 "password": user.password
             })
-            app_logger.info(f"[SIGNUP] Step 2 OK — session obtained")
-        except Exception as e:
-            app_logger.error(f"[SIGNUP] Step 2 FAILED — auto-login failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Login after signup failed: {str(e)}")
+            app_logger.info(f"[SIGNUP] Step 2 OK — session obtained directly")
+        except Exception as login_err:
+            login_err_msg = str(login_err).lower()
+            app_logger.warning(f"[SIGNUP] Step 2 — direct login failed: {login_err}")
 
-        # Step 3: Insert into public tables (non-fatal — signup still succeeds if these fail)
+            # ── Step 2b: Admin-confirm then retry login (fallback if email confirm is ON) ──
+            if "email not confirmed" in login_err_msg or "not confirmed" in login_err_msg:
+                if settings.supabase_service_role_key and created_user_id:
+                    app_logger.info(f"[SIGNUP] Step 2b — confirming user via admin API")
+                    try:
+                        await supabase_admin_auth_request(f"users/{created_user_id}", "PUT", {
+                            "email_confirm": True
+                        })
+                        login_resp = await supabase_auth_request("token?grant_type=password", "POST", {
+                            "email": pseudo_email,
+                            "password": user.password
+                        })
+                        app_logger.info(f"[SIGNUP] Step 2b OK — confirmed and logged in via admin")
+                    except Exception as admin_e:
+                        app_logger.error(f"[SIGNUP] Step 2b FAILED — admin confirm error: {admin_e}")
+                        raise HTTPException(
+                            status_code=500,
+                            detail="Account created but login failed. Please disable 'Confirm email' in Supabase Auth settings."
+                        )
+                else:
+                    app_logger.error("[SIGNUP] Step 2b — no service key available to confirm email")
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Account created but login failed. Email confirmation is enabled in Supabase — please disable it in the Supabase Auth dashboard."
+                    )
+            else:
+                raise HTTPException(status_code=500, detail=f"Login after signup failed: {str(login_err)}")
+
+        # ── Step 3: Insert into public tables using the user's own JWT ────────
         user_obj = login_resp.get("user")
-        if user_obj:
+        user_token = login_resp.get("access_token")
+        if user_obj and user_token:
+            from app.database import supabase_request
             first_name, *last_name_parts = user.full_name.split(" ") if user.full_name else ("", "")
             last_name = " ".join(last_name_parts) if last_name_parts else ""
 
             # 3a. Insert into public.users
             app_logger.info(f"[SIGNUP] Step 3a — Inserting into public.users")
             try:
-                await supabase_admin_request("users", "POST", {
+                await supabase_request("users", "POST", {
                     "id": user_obj["id"],
                     "email": pseudo_email,
                     "role": role,
                     "first_name": first_name,
                     "last_name": last_name
-                })
+                }, token=user_token)
                 app_logger.info(f"[SIGNUP] Step 3a OK")
             except Exception as db_e:
                 app_logger.error(f"[SIGNUP] Step 3a FAILED — public.users insert: {db_e}")
@@ -126,12 +160,12 @@ async def signup(user: UserCreate, request: Request):
                         "activity_level": user.activity_level,
                     }
                     profile_data = {k: v for k, v in profile_data.items() if v is not None}
-                    await supabase_admin_request("health_profiles", "POST", profile_data)
+                    await supabase_request("health_profiles", "POST", profile_data, token=user_token)
                     app_logger.info(f"[SIGNUP] Step 3b OK")
                 except Exception as db_e:
                     app_logger.error(f"[SIGNUP] Step 3b FAILED — health_profiles insert: {db_e}")
 
-        # Step 4: Return the session
+        # ── Step 4: Return the session ────────────────────────────────────────
         final_user = login_resp.get("user", {})
         final_user["username"] = user.username
         app_logger.info(f"[SIGNUP] Complete — user {user.username} signed up successfully.")
