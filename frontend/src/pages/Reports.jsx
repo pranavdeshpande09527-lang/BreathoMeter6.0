@@ -211,9 +211,9 @@ export default function Reports() {
             }
 
             // Using the new email service endpoint
-            await api.email.sendReport(userData.id, {
+            await api.email.sendReport({
                 report_id: report.id,
-                clinical_score: report.score,
+                risk_score: report.score,
                 risk_level: report.risk,
                 type: report.type
             });
