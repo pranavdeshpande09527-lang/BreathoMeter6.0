@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: breathometer6-0
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+
+    # ─────────────────────────────────────────────────────────
+    # Environment Variables
+    # Variables marked sync:false are SECRETS — set their values
+    # manually in the Render dashboard under Environment.
+    # Variables marked sync:true have safe defaults shown here.
+    # ─────────────────────────────────────────────────────────
+    envVars:
+      # ── REQUIRED ──────────────────────────────────────────
+      - key: SUPABASE_URL
+        sync: false   # Set in Render Dashboard → Environment
+
+      - key: SUPABASE_KEY
+        sync: false   # Supabase anon/publishable key
+
+      - key: GEMINI_API_KEY
+        sync: false
+
+      - key: GROQ_API_KEY
+        sync: false
+
+      - key: AQICN_API_KEY
+        sync: false
+
+      - key: OPENWEATHER_API_KEY
+        sync: false
+
+      # ── OPTIONAL (degraded mode if missing) ───────────────
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false   # Required for full admin features
+                      # Without it the app runs in degraded mode (still functional)
+
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+
+      - key: BREVO_API_KEY
+        sync: false   # Email sending
+
+      - key: SENTRY_DSN
+        sync: false   # Error monitoring
+
+      # ── STATIC ────────────────────────────────────────────
+      - key: ENVIRONMENT
+        value: production
+
+      - key: PYTHONUNBUFFERED
+        value: "1"    # Ensure logs appear in real-time in Render

@@ -22,7 +22,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 async def auth_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Authentication failure: {exc}")
+    logger.warning(f"Authentication failure: {exc}")
     # Will be triggered for specific auth exceptions we define or JWT failure
     return JSONResponse(
         status_code=401,

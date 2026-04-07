@@ -17,12 +17,76 @@ sentry_sdk.init(
 
 logger = logging.getLogger("breathometer")
 
+
+def _audit_environment() -> dict:
+    """
+    Runs at startup. Logs every env var's status (SET / MISSING) so that
+    any misconfigured Render deploy is immediately visible in the build logs.
+    Returns a summary dict used by /debug/config.
+    """
+    from app.config import settings
+
+    REQUIRED = {
+        "SUPABASE_URL":         bool(settings.supabase_url),
+        "SUPABASE_KEY":         bool(settings.supabase_key),
+        "GEMINI_API_KEY":       bool(settings.gemini_api_key),
+        "GROQ_API_KEY":         bool(settings.groq_api_key),
+        "AQICN_API_KEY":        bool(settings.aqicn_api_key),
+        "OPENWEATHER_API_KEY":  bool(settings.openweather_api_key),
+    }
+    OPTIONAL = {
+        "SUPABASE_SERVICE_ROLE_KEY": bool(settings.supabase_service_role_key),
+        "GOOGLE_MAPS_API_KEY":       bool(settings.google_maps_api_key),
+        "BREVO_API_KEY":             bool(settings.brevo_api_key),
+        "SENTRY_DSN":                bool(os.getenv("SENTRY_DSN")),
+    }
+
+    logger.info("=" * 60)
+    logger.info("  BREATHOMETER — STARTUP ENV AUDIT")
+    logger.info("=" * 60)
+
+    all_required_ok = True
+    for key, is_set in REQUIRED.items():
+        status = "✓ SET" if is_set else "✗ MISSING  ← REQUIRED"
+        logger.info(f"  [REQUIRED]  {key:<30} {status}")
+        if not is_set:
+            all_required_ok = False
+
+    for key, is_set in OPTIONAL.items():
+        status = "✓ SET" if is_set else "○ not set (optional – degraded mode)"
+        logger.info(f"  [OPTIONAL]  {key:<30} {status}")
+
+    logger.info("-" * 60)
+    if all_required_ok:
+        logger.info("  ✅ All REQUIRED variables are present. Startup OK.")
+    else:
+        logger.error("  ❌ One or more REQUIRED variables are MISSING. API will be degraded.")
+
+    if not OPTIONAL["SUPABASE_SERVICE_ROLE_KEY"]:
+        logger.warning(
+            "  ⚠  SUPABASE_SERVICE_ROLE_KEY not set. Running in degraded mode:\n"
+            "      • Signup uses public auth endpoint (works fine)\n"
+            "      • Profile update skips auth metadata sync\n"
+            "      • DB inserts use anon key (RLS still enforced)\n"
+            "      Set this in Render → Environment to enable full admin features."
+        )
+    logger.info("=" * 60)
+
+    return {
+        "required": REQUIRED,
+        "optional": OPTIONAL,
+        "all_required_ok": all_required_ok,
+        "degraded_mode": not OPTIONAL["SUPABASE_SERVICE_ROLE_KEY"],
+        "environment": settings.environment,
+    }
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage startup/shutdown of shared resources (DB connection pools)."""
-    await init_db_clients()   # Open persistent HTTP pools on startup
+    _audit_environment()          # ← Logs full env var status on every deploy
+    await init_db_clients()       # Open persistent HTTP pools on startup
     yield
-    await close_db_clients()  # Gracefully drain pools on shutdown
+    await close_db_clients()      # Gracefully drain pools on shutdown
 
 
 app = FastAPI(
@@ -102,15 +166,23 @@ async def system_status():
 
 @app.get("/debug/config", tags=["System"])
 def debug_config():
-    """Shows which environment variables are configured (not their values). For diagnostics only."""
-    from app.config import settings
+    """
+    Shows full environment configuration status.
+    Use this to verify a Render deployment has all required env vars.
+    """
+    audit = _audit_environment()
     return {
-        "supabase_url_set": bool(settings.supabase_url),
-        "supabase_anon_key_set": bool(settings.supabase_key),
-        "supabase_service_role_key_set": bool(settings.supabase_service_role_key),
-        "environment": settings.environment,
-        "gemini_key_set": bool(settings.gemini_api_key),
-        "groq_key_set": bool(settings.groq_api_key),
+        "status": "ok" if audit["all_required_ok"] else "degraded",
+        "degraded_mode": audit["degraded_mode"],
+        "environment": audit["environment"],
+        "required_vars": audit["required"],
+        "optional_vars": audit["optional"],
+        # Legacy flat fields for backward compatibility
+        "supabase_url_set":              audit["required"]["SUPABASE_URL"],
+        "supabase_anon_key_set":         audit["required"]["SUPABASE_KEY"],
+        "supabase_service_role_key_set": audit["optional"]["SUPABASE_SERVICE_ROLE_KEY"],
+        "gemini_key_set":                audit["required"]["GEMINI_API_KEY"],
+        "groq_key_set":                  audit["required"]["GROQ_API_KEY"],
     }
 
 # --- Register All API Routers ---

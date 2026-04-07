@@ -21,7 +21,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # return user as object so we can use user.id, user.email etc.
         return types.SimpleNamespace(**user_data, token=token)
     except Exception as e:
-        app_logger.error(f"Authentication failure: {str(e)}")
+        app_logger.warning(f"Authentication failure: {str(e)}")
         raise HTTPException(status_code=401, detail="Session expired or invalid")
 
 def require_role(allowed_roles: list[str]):
