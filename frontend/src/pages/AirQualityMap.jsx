@@ -520,15 +520,15 @@ export default function AirQualityMap() {
                         {/* Circular Progress */}
                         <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto' }}>
                             <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                                <circle cx="50" cy="50" r="45" fill="none" stroke="#F1F5F9" strokeWidth="8" />
-                                <circle cx="50" cy="50" r="45" fill="none" stroke={exposureScore > 70 ? '#22C55E' : exposureScore > 40 ? '#F59E0B' : '#EF4444'} strokeWidth="8" strokeDasharray="282.7" strokeDashoffset={282.7 - (282.7 * exposureScore) / 100} style={{ transition: 'stroke-dashoffset 1s ease-in-out' }} strokeLinecap="round" />
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-border-2)" strokeWidth="8" />
+                                <circle cx="50" cy="50" r="45" fill="none" stroke={exposureScore > 70 ? 'var(--color-safe)' : exposureScore > 40 ? 'var(--color-warning)' : 'var(--color-danger)'} strokeWidth="8" strokeDasharray="282.7" strokeDashoffset={282.7 - (282.7 * exposureScore) / 100} style={{ transition: 'stroke-dashoffset 1s ease-in-out' }} strokeLinecap="round" />
                             </svg>
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '100%' }}>
                                 <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--color-text)', lineHeight: 1 }}>{Math.round(exposureScore)}</div>
                                 <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>/100</div>
                             </div>
                         </div>
-                        <div style={{ marginTop: 16, fontSize: 13, color: 'var(--color-muted)', lineHeight: 1.5 }}>
+                        <div style={{ marginTop: 16, fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.5, fontWeight: 500 }}>
                             {exposureScore > 70 ? 'Excellent conditions for all activities.' : exposureScore > 40 ? 'Fair conditions. Sensitive groups monitor symptoms.' : 'High risk environment. Modify plans immediately.'}
                         </div>
                     </div>
@@ -536,11 +536,11 @@ export default function AirQualityMap() {
                     {/* Smart Alerts */}
                     <div className="card" style={{ padding: 20, borderRadius: 20 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><Bell size={18} color="#F59E0B"/> Smart Alerts</h3>
+                            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><Bell size={18} color="var(--color-warning)"/> Smart Alerts</h3>
                             <button 
                                 onClick={() => setAlertsEnabled(!alertsEnabled)}
                                 style={{
-                                    width: 44, height: 24, borderRadius: 12, background: alertsEnabled ? '#22C55E' : '#CBD5E1',
+                                    width: 44, height: 24, borderRadius: 12, background: alertsEnabled ? 'var(--color-safe)' : 'var(--color-border-2)',
                                     border: 'none', position: 'relative', cursor: 'pointer', transition: 'background 0.3s'
                                 }}
                             >
@@ -551,7 +551,7 @@ export default function AirQualityMap() {
                             </button>
                         </div>
                         <div style={{ opacity: alertsEnabled ? 1 : 0.5, transition: 'opacity 0.3s' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)', marginBottom: 8 }}>
                                 <span>Warn me when AQI exceeds:</span>
                                 <span style={{ color: getAqiBand(alertThreshold).color, fontWeight: 800 }}>{alertThreshold}</span>
                             </div>
@@ -572,22 +572,22 @@ export default function AirQualityMap() {
                     </div>
 
                     {/* Indoor Safety Estimate */}
-                    <div className="card" style={{ padding: 20, borderRadius: 20, background: '#1E293B', color: 'white' }}>
-                        <h3 style={{ margin: '0 0 16px 0', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Home size={18} color="#A78BFA"/> Indoor Safety Check</h3>
+                    <div className="card" style={{ padding: 20, borderRadius: 20, background: 'var(--color-surface-2)' }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text)' }}><Home size={18} color="var(--color-primary)"/> Indoor Safety Check</h3>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 2 }}>Outdoor AQI</div>
-                                <div style={{ fontSize: 24, fontWeight: 800, color: band?.color ?? '#94A3B8' }}>{displayAqi ?? '--'}</div>
+                                <div style={{ fontSize: 12, color: 'var(--color-subtle)', marginBottom: 2 }}>Outdoor AQI</div>
+                                <div style={{ fontSize: 24, fontWeight: 800, color: band?.color ?? 'var(--color-subtle)' }}>{displayAqi ?? '--'}</div>
                             </div>
-                            <div style={{ color: '#475569' }}>➔</div>
+                            <div style={{ color: 'var(--color-muted)' }}>➔</div>
                             <div>
-                                <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 2 }}>Est. Indoor AQI</div>
-                                <div style={{ fontSize: 24, fontWeight: 800, color: '#34D399' }}>{displayAqi ? getIndoorEstimate(displayAqi) : '--'}</div>
+                                <div style={{ fontSize: 12, color: 'var(--color-subtle)', marginBottom: 2 }}>Est. Indoor AQI</div>
+                                <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-safe)' }}>{displayAqi ? getIndoorEstimate(displayAqi) : '--'}</div>
                             </div>
                         </div>
-                        <div style={{ marginTop: 16, padding: '10px 12px', background: 'rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                            <Info size={16} color="#38BDF8" style={{ flexShrink: 0, marginTop: 2 }} />
-                            <span style={{ color: '#E2E8F0', lineHeight: 1.4 }}>{displayAqi > 100 ? 'Keep windows closed. Air purifier recommended.' : 'Safe to open windows for ventilation.'}</span>
+                        <div style={{ marginTop: 16, padding: '10px 12px', background: 'var(--color-primary-faded)', borderRadius: 10, fontSize: 12, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                            <Info size={16} color="var(--color-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
+                            <span style={{ color: 'var(--color-text-2)', lineHeight: 1.4, fontWeight: 500 }}>{displayAqi > 100 ? 'Keep windows closed. Air purifier recommended.' : 'Safe to open windows for ventilation.'}</span>
                         </div>
                     </div>
 
