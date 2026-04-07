@@ -1,0 +1,5 @@
+﻿12b1bbf chore: add startup env audit, render.yaml, and enhanced /debug/config to prevent misconfigured deploys
+ef1c7ee fix: eliminate all SUPABASE_SERVICE_ROLE_KEY hard dependencies - admin_request falls back to anon key, profile update skips metadata if no service key, health.py uses user JWT
+fbae3c6 fix: signup no longer requires SUPABASE_SERVICE_ROLE_KEY - use public auth endpoint with admin fallback
+d3eda7e debug: add /debug/config endpoint and log service role key presence at startup
+29c3df0 debug: add step-by-step logging to signup route to reveal exact failure point

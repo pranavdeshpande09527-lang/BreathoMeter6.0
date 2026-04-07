@@ -49,12 +49,7 @@ export default function Signup() {
     // Add profile-specific data
     if (role === 'Patient') {
       const pData = {
-        age: parseInt(formData.get('age')) || 0,
-        gender: formData.get('gender'),
-        height: parseFloat(formData.get('height')) || 0,
-        weight: parseFloat(formData.get('weight')) || 0,
-        smoking_status: formData.get('smoking_status'),
-        activity_level: formData.get('activity_level')
+        gender: formData.get('gender')
       }
       Object.assign(payload, pData)
     } else {
@@ -158,63 +153,23 @@ export default function Signup() {
             </div>
           )}
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="dob">Date of Birth</label>
-            <input id="dob" name="dob" type="date" className="form-input" required />
-          </div>
-
-          {role === 'Patient' && (
-            <div className="patient-profile-fields" style={{ background: 'var(--color-bg)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--color-primary)' }}>Health Profile (Initial setup)</h3>
-              
-              <div className="auth-name-row">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="age">Age</label>
-                  <input id="age" name="age" type="number" className="form-input" placeholder="25" required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="gender">Gender</label>
-                  <select id="gender" name="gender" className="form-input" required>
-                    <option value="">Select...</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="auth-name-row">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="height">Height (cm)</label>
-                  <input id="height" name="height" type="number" className="form-input" placeholder="170" required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="weight">Weight (kg)</label>
-                  <input id="weight" name="weight" type="number" className="form-input" placeholder="70" required />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="smoking_status">Smoking Status</label>
-                <select id="smoking_status" name="smoking_status" className="form-input" required>
-                  <option value="">Select...</option>
-                  <option value="Never">Never Smoked</option>
-                  <option value="Former">Former Smoker</option>
-                  <option value="Current">Current Smoker</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="activity_level">Activity Level</label>
-                <select id="activity_level" name="activity_level" className="form-input" required>
-                  <option value="">Select...</option>
-                  <option value="Low">Low (Sedentary)</option>
-                  <option value="Moderate">Moderate (Active)</option>
-                  <option value="High">High (Very Active)</option>
-                </select>
-              </div>
+          <div className="auth-name-row">
+            <div className="form-group">
+              <label className="form-label" htmlFor="dob">Date of Birth</label>
+              <input id="dob" name="dob" type="date" className="form-input" required disabled={loading} />
             </div>
-          )}
+            {role === 'Patient' && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="gender">Gender</label>
+                <select id="gender" name="gender" className="form-input" required disabled={loading}>
+                  <option value="">Select...</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           <div className="form-group">
             <label className="form-label" htmlFor="su-pass">Password</label>
