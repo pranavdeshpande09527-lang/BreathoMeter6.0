@@ -168,16 +168,27 @@ async def supabase_admin_request(
     data: Optional[Dict[str, Any]] = None,
     query_params: Optional[Dict[str, str]] = None,
     use_cache: bool = False,
+    token: Optional[str] = None,
 ) -> Union[List[Dict], Dict, None]:
     """
     Interacts with Supabase PostgREST using the Service Role Key to bypass RLS.
-    Uses a dedicated persistent client.
+    Falls back to anon key (with RLS) when service key is not configured.
     """
-    if not SUPABASE_SERVICE_ROLE_KEY:
-        raise Exception("SUPABASE_SERVICE_ROLE_KEY is required for admin operations.")
-
-    if _admin_client is None:
+    if _admin_client is None or _anon_client is None:
         raise RuntimeError("DB clients not initialised — call init_db_clients() at startup.")
+
+    # Choose headers and client based on key availability
+    if SUPABASE_SERVICE_ROLE_KEY:
+        use_headers = _ADMIN_HEADERS.copy()
+        client = _admin_client
+    else:
+        logger.warning(f"[admin_request] SERVICE_ROLE_KEY missing — falling back to anon key for table '{table}'")
+        use_headers = _ANON_HEADERS.copy()
+        client = _anon_client
+
+    # Allow caller to override the auth token (e.g. pass user JWT for RLS)
+    if token:
+        use_headers["Authorization"] = f"Bearer {token}"
 
     cache_key = _cache_key(f"admin:{table}", query_params) if use_cache else None
     if use_cache and method == "GET":
@@ -186,11 +197,10 @@ async def supabase_admin_request(
             return cached
 
     url = f"{SUPABASE_URL}/rest/v1/{table}"
-
-    response = await _dispatch(_admin_client, method, url, _ADMIN_HEADERS, data, query_params)
+    response = await _dispatch(client, method, url, use_headers, data, query_params)
 
     if response.status_code >= 400:
-        raise Exception(f"Admin DB Error {response.status_code}: {response.text}")
+        raise Exception(f"DB Error {response.status_code}: {response.text}")
 
     result = response.json() if response.text.strip() else []
 
@@ -237,7 +247,8 @@ async def supabase_admin_auth_request(
 ) -> Dict[str, Any]:
     """
     Interacts with Supabase GoTrue Auth Admin API.
-    Requires Service Role Key. Uses a persistent connection pool.
+    Requires Service Role Key. Raises a clear error if key is missing so callers
+    can catch and handle gracefully rather than crashing the whole request.
     """
     if not SUPABASE_SERVICE_ROLE_KEY:
         raise Exception("SUPABASE_SERVICE_ROLE_KEY is required for admin auth operations.")

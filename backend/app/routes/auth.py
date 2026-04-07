@@ -323,18 +323,22 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
 
     full_name = " ".join(filter(None, [data.first_name, data.last_name])) or None
 
-    try:
-        # 1. Update Supabase Auth user_metadata (display name in token)
-        await supabase_admin_auth_request(
-            f"users/{user.id}",
-            "PUT",
-            {"user_metadata": {"full_name": full_name or user.full_name}}
-        )
-    except Exception as e:
-        app_logger.warning(f"Could not update Supabase auth metadata for {user.id}: {e}")
+    # 1. Update Supabase Auth user_metadata (optional — requires service key)
+    # Failure here is non-fatal: the health_profiles table is the source of truth.
+    if settings.supabase_service_role_key:
+        try:
+            await supabase_admin_auth_request(
+                f"users/{user.id}",
+                "PUT",
+                {"user_metadata": {"full_name": full_name or user.full_name}}
+            )
+        except Exception as e:
+            app_logger.warning(f"Could not update Supabase auth metadata for {user.id}: {e}")
+    else:
+        app_logger.info(f"Skipping auth metadata update — SERVICE_ROLE_KEY not configured")
 
     try:
-        # 2. Upsert profile data into health_profiles table
+        # 2. Upsert profile data into health_profiles table using user's JWT
         profile_record = {
             "user_id": user.id,
             "first_name": data.first_name,
@@ -358,12 +362,18 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "health_profiles",
             "PATCH",
             profile_record,
-            query_params={"user_id": f"eq.{user.id}"}
+            query_params={"user_id": f"eq.{user.id}"},
+            token=user.token,
         )
 
         # If no row existed (empty result), insert a new one
         if patched == []:
-            await supabase_request("health_profiles", "POST", {"user_id": user.id, **profile_record})
+            await supabase_request(
+                "health_profiles",
+                "POST",
+                {"user_id": user.id, **profile_record},
+                token=user.token,
+            )
 
     except Exception as e:
         app_logger.error(f"Failed to save health_profiles for user {user.id}: {e}")

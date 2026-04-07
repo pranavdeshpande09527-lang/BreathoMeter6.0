@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.health_data import HealthDataCreate
 from app.core.dependencies import get_current_user
-from app.database import supabase_request, supabase_admin_request
+from app.database import supabase_request
 
 router = APIRouter(prefix="/health", tags=["Health Data"])
 
@@ -24,7 +24,7 @@ async def submit_health_data(data: HealthDataCreate, user=Depends(get_current_us
     }
 
     try:
-        response = await supabase_admin_request("health_data", "POST", health_record)
+        response = await supabase_request("health_data", "POST", health_record, token=user.token)
         if not response:
             raise HTTPException(status_code=500, detail="Failed to save health data")
         return {"message": "Health data saved successfully", "data": response[0]}
