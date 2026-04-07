@@ -1,0 +1,458 @@
+/* =========================================
+   Hava AI Chatbot — Premium v3
+   Enhanced glass, AI presence, depth
+   ========================================= */
+
+/* ─── Floating Action Button (AI Orb) ─────────────────────────────────── */
+.hava-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #3B82F6 60%, #0EA5E9 100%);
+    box-shadow:
+        0 0 0 0   rgba(37, 99, 235, 0.20),
+        0 0 0 0   rgba(37, 99, 235, 0.10),
+        0 6px 20px rgba(37, 99, 235, 0.40);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    cursor: pointer;
+    border: none;
+    /* Breathing pulse animation */
+    animation: hava-orb-breathe 3.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.22s ease;
+}
+
+@keyframes hava-orb-breathe {
+    0%, 100% {
+        box-shadow:
+            0 0 0 0   rgba(37, 99, 235, 0.20),
+            0 0 0 0   rgba(37, 99, 235, 0.10),
+            0 6px 20px rgba(37, 99, 235, 0.40);
+    }
+    50% {
+        box-shadow:
+            0 0 0 8px  rgba(37, 99, 235, 0.12),
+            0 0 0 16px rgba(37, 99, 235, 0.05),
+            0 8px 28px rgba(37, 99, 235, 0.50);
+    }
+}
+
+.hava-fab:hover {
+    transform: scale(1.08) translateY(-2px);
+    animation-play-state: paused;
+}
+
+.hava-fab:active {
+    transform: scale(0.94) translateY(0);
+    transition: transform 0.08s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.hava-fab-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.75) translateY(8px);
+    animation: none;
+}
+
+/* ─── Chat Panel ─────────────────────────────────────────────────────────── */
+.hava-panel {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 364px;
+    height: 600px;
+    max-height: calc(100vh - 56px);
+    /* Glass surface */
+    background: rgba(255, 255, 255, 0.80);
+    -webkit-backdrop-filter: blur(36px) saturate(200%);
+    backdrop-filter: blur(36px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 20px;
+    box-shadow:
+        0 2px 4px  rgba(15, 23, 42, 0.04),
+        0 8px 24px rgba(15, 23, 42, 0.08),
+        0 32px 64px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255,255,255,0.95),
+        inset 0 -1px 0 rgba(15,23,42,0.03);
+    display: flex;
+    flex-direction: column;
+    z-index: 10000;
+    overflow: hidden;
+
+    /* Hidden state */
+    opacity: 0;
+    transform: translateY(24px) scale(0.94);
+    pointer-events: none;
+    transition:
+        opacity 0.30s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.30s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.hava-panel-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* Dark mode panel */
+[data-theme='dark'] .hava-panel {
+    background: rgba(20, 24, 36, 0.88);
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow:
+        0 2px 4px  rgba(0, 0, 0, 0.20),
+        0 8px 24px rgba(0, 0, 0, 0.35),
+        0 32px 64px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        inset 0 -1px 0 rgba(0,0,0,0.15);
+}
+
+/* Panel inner top-light shimmer */
+.hava-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 100%);
+    border-radius: 20px 20px 0 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.hava-header {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #3B82F6 50%, #0EA5E9 100%);
+    color: #ffffff;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    /* Inset shimmer */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -1px 0 rgba(0,0,0,0.08);
+}
+
+.hava-header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hava-avatar {
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid rgba(255,255,255,0.35);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3);
+    position: relative;
+    animation: hava-avatar-pulse 3s ease-in-out infinite;
+}
+
+@keyframes hava-avatar-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.15); }
+    50%       { box-shadow: 0 0 0 5px rgba(255,255,255,0.10), 0 2px 8px rgba(0,0,0,0.15); }
+}
+
+.hava-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+}
+
+.hava-subtitle {
+    font-size: 11px;
+    font-weight: 500;
+    margin: 0;
+    opacity: 0.80;
+    margin-top: 2px;
+    letter-spacing: 0.1px;
+}
+
+/* Online indicator */
+.hava-subtitle::before {
+    content: '● ';
+    font-size: 8px;
+    opacity: 0.9;
+}
+
+.hava-close-btn {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.90);
+    border: 1px solid rgba(255,255,255,0.20);
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.18s ease, transform 0.18s cubic-bezier(0.34,1.42,0.64,1);
+    will-change: transform;
+}
+
+.hava-close-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    transform: rotate(90deg) scale(1.05);
+}
+
+/* ─── Messages Area ──────────────────────────────────────────────────────── */
+.hava-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: transparent;
+    /* Subtle dot grid */
+    background-image: radial-gradient(circle, rgba(37,99,235,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+    position: relative;
+    z-index: 1;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(37,99,235,0.12) transparent;
+}
+
+.hava-messages::-webkit-scrollbar { width: 4px; }
+.hava-messages::-webkit-scrollbar-track { background: transparent; }
+.hava-messages::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.12); border-radius: 4px; }
+
+.hava-msg-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    max-width: 87%;
+    animation: hava-msg-in 0.28s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+@keyframes hava-msg-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hava-msg-hava-row {
+    align-self: flex-start;
+}
+
+.hava-msg-user-row {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.hava-msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), #3B82F6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+}
+
+.hava-msg {
+    padding: 11px 15px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    position: relative;
+}
+
+.hava-msg-text {
+    margin: 0;
+    word-wrap: break-word;
+}
+
+.hava-msg-time {
+    font-size: 10px;
+    text-align: right;
+    margin-top: 5px;
+    opacity: 0.5;
+}
+
+/* AI messages — glass bubble */
+.hava-msg-hava {
+    background: rgba(255, 255, 255, 0.75);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    color: var(--color-text, #0F172A);
+    border-radius: 16px 16px 16px 4px;
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow:
+        0 2px 8px rgba(15,23,42,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+[data-theme='dark'] .hava-msg-hava {
+    background: rgba(36,41,56,0.80);
+    border-color: rgba(255,255,255,0.10);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+    color: var(--color-text, #F8FAFC);
+}
+
+/* User messages — gradient pill */
+.hava-msg-user {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #3B82F6 100%);
+    color: #ffffff;
+    border-radius: 16px 16px 4px 16px;
+    box-shadow: 0 2px 12px rgba(37,99,235,0.30), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.hava-msg-user .hava-msg-time {
+    color: rgba(255, 255, 255, 0.70);
+}
+
+/* ─── Organic Wave Typing Indicator ──────────────────────────────────────── */
+.hava-typing {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 13px 18px;
+    min-width: 64px;
+}
+
+.hava-typing .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--color-primary, #2563EB);
+    border-radius: 50%;
+    animation: hava-wave 1.5s ease-in-out infinite;
+    opacity: 0.7;
+}
+
+.hava-typing .dot:nth-child(1) { animation-delay: 0s;    }
+.hava-typing .dot:nth-child(2) { animation-delay: 0.18s; }
+.hava-typing .dot:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes hava-wave {
+    0%, 60%, 100% { transform: translateY(0);    opacity: 0.4; }
+    30%            { transform: translateY(-6px); opacity: 1.0; }
+}
+
+/* ─── Input Area ─────────────────────────────────────────────────────────── */
+.hava-input-area {
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.70);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+[data-theme='dark'] .hava-input-area {
+    background: rgba(22, 27, 40, 0.70);
+    border-top-color: rgba(255,255,255,0.08);
+}
+
+.hava-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.65);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    font-family: var(--font-family, inherit);
+    color: var(--color-text, #0F172A);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.hava-input:focus {
+    border-color: rgba(37, 99, 235, 0.50);
+    box-shadow:
+        0 0 0 3px rgba(37,99,235,0.10),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.hava-input::placeholder {
+    color: var(--color-subtle, #94A3B8);
+    font-size: 13px;
+}
+
+[data-theme='dark'] .hava-input {
+    background: rgba(36,41,56,0.70);
+    border-color: rgba(255,255,255,0.12);
+    color: var(--color-text, #F8FAFC);
+}
+
+[data-theme='dark'] .hava-input:focus {
+    border-color: rgba(96,165,250,0.50);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.hava-send-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #3B82F6 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    will-change: transform;
+    transition:
+        transform 0.22s cubic-bezier(0.34, 1.42, 0.64, 1),
+        box-shadow 0.22s ease,
+        opacity 0.15s ease;
+    box-shadow: 0 2px 10px rgba(37,99,235,0.30);
+    flex-shrink: 0;
+}
+
+.hava-send-btn:hover:not(:disabled) {
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 4px 16px rgba(37,99,235,0.40);
+}
+
+.hava-send-btn:active:not(:disabled) {
+    transform: scale(0.94);
+    transition: transform 0.07s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.hava-send-btn:disabled {
+    background: var(--color-border-2, #CBD5E1);
+    cursor: not-allowed;
+    opacity: 0.60;
+    box-shadow: none;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .hava-panel {
+        bottom: 0;
+        right: 0;
+        width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
+    }
+
+    .hava-fab {
+        bottom: 20px;
+        right: 20px;
+        width: 52px;
+        height: 52px;
+    }
+}

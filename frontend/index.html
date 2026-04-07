@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Breathometer — AI-powered respiratory health monitoring platform for patients and clinicians." />
+    <title>Breathometer — Respiratory Health Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <!-- Blocking initializer — prevents flash of wrong theme and scroll jump on reload -->
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('theme') || 'light';
+          document.documentElement.setAttribute('data-theme', t);
+          if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+          }
+        } catch(e) {}
+      })();
+      // Pre-anchor native position to 0 directly before page tear-down.
+      // This prevents the browser from loading "down" and needing a visible scroll "up".
+      window.addEventListener('beforeunload', function() {
+        window.scrollTo(0, 0);
+      });
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

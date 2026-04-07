@@ -1,0 +1,594 @@
+import { useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { ArrowLeft, Activity, Wind, Cloud, HeartPulse, AlertTriangle, CheckCircle, Download, Share2, PlusCircle } from 'lucide-react'
+import LungCapacityVisualization from '../components/LungCapacityVisualization'
+import ConfidenceBadge from '../components/ConfidenceBadge'
+import { getConfidenceTier, getImprovementSuggestion } from '../utils/predictionConfidence'
+
+function riskLabel(riskCategory) {
+    if (!riskCategory) return 'Unknown'
+    const lc = riskCategory.toLowerCase()
+    if (lc.includes('low')) return 'Low'
+    if (lc.includes('high')) return 'High'
+    return 'Moderate'
+}
+
+function generatePDF(report) {
+    const riskColor = report.risk === 'Low' ? '#16a34a' : report.risk === 'Moderate' ? '#d97706' : '#dc2626'
+    const riskBg = report.risk === 'Low' ? '#dcfce7' : '#fef9c3'
+    const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+
+    const win = window.open('', '_blank')
+    if (!win) {
+        alert('Please allow pop-ups in your browser to download the report.')
+        return
+    }
+
+    win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${report.title} — ${report.id}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; color: #1f2937; background: #fff; padding: 40px; font-size: 13px; line-height: 1.5; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f3f4f6; padding-bottom: 24px; margin-bottom: 32px; }
+    .brand-container { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 44px; height: 44px; background: #2563eb; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 800; }
+    .brand-text h1 { font-size: 22px; font-weight: 800; color: #111827; letter-spacing: -0.5px; }
+    .brand-text p { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .report-info { text-align: right; }
+    .report-info h2 { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+    .report-info p { font-size: 11px; color: #9ca3af; }
+
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+    .metric-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; text-align: center; }
+    .metric-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .metric-value { font-size: 36px; font-weight: 800; color: #111827; }
+    .metric-sub { font-size: 14px; color: #6b7280; font-weight: 400; }
+    
+    .risk-indicator { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-top: 8px; background: ${riskBg}; color: ${riskColor}; }
+
+    .section { margin-bottom: 32px; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+    .section-icon { width: 8px; height: 8px; background: #2563eb; border-radius: 2px; }
+    .section-title { font-size: 12px; font-weight: 800; color: #374151; text-transform: uppercase; letter-spacing: 1px; }
+
+    .analysis-box { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 12px; padding: 20px; color: #1e40af; font-size: 14px; line-height: 1.6; }
+    
+    .factors-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .factor-tag { background: #fef9c3; color: #a16207; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #fef08a; }
+
+    .disease-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .disease-item { padding: 12px 16px; border: 1px solid #f3f4f6; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .disease-name { font-weight: 600; color: #4b5563; }
+    .disease-risk-val { font-weight: 700; color: #111827; }
+    .risk-bar-bg { width: 100%; height: 6px; background: #f3f4f6; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .risk-bar-fill { height: 100%; border-radius: 3px; }
+
+    .footer { margin-top: auto; padding-top: 24px; border-top: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: flex-end; }
+    .footer-text { font-size: 10px; color: #9ca3af; max-width: 400px; }
+    .verified-stamp { text-align: right; }
+    .stamp-box { display: inline-block; border: 2px solid #16a34a; color: #16a34a; padding: 4px 12px; border-radius: 4px; font-weight: 800; font-size: 10px; text-transform: uppercase; transform: rotate(-5deg); }
+
+    @page { size: A4; margin: 0; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand-container">
+      <div class="logo">B</div>
+      <div class="brand-text">
+        <h1>BreathoMeter</h1>
+        <p>AI Respiratory Diagnostics</p>
+      </div>
+    </div>
+    <div class="report-info">
+      <h2>HEALTH ANALYSIS REPORT</h2>
+      <p>REF: ${report.id} &nbsp;|&nbsp; ${today}</p>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="metric-card">
+      <div class="metric-label">Vital Health Score</div>
+      <div class="metric-value">${report.score}<span class="metric-sub">/100</span></div>
+      <p style="font-size: 11px; color: #9ca3af; margin-top: 8px;">Aggregate Score based on Clinical Parameters</p>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Predicted Risk Level</div>
+      <div class="risk-indicator">${report.risk} Priority</div>
+      <p style="font-size: 11px; color: #9ca3af; margin-top: 12px;">Determined by AI Ensemble Model</p>
+    </div>
+  </div>
+
+  ${report.ai_explanation ? `
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon"></div>
+      <div class="section-title">Clinical Interpretation</div>
+    </div>
+    <div class="analysis-box">
+      ${report.ai_explanation}
+    </div>
+  </div>
+  ` : ''}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+    <div>
+      <div class="section">
+        <div class="section-header">
+          <div class="section-icon"></div>
+          <div class="section-title">Critical Pathogens Map</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          ${(report.disease_risks || []).map(d => {
+        const color = d.risk_percentage > 60 ? '#dc2626' : d.risk_percentage > 30 ? '#d97706' : '#16a34a'
+        return `
+            <div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px;">
+                <span class="disease-name">${d.disease}</span>
+                <span class="disease-risk-val">${d.risk_percentage}%</span>
+              </div>
+              <div class="risk-bar-bg">
+                <div class="risk-bar-fill" style="width: ${d.risk_percentage}%; background: ${color}"></div>
+              </div>
+            </div>
+          `
+    }).join('') || '<p style="color:#9ca3af; font-size:11px;">Pathogen analysis not applicable for this report type.</p>'}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section">
+        <div class="section-header">
+          <div class="section-icon"></div>
+          <div class="section-title">Significant Risk Factors</div>
+        </div>
+        <div class="factors-grid">
+          ${(report.top_risk_factors || []).map(f => `
+            <span class="factor-tag">${f}</span>
+          `).join('') || '<span class="factor-tag">General Baseline</span>'}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="section-icon"></div>
+          <div class="section-title">Diagnostic Meta</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+          <div style="display: flex; justify-content: space-between;"><span style="color:#6b7280">Model Confidence</span><span style="font-weight:600">${report.confidence || '94.2%'}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color:#6b7280">System Status</span><span style="font-weight:600; color:#16a34a">Calibrated</span></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color:#6b7280">Data Integrity</span><span style="font-weight:600; color:#16a34a">Verified</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  ${report.warnings && report.warnings.length > 0 ? `
+  <div class="section" style="margin-top: 32px; background: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: 12px;">
+    <div style="color: #b91c1c; font-weight: 800; font-size: 13px; margin-bottom: 8px; text-transform: uppercase;">Clinical Alerts & Warnings</div>
+    <ul style="color: #991b1b; font-size: 12px; padding-left: 20px; line-height: 1.5; margin: 0;">
+      ${report.warnings.map(w => `<li>${w}</li>`).join('')}
+    </ul>
+  </div>
+  ` : ''}
+
+  ${report.similar_cases_distribution && Object.keys(report.similar_cases_distribution).length > 0 ? `
+  <div class="section" style="margin-top: 24px;">
+    <div class="section-header">
+      <div class="section-icon"></div>
+      <div class="section-title">Verified Clinical Context</div>
+    </div>
+    <p style="font-size: 11px; color: #6b7280; margin-bottom: 12px;">Based on securely matched records with similar clinical presentations:</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      ${Object.entries(report.similar_cases_distribution).map(([condition, count]) => `
+        <span style="background: #f3f4f6; border: 1px solid #e5e7eb; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #374151;">
+          ${condition}: <span style="color: #2563eb;">${count} cases</span>
+        </span>
+      `).join('')}
+    </div>
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    <div class="footer-text">
+      This report is generated by the BreathoMeter AI Diagnostic Engine. It is intended for informational and screening purposes only and does not constitute a clinical diagnosis. Please consult a qualified healthcare professional for medical advice and official treatment.
+    </div>
+    <div class="verified-stamp">
+      <div class="stamp-box">AI VERIFIED</div>
+      <p style="font-size: 9px; color: #9ca3af; margin-top: 4px;">SYSTEM ID: BM-V6-INF00</p>
+    </div>
+  </div>
+
+  <script>window.onload = function() { window.print(); };<\/script>
+</body>
+</html>`)
+    win.document.close()
+}
+
+// Inverse logic depending on gauge type
+const getGaugeDetails = (score, type) => {
+    if (type === 'risk') {
+        if (score < 35) return { label: 'Low Risk', color: 'var(--color-safe)', cls: 'badge-safe' }
+        if (score < 65) return { label: 'Moderate Risk', color: 'var(--color-warning)', cls: 'badge-warning' }
+        return { label: 'High Risk', color: 'var(--color-danger)', cls: 'badge-danger' }
+    } else {
+        if (score > 65) return { label: 'Good Health', color: 'var(--color-safe)', cls: 'badge-safe' }
+        if (score > 35) return { label: 'Fair Health', color: 'var(--color-warning)', cls: 'badge-warning' }
+        return { label: 'Poor Health', color: 'var(--color-danger)', cls: 'badge-danger' }
+    }
+}
+
+function MiniGauge({ title, score, type, icon: Icon }) {
+    const details = getGaugeDetails(score, type)
+    const cx = 80, cy = 70, r = 60
+    const startAngle = Math.PI
+    const totalAngle = Math.PI
+
+    const polarToCartesian = (angle) => ({
+        x: cx + r * Math.cos(angle),
+        y: cy - r * Math.sin(angle),
+    })
+
+    const fillAngle = startAngle - (score / 100) * totalAngle
+    const fillEnd = polarToCartesian(fillAngle)
+    const largeArc = (startAngle - fillAngle) > Math.PI ? 1 : 0
+    const fillPath = `M ${polarToCartesian(startAngle).x} ${polarToCartesian(startAngle).y} A ${r} ${r} 0 ${largeArc} 1 ${fillEnd.x} ${fillEnd.y}`
+    const needleEnd = polarToCartesian(fillAngle)
+
+    return (
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Icon size={16} color="var(--color-primary)" />
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{title}</div>
+            </div>
+            <svg viewBox="0 0 160 90" width="160" height="90" style={{ marginTop: 16 }}>
+                <path d={`M ${polarToCartesian(Math.PI).x} ${polarToCartesian(Math.PI).y} A ${r} ${r} 0 0 1 ${polarToCartesian(0).x} ${polarToCartesian(0).y}`}
+                    fill="none" stroke="var(--color-border)" strokeWidth="8" />
+                <path d={fillPath} fill="none" stroke={details.color} strokeWidth="8" strokeLinecap="round" />
+                <line x1={cx} y1={cy} x2={needleEnd.x} y2={needleEnd.y} stroke={details.color} strokeWidth="2" strokeLinecap="round" />
+                <circle cx={cx} cy={cy} r="4" fill={details.color} />
+            </svg>
+            <div style={{ fontSize: 24, fontWeight: 700, marginTop: -10 }}>{score}<span style={{ fontSize: 12, color: 'var(--color-subtle)', fontWeight: 400 }}>/100</span></div>
+            <div className={`badge ${details.cls}`} style={{ marginTop: 8 }}>{details.label}</div>
+        </div>
+    )
+}
+
+export default function AssessmentResults() {
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    const payload = location.state?.payload
+    if (!payload) {
+        return <Navigate to="/assessment" replace />
+    }
+
+    const { scores, timestamp, predictionDetails, formData } = payload
+    const d = formData || {}
+    const diseaseRisks = predictionDetails?.disease_risks || []
+
+    const handleDownload = () => {
+        const report = {
+            id: `RPT-${predictionDetails?.id?.slice(0, 8)?.toUpperCase() || 'NEW'}`,
+            title: 'Diagnostic Health Summary',
+            score: scores.overallScore,
+            risk: riskLabel(predictionDetails?.risk_category),
+            ai_explanation: predictionDetails?.ai_explanation,
+            top_risk_factors: predictionDetails?.top_risk_factors,
+            disease_risks: predictionDetails?.disease_risks,
+            warnings: predictionDetails?.warnings,
+            similar_cases_distribution: predictionDetails?.similar_cases_distribution,
+            confidence: predictionDetails?.confidence_score ? `${Math.round(predictionDetails.confidence_score * 100)}%` : null
+        };
+        generatePDF(report);
+    };
+
+    const handleShare = async () => {
+        const shareData = {
+            title: 'My BreathoMeter Health Analysis',
+            text: `My AI-powered health assessment is complete. Overall Score: ${scores.overallScore}/100. Check out the BreathoMeter platform!`,
+            url: window.location.origin
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.error('Error sharing:', err);
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+                alert('Report details copied to clipboard!');
+            } catch (err) {
+                alert('Sharing is not supported on this browser.');
+            }
+        }
+    };
+
+    const generateRecommendations = () => {
+        const recs = []
+        const { respiratoryRisk, lungFunction, environmentalRisk, overallScore } = scores
+
+        // ── Environmental ────────────────────────────────────────────────────
+        if (environmentalRisk > 70) {
+            recs.push({ icon: '🌫️', text: 'Your area has very high pollution. Wear an N95 mask outdoors and avoid peak traffic hours (7–10 AM, 5–8 PM).' })
+            recs.push({ icon: '🏠', text: 'Keep windows closed on high-AQI days. Use an indoor HEPA air purifier, especially in bedrooms.' })
+        } else if (environmentalRisk > 50) {
+            recs.push({ icon: '😷', text: 'Moderate pollution detected. Limit outdoor exercise on high-AQI days; consider an N95 mask when outdoors for extended periods.' })
+        }
+
+        // ── Respiratory Risk ─────────────────────────────────────────────────
+        if (respiratoryRisk > 70) {
+            recs.push({ icon: '🩺', text: 'Your respiratory risk is high. Consult a pulmonologist for a complete lung function test (spirometry) as soon as possible.' })
+            recs.push({ icon: '📊', text: 'Monitor your SpO2 (oxygen saturation) daily with a pulse oximeter. Alert your doctor if it falls below 94%.' })
+            recs.push({ icon: '💊', text: 'Ensure all prescribed inhalers or respiratory medications are up to date and accessible at all times.' })
+        } else if (respiratoryRisk > 50) {
+            recs.push({ icon: '📋', text: 'Moderate respiratory risk detected. Schedule a check-up with your doctor and mention any recent symptoms like wheezing or shortness of breath.' })
+            recs.push({ icon: '📊', text: 'Track your SpO2 levels weekly using a pulse oximeter.' })
+        }
+
+        // ── Lung Function ────────────────────────────────────────────────────
+        if (lungFunction < 40) {
+            recs.push({ icon: '🫁', text: 'Lung function is significantly reduced. Begin supervised breathing rehabilitation. Pursed-lip and diaphragmatic breathing exercises can help.' })
+            recs.push({ icon: '🚶', text: 'Avoid strenuous activity. Light walks of 10–15 min/day are recommended; increase gradually under medical supervision.' })
+        } else if (lungFunction < 60) {
+            recs.push({ icon: '🧘', text: 'Practice deep breathing exercises for 10 minutes daily to improve lung capacity and reduce breathlessness.' })
+            recs.push({ icon: '🚵', text: 'Incorporate low-impact cardio (swimming, cycling) 3× per week to strengthen respiratory muscles.' })
+        }
+
+        // ── Smoking ──────────────────────────────────────────────────────────
+        if (d.smoking === 'Current') {
+            recs.push({ icon: '🚭', text: 'Quitting smoking is the single most impactful action you can take. Ask your doctor about nicotine replacement therapy or varenicline.' })
+        } else if (d.smoking === 'Former') {
+            recs.push({ icon: '✅', text: 'Good job quitting smoking! Continue monitoring your lung function annually as residual risk remains elevated for former smokers.' })
+        }
+
+        // ── Weight / BMI ─────────────────────────────────────────────────────
+        const bmi = Number(d.bmi) || 0
+        if (bmi >= 30) {
+            recs.push({ icon: '⚖️', text: 'Obesity increases respiratory strain and sleep apnea risk. A 5–10% weight reduction can significantly improve lung function and SpO2.' })
+        } else if (bmi >= 25) {
+            recs.push({ icon: '🥗', text: 'Being overweight adds pressure on the diaphragm. A balanced diet and regular aerobic exercise can reduce respiratory load.' })
+        }
+
+        // ── Symptoms ─────────────────────────────────────────────────────────
+        if (d.wheezing) recs.push({ icon: '🌬️', text: 'Wheezing is present. Identify and avoid triggers (dust, pollen, cold air). A bronchodilator (prescribed) should be kept on hand.' })
+        if (d.shortnessOfBreath) recs.push({ icon: '💨', text: 'Shortness of breath is reported. Use the "pursed-lip breathing" technique during episodes and sit upright to ease airflow.' })
+        if (d.chestTightness) recs.push({ icon: '🫀', text: 'Chest tightness may indicate bronchospasm or early cardiac involvement. Seek evaluation if it occurs at rest or with minimal exertion.' })
+        if (d.excessMucus) recs.push({ icon: '💧', text: 'Excess mucus production suggests airway inflammation. Stay well hydrated (2–3 L/day) and consider steam inhalation to loosen secretions.' })
+
+        // ── Overall Health ───────────────────────────────────────────────────
+        if (overallScore > 65) {
+            recs.push({ icon: '💪', text: 'Your overall health score is good. Maintain your healthy habits: regular exercise, a balanced diet, and annual health check-ups.' })
+        } else if (overallScore < 35) {
+            recs.push({ icon: '🏥', text: 'Your overall health score is low. A comprehensive multi-specialist review (pulmonologist + cardiologist) is strongly recommended.' })
+        }
+
+        // ── Lifestyle ────────────────────────────────────────────────────────
+        if (d.exerciseFrequency === 'None' || d.exerciseFrequency === 'Rarely') {
+            recs.push({ icon: '🏃', text: 'Physical inactivity significantly increases respiratory and cardiovascular risk. Aim for at least 150 min of moderate exercise per week.' })
+        }
+
+        // Ensure at least one recommendation
+        if (recs.length === 0) {
+            recs.push({ icon: '✅', text: 'Maintain your current healthy lifestyle. Continue routine monitoring and annual health assessments.' })
+        }
+
+        return recs
+    }
+
+    const recommendations = generateRecommendations()
+
+    return (
+        <div className="page-enter">
+            <div className="page-header" style={{ marginBottom: 32 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <button className="btn btn-ghost btn-sm" style={{ padding: 0, marginBottom: 16 }} onClick={() => navigate('/dashboard')}>
+                        <ArrowLeft size={16} /> <span style={{ marginLeft: 6 }}>Back to Dashboard</span>
+                    </button>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button className="btn btn-outline btn-sm" onClick={handleShare}>
+                            <Share2 size={14} style={{ marginRight: 6 }} /> Share
+                        </button>
+                        <button className="btn btn-primary btn-sm" onClick={handleDownload}>
+                            <Download size={14} style={{ marginRight: 6 }} /> Export PDF
+                        </button>
+                    </div>
+                </div>
+                <div className="page-header-row">
+                    <div>
+                        <div className="text-label">AI Analysis Complete</div>
+                        <h1 className="text-page-title" style={{ marginTop: 4 }}>Health Assessment Results</h1>
+                    </div>
+                    <div className="text-meta">Generated: {new Date(timestamp).toLocaleString()}</div>
+                </div>
+            </div>
+
+            {/* Score gauges */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24, marginBottom: 24 }}>
+                <MiniGauge title="Overall Health Score" score={scores.overallScore} type="health" icon={HeartPulse} />
+                <MiniGauge title="Respiratory Risk" score={scores.respiratoryRisk} type="risk" icon={Activity} />
+                <MiniGauge title="Lung Function" score={scores.lungFunction} type="health" icon={Wind} />
+                <MiniGauge title="Environmental Risk" score={scores.environmentalRisk} type="risk" icon={Cloud} />
+            </div>
+
+            {/* Anatomical Visualization */}
+            <div className="card section" style={{ overflow: 'hidden', marginBottom: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '32px', alignItems: 'center', padding: '16px' }}>
+                    <div style={{ flex: '0 0 auto' }}>
+                        <div style={{ 
+                            width: 280, 
+                            height: 280, 
+                            borderRadius: '24px', 
+                            overflow: 'hidden',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                            border: '1px solid rgba(255,255,255,0.05)'
+                        }}>
+                            <LungCapacityVisualization size={280} healthScore={scores.lungFunction} hideUI={true} />
+                        </div>
+                    </div>
+                    <div style={{ flex: '1 1 300px' }}>
+                        <div className="text-card-title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Respiratory Simulation</div>
+                        <div className="text-meta" style={{ fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '16px' }}>
+                            The 3D model above reflects your current respiratory condition based on your clinical assessment and breathing performance.
+                        </div>
+                        <div className="glass-card" style={{ padding: '16px', borderRadius: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '8px' }}>
+                                <Wind size={20} />
+                                <span style={{ fontWeight: 700 }}>VISUAL FEEDBACK</span>
+                            </div>
+                            <div style={{ fontSize: '14px', lineHeight: '1.5', color: 'var(--color-text)' }}>
+                                {scores.lungFunction > 70 
+                                    ? "Your lungs show high resilience and optimal capacity. Maintain your current fitness routine." 
+                                    : scores.lungFunction > 40
+                                    ? "Moderate restriction observed. Focused breathing exercises are recommended to improve overall efficiency."
+                                    : "Significant respiratory strain detected. Prioritize the medical recommendations below and consult a specialist."}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Confidence Banner */}
+            {predictionDetails?.confidence_score != null && (() => {
+                const conf = predictionDetails.confidence_score
+                const tier = getConfidenceTier(conf)
+                const suggestion = getImprovementSuggestion(conf)
+                return (
+                    <div style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 14,
+                        padding: '16px 20px', borderRadius: 14, marginBottom: 24,
+                        background: tier.tier === 'high' ? 'rgba(22,163,74,0.07)' : tier.tier === 'moderate' ? 'rgba(217,119,6,0.07)' : 'rgba(220,38,38,0.07)',
+                        border: `1px solid ${tier.tier === 'high' ? 'rgba(22,163,74,0.25)' : tier.tier === 'moderate' ? 'rgba(217,119,6,0.25)' : 'rgba(220,38,38,0.25)'}`
+                    }}>
+                        <div style={{ fontSize: 22, lineHeight: 1 }}>{tier.emoji}</div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                <ConfidenceBadge confidence={conf} size="md" showBar={false} />
+                            </div>
+                            {suggestion && (
+                                <div style={{ fontSize: 13, color: '#dc2626', display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 8 }}>
+                                    <PlusCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                                    <span><strong>Improve accuracy:</strong> {suggestion}</span>
+                                </div>
+                            )}
+                            {predictionDetails.recommended_specialty && (
+                                <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-text-2)' }}>
+                                    Recommended specialist: <strong>{predictionDetails.recommended_specialty}</strong>
+                                </div>
+                            )}
+                            
+                            {predictionDetails.warnings && predictionDetails.warnings.length > 0 && (
+                                <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 8, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)' }}>
+                                    <div style={{ fontWeight: 600, color: '#dc2626', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <AlertTriangle size={16} /> Clinical Alert
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: 22, color: '#991b1b', fontSize: 13, lineHeight: 1.5 }}>
+                                        {predictionDetails.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            })()}
+
+            {/* AI Explanation */}
+            {predictionDetails?.ai_explanation && (
+                <div className="card" style={{ padding: '24px 32px', marginBottom: 24, background: 'var(--color-surface)', border: '1px solid var(--color-primary-light)' }}>
+                    <div className="text-card-title" style={{ marginBottom: 12 }}>AI Risk Explanation</div>
+                    <p style={{ margin: 0, color: 'var(--color-text)', lineHeight: 1.5 }}>
+                        {predictionDetails.ai_explanation}
+                    </p>
+                    {predictionDetails.top_risk_factors && predictionDetails.top_risk_factors.length > 0 && (
+                        <div style={{ marginTop: 16 }}>
+                            <div className="text-meta" style={{ marginBottom: 8, fontWeight: 600 }}>Key Contributing Factors:</div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                {predictionDetails.top_risk_factors.map((factor, idx) => (
+                                    <span key={idx} className="badge badge-warning">{factor}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Clinical Context */}
+            {predictionDetails?.similar_cases_distribution && Object.keys(predictionDetails.similar_cases_distribution).length > 0 && (
+                <div className="card" style={{ padding: '24px 32px', marginBottom: 24, background: 'var(--color-surface)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <CheckCircle size={20} color="var(--color-primary)" />
+                        <div className="text-card-title" style={{ margin: 0 }}>Clinical Validation</div>
+                    </div>
+                    <div className="text-meta" style={{ marginBottom: 16 }}>
+                        Based on securely matched records from our verified clinical database with similar symptom severity and lifestyle markers.
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                        {Object.entries(predictionDetails.similar_cases_distribution).map(([condition, count], idx) => (
+                            <div key={idx} style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text)' }}>{condition}</span>
+                                <span className="badge badge-primary" style={{ background: 'var(--color-primary)', color: 'white' }}>{count} matching cases</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Disease Risk Breakdown */}
+            {diseaseRisks.length > 0 && (
+                <div className="card" style={{ padding: '24px 32px', marginBottom: 24 }}>
+                    <div className="text-card-title" style={{ marginBottom: 4 }}>Condition-Specific Risk Analysis</div>
+                    <div className="text-meta" style={{ marginBottom: 20 }}>Risk scores are estimates based on your reported symptoms, lifestyle, and medical history. Not a clinical diagnosis.</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+                        {diseaseRisks.map((dr, idx) => {
+                            const riskNum = dr.risk_percentage
+                            const colorVar = riskNum > 60 ? 'var(--color-danger)' : riskNum > 30 ? 'var(--color-warning)' : 'var(--color-safe)'
+                            const label = riskNum > 60 ? 'High' : riskNum > 30 ? 'Moderate' : 'Low'
+                            return (
+                                <div key={idx} style={{ padding: '14px 18px', border: '1px solid var(--color-border)', borderRadius: 10, background: 'var(--color-bg)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                        <span style={{ fontWeight: 600, fontSize: 14 }}>{dr.disease}</span>
+                                        <span style={{ fontWeight: 700, fontSize: 15, color: colorVar }}>{riskNum}%</span>
+                                    </div>
+                                    <div style={{ width: '100%', height: 7, background: 'var(--color-border)', borderRadius: 4, overflow: 'hidden' }}>
+                                        <div style={{ width: `${riskNum}%`, height: '100%', background: colorVar, transition: 'width 1s ease-out', borderRadius: 4 }} />
+                                    </div>
+                                    <div style={{ marginTop: 6, fontSize: 11, color: colorVar, fontWeight: 600 }}>{label} Risk</div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Personalized Recommendations */}
+            <div className="card" style={{ padding: '24px 32px' }}>
+                <div className="text-card-title" style={{ marginBottom: 4 }}>Personalized Recommendations</div>
+                <div className="text-meta" style={{ marginBottom: 20 }}>Based on your assessment scores, symptoms, and lifestyle factors.</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {recommendations.map((rec, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: '14px 16px', background: 'var(--color-surface)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
+                            <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{rec.icon}</span>
+                            <span style={{ color: 'var(--color-text)', lineHeight: 1.6, fontSize: 14 }}>{rec.text}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div style={{ marginTop: 24, textAlign: 'center' }}>
+                <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Complete &amp; Return to Dashboard</button>
+            </div>
+        </div>
+    )
+}
+

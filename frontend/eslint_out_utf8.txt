@@ -1,0 +1,64 @@
+﻿node.exe : 
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (:St  
+  ring) [], RemoteExcept   
+ ion
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+Oops! Something went 
+wrong! :(
+
+ESLint: 10.1.0
+
+Error 
+[ERR_MODULE_NOT_FOUND]: 
+Cannot find package 
+'@eslint/js' imported from 
+C:\Users\prana\.antigravity
+\breathomeater4.0\BreathoMe
+ter5.0\frontend\eslint.conf
+ig.js
+    at 
+Object.getPackageJSONURL (n
+ode:internal/modules/packag
+e_json_reader:301:9)
+    at packageResolve (node
+:internal/modules/esm/resol
+ve:768:81)
+    at moduleResolve (node:
+internal/modules/esm/resolv
+e:859:18)
+    at defaultResolve (node
+:internal/modules/esm/resol
+ve:991:11)
+    at 
+#cachedDefaultResolve (node
+:internal/modules/esm/loade
+r:719:20)
+    at #resolveAndMaybeBloc
+kOnLoaderThread (node:inter
+nal/modules/esm/loader:736:
+38)
+    at 
+ModuleLoader.resolveSync (n
+ode:internal/modules/esm/lo
+ader:765:52)
+    at #resolve (node:inter
+nal/modules/esm/loader:701:
+17)
+    at ModuleLoader.getOrCr
+eateModuleJob (node:interna
+l/modules/esm/loader:621:35
+)
+    at ModuleJob.syncLink (
+node:internal/modules/esm/m
+odule_job:160:33)
