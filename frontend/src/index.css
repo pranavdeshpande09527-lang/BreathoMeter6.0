@@ -782,17 +782,46 @@ button, a {
 
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-width);
+  /* Mobile/tablet: full width — sidebar overlays on top */
+  margin-left: 0;
   padding-top: var(--topbar-height);
   min-height: 100vh;
   background: transparent;
-  overflow: visible; /* Never trap scroll — let it flow to document root */
+  overflow: visible;
+}
+/* Desktop: shift content right of the fixed sidebar */
+@media (min-width: 1024px) {
+  .main-content {
+    margin-left: var(--sidebar-width);
+  }
 }
 
 .page-content {
   padding: var(--sp-lg);
   max-width: 1300px;
   overflow: visible;
+}
+
+/* ─── Mobile Sidebar Overlay ───────────────────────────────────────────────
+   Semi-transparent backdrop behind the sidebar drawer on mobile/tablet.
+   Clicking it closes the sidebar.
+─────────────────────────────────────────────────────────────────────────── */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  background: rgba(15, 23, 42, 0.45);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  animation: overlayIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Hide on desktop — sidebar is always visible */
+@media (min-width: 1024px) {
+  .sidebar-overlay { display: none; }
 }
 
 .page-header {

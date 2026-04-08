@@ -2,9 +2,10 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Users, FileText, Bell, Settings,
-  LogOut, Stethoscope, Moon, Sun
+  LogOut, Stethoscope, Moon, Sun, X
 } from 'lucide-react'
 import Logo from './Logo'
+import { useSidebar } from './SidebarContext'
 
 const navGroups = [
   {
@@ -30,6 +31,7 @@ const navGroups = [
 ]
 
 export default function DoctorSidebar() {
+  const { isOpen, close } = useSidebar()
   const navigate = useNavigate()
   const [isDark, setIsDark] = useState(
     () => document.documentElement.getAttribute('data-theme') === 'dark'
@@ -65,11 +67,18 @@ export default function DoctorSidebar() {
       }
 
   return (
-    <aside className="dsb" style={sidebarStyle}>
+    <aside className={`dsb${isOpen ? ' dsb--open' : ''}`} style={sidebarStyle}>
       <div className="dsb-logo">
         <div className="dsb-logo-inner">
           <Logo size={36} className="dsb-brand-logo" />
         </div>
+        <button
+          className="dsb-close-btn"
+          onClick={close}
+          aria-label="Close navigation"
+        >
+          <X size={18} strokeWidth={2} />
+        </button>
       </div>
 
 
@@ -82,6 +91,7 @@ export default function DoctorSidebar() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={close}
                 className={({ isActive }) => `dsb-item${isActive ? ' dsb-item--active' : ''}`}
               >
                 <span className="dsb-item-icon">
@@ -116,9 +126,18 @@ export default function DoctorSidebar() {
           box-shadow: 1px 0 0 rgba(15,23,42,0.04), 4px 0 16px rgba(15,23,42,0.04);
           display: flex;
           flex-direction: column;
-          z-index: 1000;
+          z-index: 1100;
           overflow: hidden;
-          transition: background 0.5s ease-in-out, border-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
+          transform: translateX(-100%);
+          transition:
+            transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+            background 0.5s ease-in-out,
+            border-color 0.5s ease-in-out,
+            box-shadow 0.5s ease-in-out;
+        }
+        .dsb--open { transform: translateX(0) !important; }
+        @media (min-width: 1024px) {
+          .dsb { transform: translateX(0); }
         }
 
         [data-theme='dark'] .dsb {
@@ -134,11 +153,31 @@ export default function DoctorSidebar() {
           border-bottom: 1px solid var(--color-border);
           flex-shrink: 0;
           background: transparent;
-          justify-content: flex-start;
+          justify-content: space-between;
           width: 100%;
           position: relative;
         }
-
+        .dsb-close-btn {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: 32px; height: 32px;
+          border-radius: var(--radius-sm);
+          background: var(--color-surface);
+          border: 1.5px solid var(--color-border);
+          color: var(--color-muted);
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+        .dsb-close-btn:hover {
+          background: var(--color-danger-light);
+          color: var(--color-danger);
+          border-color: var(--color-danger-muted);
+        }
+        @media (max-width: 1023px) {
+          .dsb-close-btn { display: flex; }
+        }
         .dsb-logo::after {
           content: '';
           position: absolute;

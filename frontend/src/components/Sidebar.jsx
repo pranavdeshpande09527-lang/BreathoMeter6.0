@@ -2,10 +2,11 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Wind, Activity, Cloud, Map,
-  Clock, FileText, Bell, Settings, LogOut, HeartPulse, Stethoscope, Moon, Sun
+  Clock, FileText, Bell, Settings, LogOut, HeartPulse, Stethoscope, Moon, Sun, X
 } from 'lucide-react'
 import Logo from './Logo'
 import { getTopPages } from '../utils/livingUI'
+import { useSidebar } from './SidebarContext'
 
 const navGroups = [
   {
@@ -42,6 +43,7 @@ const navGroups = [
 ]
 
 export default function PatientSidebar() {
+  const { isOpen, close } = useSidebar()
   const navigate = useNavigate()
   const [topPages, setTopPages] = useState([])
   const [isDark, setIsDark] = useState(
@@ -82,12 +84,19 @@ export default function PatientSidebar() {
       }
 
   return (
-    <aside className="sb" style={sidebarStyle}>
-      {/* Logo Section */}
+    <aside className={`sb${isOpen ? ' sb--open' : ''}`} style={sidebarStyle}>
+      {/* Logo Section + Mobile Close */}
       <div className="sb-logo">
         <div className="sb-logo-inner">
           <Logo size={34} className="sb-brand-logo" />
         </div>
+        <button
+          className="sb-close-btn"
+          onClick={close}
+          aria-label="Close navigation"
+        >
+          <X size={18} strokeWidth={2} />
+        </button>
       </div>
 
       {/* Nav */}
@@ -99,6 +108,7 @@ export default function PatientSidebar() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={close}
                 className={({ isActive }) =>
                   `sb-item${isActive ? ' sb-item--active' : ''}${
                     topPages.includes(item.to) && !isActive ? ' sb-item--priority' : ''
@@ -130,6 +140,10 @@ export default function PatientSidebar() {
       </div>
 
       <style>{`
+        /* ─── Sidebar — mobile-first ───────────────────────────────────────────
+           On mobile / tablet (<1024px) the sidebar starts off-screen and
+           slides in when .sb--open is added. On desktop it is always visible.
+        ───────────────────────────────────────────────────────────────────── */
         .sb {
           position: fixed;
           top: 0; left: 0;
@@ -142,9 +156,21 @@ export default function PatientSidebar() {
           box-shadow: 1px 0 0 rgba(15,23,42,0.04), 4px 0 16px rgba(15,23,42,0.04);
           display: flex;
           flex-direction: column;
-          z-index: 1000;
+          z-index: 1100;
           overflow: hidden;
-          transition: background 0.5s ease-in-out, border-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
+          /* Slide transition */
+          transform: translateX(-100%);
+          transition:
+            transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+            background 0.5s ease-in-out,
+            border-color 0.5s ease-in-out,
+            box-shadow 0.5s ease-in-out;
+        }
+        /* Open state — used on mobile/tablet */
+        .sb--open { transform: translateX(0) !important; }
+        /* Always visible on desktop */
+        @media (min-width: 1024px) {
+          .sb { transform: translateX(0); }
         }
         /* Dark mode .sb background is controlled via React inline style + MutationObserver
            to avoid CSS caching / selector timing issues. This rule is a fallback only. */
@@ -164,9 +190,31 @@ export default function PatientSidebar() {
           border-bottom: 1px solid var(--color-border);
           flex-shrink: 0;
           background: transparent;
-          justify-content: flex-start;
+          justify-content: space-between;
           width: 100%;
           position: relative;
+        }
+        /* Close button — only show on mobile */
+        .sb-close-btn {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: 32px; height: 32px;
+          border-radius: var(--radius-sm);
+          background: var(--color-surface);
+          border: 1.5px solid var(--color-border);
+          color: var(--color-muted);
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+        .sb-close-btn:hover {
+          background: var(--color-danger-light);
+          color: var(--color-danger);
+          border-color: var(--color-danger-muted);
+        }
+        @media (max-width: 1023px) {
+          .sb-close-btn { display: flex; }
         }
         .sb-logo::after {
           content: '';

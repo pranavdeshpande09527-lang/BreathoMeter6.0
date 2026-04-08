@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Bell, Search, Settings, LogOut, ChevronDown, X, Moon, Sun, MessageSquare } from 'lucide-react'
+import { Bell, Search, Settings, LogOut, ChevronDown, X, Moon, Sun, MessageSquare, Menu } from 'lucide-react'
+import { useSidebar } from './SidebarContext'
 
 const routeTitles = {
   '/dashboard':         { title: 'Dashboard',        sub: 'Your health at a glance' },
@@ -27,6 +28,7 @@ export default function Topbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const pageInfo = routeTitles[location.pathname] || { title: 'Health Intelligence', sub: 'Clinical Respiratory Monitoring' }
+  const { toggle } = useSidebar()
 
   const [userData, setUserData] = useState({ name: '', role: '' })
   const [profileOpen, setProfileOpen] = useState(false)
@@ -129,6 +131,17 @@ export default function Topbar() {
     <header className="tb" style={topbarStyle}>
       {/* Gradient bottom border — AI feel */}
       <div className="tb-gradient-border" aria-hidden="true" />
+
+      {/* Hamburger — only visible on mobile/tablet */}
+      <button
+        id="tb-hamburger"
+        className="tb-hamburger"
+        onClick={toggle}
+        aria-label="Open navigation menu"
+      >
+        <Menu size={20} strokeWidth={2} />
+      </button>
+
       {/* Left: Page title */}
       <div className="tb-left">
         <div className="tb-title">{pageInfo.title}</div>
@@ -255,10 +268,14 @@ export default function Topbar() {
       </div>
 
       <style>{`
+        /* ─── Topbar ────────────────────────────────────────────────────────────
+           On desktop (≥1024px) it starts after the sidebar.
+           On mobile/tablet (<1024px) it spans the full width.
+        ─────────────────────────────────────────────────────────────────────── */
         .tb {
           position: fixed;
           top: 0;
-          left: var(--sidebar-width);
+          left: 0;
           right: 0;
           height: var(--topbar-height);
           /* Background controlled via React inline style for reliability */
@@ -268,11 +285,38 @@ export default function Topbar() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 28px;
+          padding: 0 20px;
           z-index: 999;
+          gap: 12px;
           transition: background 0.4s cubic-bezier(0.4,0,0.2,1),
                       border-color 0.4s cubic-bezier(0.4,0,0.2,1),
                       box-shadow 0.4s cubic-bezier(0.4,0,0.2,1);
+        }
+        /* On desktop, offset the topbar to sit to the right of the fixed sidebar */
+        @media (min-width: 1024px) {
+          .tb { left: var(--sidebar-width); padding: 0 28px; }
+        }
+        /* Hamburger — visible only on mobile/tablet */
+        .tb-hamburger {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px; height: 36px;
+          background: var(--color-bg);
+          border: 1.5px solid var(--color-border);
+          border-radius: var(--radius-sm);
+          color: var(--color-muted);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: all 0.15s ease;
+        }
+        .tb-hamburger:hover {
+          background: var(--color-surface);
+          color: var(--color-primary);
+          border-color: var(--color-primary-muted);
+        }
+        @media (min-width: 1024px) {
+          .tb-hamburger { display: none; }
         }
         /* Fallback CSS selector (React inline style takes precedence) */
         [data-theme='dark'] .tb {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Search, ChevronDown, Settings, LogOut, X, Moon, Sun } from 'lucide-react'
+import { Bell, Search, ChevronDown, Settings, LogOut, X, Moon, Sun, Menu } from 'lucide-react'
+import { useSidebar } from './SidebarContext'
 
 const routeTitles = {
   '/doctor/dashboard':     { title: 'Clinical Dashboard', sub: 'Patient health overview' },
@@ -21,6 +22,7 @@ export default function DoctorTopbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const pageInfo = routeTitles[location.pathname] || { title: 'Doctor Portal', sub: '' }
+  const { toggle } = useSidebar()
 
   const [userData, setUserData] = useState({ name: '', role: 'Doctor' })
   const [profileOpen, setProfileOpen] = useState(false)
@@ -80,6 +82,16 @@ export default function DoctorTopbar() {
 
   return (
     <header className="dtb">
+      {/* Hamburger — only visible on mobile/tablet */}
+      <button
+        id="dtb-hamburger"
+        className="dtb-hamburger"
+        onClick={toggle}
+        aria-label="Open navigation menu"
+      >
+        <Menu size={20} strokeWidth={2} />
+      </button>
+
       <div className="dtb-left">
         <div className="dtb-title">{pageInfo.title}</div>
         {pageInfo.sub && <div className="dtb-subtitle">{pageInfo.sub}</div>}
@@ -172,7 +184,7 @@ export default function DoctorTopbar() {
       <style>{`
         .dtb {
           position: fixed;
-          top: 0; left: var(--sidebar-width); right: 0;
+          top: 0; left: 0; right: 0;
           height: var(--topbar-height);
           background: rgba(255, 255, 255, 0.65);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -182,9 +194,35 @@ export default function DoctorTopbar() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 28px;
-          z-index: 99;
+          padding: 0 20px;
+          gap: 12px;
+          z-index: 999;
           transition: background 0.5s ease, border-color 0.5s ease;
+        }
+        @media (min-width: 1024px) {
+          .dtb { left: var(--sidebar-width); padding: 0 28px; }
+        }
+        /* Hamburger — visible only on mobile/tablet */
+        .dtb-hamburger {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px; height: 36px;
+          background: var(--color-bg);
+          border: 1.5px solid var(--color-border);
+          border-radius: var(--radius-sm);
+          color: var(--color-muted);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: all 0.15s ease;
+        }
+        .dtb-hamburger:hover {
+          background: var(--color-surface);
+          color: var(--color-safe);
+          border-color: var(--color-safe-muted);
+        }
+        @media (min-width: 1024px) {
+          .dtb-hamburger { display: none; }
         }
         [data-theme='dark'] .dtb {
           background: rgba(11, 17, 32, 0.88);

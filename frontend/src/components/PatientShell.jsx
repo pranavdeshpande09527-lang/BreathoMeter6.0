@@ -3,12 +3,14 @@ import { Outlet, useLocation } from 'react-router-dom'
 import PatientSidebar from './Sidebar'
 import Topbar from './Topbar'
 import HavaChatbot from './HavaChatbot'
+import { SidebarProvider, useSidebar } from './SidebarContext'
 import { applyLivingContext, recordPageVisit, getPersonalizedInsight } from '../utils/livingUI'
 
-export default function PatientShell() {
+function PatientShellInner() {
     const location = useLocation()
     const contextInterval = useRef(null)
     const [insight, setInsight] = useState(null)
+    const { isOpen, close } = useSidebar()
 
     // ── Apply Living UI context on mount and every 5 min ─────────────────────
     useEffect(() => {
@@ -41,9 +43,27 @@ export default function PatientShell() {
         recordPageVisit(location.pathname)
     }, [location.pathname])
 
+    // ── Prevent body scroll when mobile sidebar is open ───────────────────────
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => { document.body.style.overflow = '' }
+    }, [isOpen])
+
     return (
         <div className="app-shell">
             <PatientSidebar />
+            {/* Mobile overlay — clicking outside the sidebar closes it */}
+            {isOpen && (
+                <div
+                    className="sidebar-overlay"
+                    onClick={close}
+                    aria-hidden="true"
+                />
+            )}
             <div className="main-content living-main">
                 <Topbar />
                 <div className="page-content page-enter">
@@ -63,5 +83,13 @@ export default function PatientShell() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function PatientShell() {
+    return (
+        <SidebarProvider>
+            <PatientShellInner />
+        </SidebarProvider>
     )
 }
