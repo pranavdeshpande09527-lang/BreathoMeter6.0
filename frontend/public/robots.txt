@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://breathometer6.web.app/sitemap.xml

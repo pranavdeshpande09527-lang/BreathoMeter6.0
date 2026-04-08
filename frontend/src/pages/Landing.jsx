@@ -449,9 +449,14 @@ export default function Landing() {
           <div className="land-logo">
             <Logo size={40} />
           </div>
+          <div className="footer-contact" style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            <span style={{ fontWeight: '500', color: 'var(--text-main)' }}>Project Owner</span>
+            <span>pranav deshpande</span>
+            <a href="mailto:pranavdeshpande09527@gmail.com" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>pranavdeshpande09527@gmail.com</a>
+          </div>
           <div className="footer-links">
-            <a href="#">Privacy</a>
-            <a href="#">Terms</a>
+            <Link to="/privacy-policy">Privacy</Link>
+            <Link to="/terms-of-service">Terms</Link>
             <a href="#">Security</a>
           </div>
         </div>

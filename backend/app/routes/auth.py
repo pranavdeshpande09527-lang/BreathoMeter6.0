@@ -190,8 +190,9 @@ async def signup(user: UserCreate, request: Request):
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 @router.post("/login")
-async def login(user: UserLogin):
+async def login(user: UserLogin, request: Request):
     """Handles user login with standard Supabase Auth."""
+    await check_rate_limit(request, limit=10, window_seconds=60)
     pseudo_email = f"{user.username}@breathometer.local"
     try:
         response = await supabase_auth_request("token?grant_type=password", "POST", {

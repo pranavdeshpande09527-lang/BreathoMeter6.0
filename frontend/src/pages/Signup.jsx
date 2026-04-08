@@ -184,7 +184,7 @@ export default function Signup() {
           </div>
 
           <div className="auth-terms text-meta">
-            By creating an account you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+            By creating an account you agree to our <Link to="/terms-of-service">Terms of Service</Link> and <Link to="/privacy-policy">Privacy Policy</Link>.
           </div>
 
           <button type="submit" className="btn btn-primary auth-submit" disabled={loading || cooldown > 0} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

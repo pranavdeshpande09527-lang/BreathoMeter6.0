@@ -24,6 +24,8 @@ import DoctorSettings from './pages/DoctorSettings'
 import AppointmentChat from './pages/AppointmentChat'
 import DoctorRecommendations from './pages/DoctorRecommendations'
 import HavaPage from './pages/HavaPage'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
 import PatientShell from './components/PatientShell'
 import DoctorShell from './components/DoctorShell'
 import ScrollToTop from './components/ScrollToTop'
@@ -138,6 +140,8 @@ export default function App() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
                     <Route path="/profile-setup" element={<ProtectedRoute allowedRole="patient"><HealthProfileSetup /></ProtectedRoute>} />
 
                     {/* Patient System */}

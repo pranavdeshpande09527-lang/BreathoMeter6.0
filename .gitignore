@@ -2,6 +2,7 @@
 .env
 api_key.env
 *.env.local
+*-firebase-adminsdk-*.json
 
 # Python
 __pycache__/

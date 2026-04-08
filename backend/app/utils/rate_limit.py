@@ -34,7 +34,7 @@ async def check_rate_limit(request: Request, limit: int = 5, window_seconds: int
             app_logger.warning(f"Rate limit exceeded for IP: {client_ip} on path: {request.url.path}")
             raise HTTPException(
                 status_code=429,
-                detail="Too many signup attempts. Please wait before trying again."
+                detail="Too many requests. Please wait before trying again."
             )
             
         # Add new request
