@@ -257,7 +257,11 @@ export default function PatientDashboard() {
             <div className={`pd-insights-row ${recommendedDoctor ? 'has-two' : ''}`} style={{ marginBottom: 32 }}>
                 {/* Narrator AI Card */}
                 {(!loading && (currentAqi || healthScore)) && (
-                    <div className="narrator-card glass-secondary depth-float hover-card card-enter-2">
+                    <div 
+                        className="narrator-card glass-secondary depth-float hover-card card-enter-2"
+                        onClick={() => navigate('/hava')}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <div className="narrator-icon-box">
                             <div className="narrator-pulse" />
                             <Activity size={20} className="narrator-icon-v3" />
