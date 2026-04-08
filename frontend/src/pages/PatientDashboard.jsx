@@ -219,7 +219,7 @@ export default function PatientDashboard() {
     })()
 
     return (
-        <div className="pd-page page-enter">
+        <div className="pd-page page-enter" style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
             {/* ── Dashboard Header ─────────────────────────────────────────── */}
             <header className="pd-header-v3 card-enter-1" style={{ borderRadius: 'var(--radius-lg)', padding: '20px 24px', marginBottom: 24 }}>
                 <div className="page-header-row">
@@ -254,7 +254,7 @@ export default function PatientDashboard() {
                 </div>
             </header>
             {/* ── Intelligence Layer: Narrator & Doctor Match ───────────────── */}
-            <div className="pd-insights-row" style={{ display: 'grid', gridTemplateColumns: recommendedDoctor ? '1fr 1fr' : '1fr', gap: '24px', marginBottom: 32 }}>
+            <div className={`pd-insights-row ${recommendedDoctor ? 'has-two' : ''}`} style={{ marginBottom: 32 }}>
                 {/* Narrator AI Card */}
                 {(!loading && (currentAqi || healthScore)) && (
                     <div className="narrator-card glass-secondary depth-float hover-card card-enter-2">
@@ -612,7 +612,7 @@ export default function PatientDashboard() {
             <style>{`
         .pd-anchor-row {
           display: grid;
-          grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) 2fr;
+          grid-template-columns: 1fr;
           gap: var(--sp-md);
           align-items: start;
         }
@@ -632,7 +632,7 @@ export default function PatientDashboard() {
           flex-direction: column;
           height: 100%;
         }
-        @media (max-width: 1024px) {
+        @media (min-width: 640px) {
           .pd-anchor-row {
             grid-template-columns: 1fr 1fr;
           }
@@ -640,9 +640,9 @@ export default function PatientDashboard() {
             grid-column: span 2;
           }
         }
-        @media (max-width: 600px) {
+        @media (min-width: 1024px) {
           .pd-anchor-row {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1fr 2fr;
           }
           .pd-secondary-col {
             grid-column: span 1;
@@ -787,9 +787,28 @@ export default function PatientDashboard() {
 
         .grid-metrics {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 16px;
             margin-top: 16px;
+        }
+        .pd-page {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        .pd-insights-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+        @media (min-width: 768px) {
+            .pd-insights-row.has-two {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 639px) {
+            .page-content { padding: 16px 12px; }
         }
       `}</style>
         </div>

@@ -264,6 +264,7 @@ body {
     color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-x: hidden;
+  max-width: 100%;
   position: relative;
 }
 
@@ -799,7 +800,9 @@ button, a {
 .page-content {
   padding: var(--sp-lg);
   max-width: 1300px;
-  overflow: visible;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ─── Mobile Sidebar Overlay ───────────────────────────────────────────────
@@ -851,7 +854,7 @@ button, a {
 
 .grid-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--sp-sm);
 }
 

@@ -148,48 +148,50 @@ export default function DoctorDashboard() {
                                 <div style={{ fontSize: 13 }}>When patients connect to you through the Risk Analysis page, their requests appear here in real-time.</div>
                             </div>
                         ) : (
-                            <table className="dd-table">
-                                <thead>
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Health Concern</th>
-                                        <th>Date Requested</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {appointments.map(a => (
-                                        <tr key={a.id} style={{ background: a.status === 'pending' ? 'rgba(var(--color-warning-rgb, 255,165,0), 0.04)' : 'transparent' }}>
-                                            <td>
-                                                <div style={{ fontWeight: 600 }}>{a.patient_name || a.patient_id?.slice(0, 8)}</div>
-                                                <div className="text-meta" style={{ fontSize: 11 }}>ID: {a.patient_id?.slice(0, 8)}</div>
-                                            </td>
-                                            <td style={{ color: 'var(--color-text)' }}>{a.disease}</td>
-                                            <td className="text-meta">
-                                                {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${a.status === 'pending' ? 'badge-warning' : 'badge-safe'}`}>
-                                                    {a.status === 'pending' ? '⏳ Pending' : '✅ Accepted'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {a.status === 'pending' ? (
-                                                    <div style={{ display: 'flex', gap: 6 }}>
-                                                        <button onClick={() => handleAccept(a.id)} className="btn btn-primary btn-sm">Accept</button>
-                                                        <button onClick={() => handleDecline(a.id)} className="btn btn-outline btn-sm" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>
-                                                            <X size={12} style={{ display: 'inline', marginRight: 3 }} />Decline
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <Link to={`/chat/${a.id}?role=doctor`} className="btn btn-primary btn-sm">💬 Chat</Link>
-                                                )}
-                                            </td>
+                            <div style={{ overflowX: 'auto', width: '100%' }}>
+                                <table className="dd-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient</th>
+                                            <th>Health Concern</th>
+                                            <th>Date Requested</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {appointments.map(a => (
+                                            <tr key={a.id} style={{ background: a.status === 'pending' ? 'rgba(var(--color-warning-rgb, 255,165,0), 0.04)' : 'transparent' }}>
+                                                <td>
+                                                    <div style={{ fontWeight: 600 }}>{a.patient_name || a.patient_id?.slice(0, 8)}</div>
+                                                    <div className="text-meta" style={{ fontSize: 11 }}>ID: {a.patient_id?.slice(0, 8)}</div>
+                                                </td>
+                                                <td style={{ color: 'var(--color-text)', whiteSpace: 'nowrap' }}>{a.disease}</td>
+                                                <td className="text-meta" style={{ whiteSpace: 'nowrap' }}>
+                                                    {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </td>
+                                                <td>
+                                                    <span className={`badge ${a.status === 'pending' ? 'badge-warning' : 'badge-safe'}`} style={{ whiteSpace: 'nowrap' }}>
+                                                        {a.status === 'pending' ? '⏳ Pending' : '✅ Accepted'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {a.status === 'pending' ? (
+                                                        <div style={{ display: 'flex', gap: 6 }}>
+                                                            <button onClick={() => handleAccept(a.id)} className="btn btn-primary btn-sm">Accept</button>
+                                                            <button onClick={() => handleDecline(a.id)} className="btn btn-outline btn-sm" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>
+                                                                <X size={12} style={{ display: 'inline', marginRight: 3 }} />Decline
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <Link to={`/chat/${a.id}?role=doctor`} className="btn btn-primary btn-sm">💬 Chat</Link>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
                     
@@ -213,36 +215,38 @@ export default function DoctorDashboard() {
                                 ))}
                             </div>
                         </div>
-                        <table className="dd-table">
-                            <thead>
-                                <tr>
-                                    <th>Patient</th><th>Email</th><th>Role</th><th>Joined</th><th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredPatients.length === 0 ? (
-                                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-muted)' }}>No patients found.</td></tr>
-                                ) : (
-                                    filteredPatients.map(p => (
-                                        <tr key={p.id}>
-                                            <td style={{ fontWeight: 600, color: 'var(--color-text)' }}>
-                                                {p.email?.split('@')[0] || p.id?.slice(0, 8)}
-                                            </td>
-                                            <td className="text-meta">{p.email}</td>
-                                            <td>
-                                                <span className="badge badge-safe">{p.role || 'patient'}</span>
-                                            </td>
-                                            <td className="text-meta">
-                                                {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '–'}
-                                            </td>
-                                            <td>
-                                                <Link to={`/doctor/patient-profile/${p.id}`} className="btn btn-outline btn-sm">View</Link>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                        <div style={{ overflowX: 'auto', width: '100%' }}>
+                            <table className="dd-table">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th><th>Email</th><th>Role</th><th>Joined</th><th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredPatients.length === 0 ? (
+                                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-muted)' }}>No patients found.</td></tr>
+                                    ) : (
+                                        filteredPatients.map(p => (
+                                            <tr key={p.id}>
+                                                <td style={{ fontWeight: 600, color: 'var(--color-text)', whiteSpace: 'nowrap' }}>
+                                                    {p.email?.split('@')[0] || p.id?.slice(0, 8)}
+                                                </td>
+                                                <td className="text-meta" style={{ whiteSpace: 'nowrap' }}>{p.email}</td>
+                                                <td>
+                                                    <span className="badge badge-safe">{p.role || 'patient'}</span>
+                                                </td>
+                                                <td className="text-meta" style={{ whiteSpace: 'nowrap' }}>
+                                                    {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '–'}
+                                                </td>
+                                                <td>
+                                                    <Link to={`/doctor/patient-profile/${p.id}`} className="btn btn-outline btn-sm">View</Link>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     {/* Right sidebar summary */}
@@ -295,6 +299,7 @@ export default function DoctorDashboard() {
         .dd-table td { padding:10px 10px 10px 0; border-bottom:1px solid var(--color-border); vertical-align:middle; }
         .dd-table tbody tr:last-child td { border-bottom:none; }
         @media (max-width:900px) { .dd-anchor-row { grid-template-columns:1fr; } .dd-stats-row { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:640px) { .dd-stats-row { grid-template-columns:1fr; } }
       `}</style>
         </div>
     )
