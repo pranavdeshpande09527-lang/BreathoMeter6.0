@@ -605,6 +605,27 @@ export default function Topbar() {
           background: var(--color-danger-light);
           color: var(--color-danger);
         }
+
+        /* Mobile specific hiding of extra topbar items to prevent overflow */
+        @media (max-width: 768px) {
+          .tb-search,
+          .tb-profile-info {
+            display: none;
+          }
+          .tb {
+            padding: 0 12px;
+            gap: 8px;
+          }
+          .tb-right {
+            gap: 4px;
+          }
+          .tb-title {
+            font-size: 14px;
+          }
+          .tb-subtitle {
+            font-size: 10px;
+          }
+        }
       `}</style>
     </header>
   )

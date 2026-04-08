@@ -276,6 +276,27 @@ export default function DoctorTopbar() {
         .dtb-dropdown-item:hover { background:var(--color-bg); color:var(--color-text); }
         .dtb-dropdown-item--danger { color:var(--color-danger); }
         .dtb-dropdown-item--danger:hover { background:var(--color-danger-light); }
+
+        /* Mobile specific hiding of extra topbar items to prevent overflow */
+        @media (max-width: 768px) {
+          .dtb-search,
+          .dtb-profile-info {
+            display: none;
+          }
+          .dtb {
+            padding: 0 12px;
+            gap: 8px;
+          }
+          .dtb-right {
+            gap: 4px;
+          }
+          .dtb-title {
+            font-size: 14px;
+          }
+          .dtb-subtitle {
+            font-size: 10px;
+          }
+        }
       `}</style>
     </header>
   )
