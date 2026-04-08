@@ -40,9 +40,6 @@ const features = [
 ]
 
 const stats = [
-  { value: '48,000+', label: 'People Helped' },
-  { value: '99.2%',   label: 'Accurate Results' },
-  { value: '320+',    label: 'Clinics on Board' },
   { value: '24/7',    label: 'Always Available' },
 ]
 
