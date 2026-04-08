@@ -359,12 +359,12 @@ export default function AirQualityMap() {
             )}
 
             {/* ── Header ─────────────────────────────────────────────────── */}
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
-                <div>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap', marginBottom: 24 }}>
+                <div style={{ minWidth: 'min(300px, 100%)' }}>
                     <div className="text-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapIcon size={14} /> Environmental Intelligence</div>
                     <h1 className="text-page-title" style={{ marginTop: 4 }}>Interactive AQI Map</h1>
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     <button 
                         onClick={() => setShowRoute(!showRoute)}
                         className={`glass-btn ${showRoute ? 'active' : ''}`}
@@ -376,7 +376,7 @@ export default function AirQualityMap() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 7fr) minmax(0, 3fr)', gap: 20, alignItems: 'start' }}>
+            <div className="aqi-map-grid">
                 
                 {/* ── Left Column (Map & Trends) ───────────────────────────────────────────── */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -402,12 +402,12 @@ export default function AirQualityMap() {
                     </div>
 
                     {/* Map Container */}
-                    <div style={{ position: 'relative', width: '100%', height: 500, borderRadius: 20, overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.06)' }}>
+                    <div className="map-view-container">
                         
                         {/* Floating AQI Card */}
-                        <div className="glass-panel" style={{
+                        <div className="glass-panel map-floating-card" style={{
                             position: 'absolute', top: 16, left: 16, zIndex: 1000,
-                            padding: panelOpen ? '18px 20px' : '12px 16px', width: panelOpen ? 280 : 'auto',
+                            padding: panelOpen ? '18px 20px' : '12px 16px',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -459,7 +459,7 @@ export default function AirQualityMap() {
                     </div>
 
                     {/* Historical & Forecast Container */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    <div className="analytics-mini-grid">
                         
                         {/* 24h Trend Slider */}
                         {trendData.length > 0 && (
@@ -560,7 +560,7 @@ export default function AirQualityMap() {
                     </div>
 
                     {/* Personalized Activity */}
-                    <div style={{ display: 'flex', gap: 12 }}>
+                    <div className="analytics-mini-grid">
                         <div className="card" style={{ flex: 1, padding: 16, borderRadius: 16, borderTop: '4px solid #22C55E', background: 'linear-gradient(180deg, var(--color-safe-light), var(--color-surface))' }}>
                             <div style={{ fontSize: 11, color: 'var(--color-safe)', fontWeight: 700, textTransform: 'uppercase' }}>Best Time Out</div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-text)', marginTop: 4 }}>{bestTime || 'Morning'}</div>
@@ -595,6 +595,29 @@ export default function AirQualityMap() {
             </div>
 
             <style>{`
+                .aqi-map-grid {
+                    display: grid;
+                    grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+                    gap: 20px;
+                    align-items: start;
+                }
+                .map-view-container {
+                    position: relative;
+                    width: 100%;
+                    height: 600px;
+                    border-radius: 20px;
+                    overflow: hidden;
+                    border: 1px solid var(--color-border);
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+                }
+                .map-floating-card {
+                    width: 280px;
+                }
+                .analytics-mini-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                }
                 .glass-panel {
                     background: rgba(255,255,255,0.85); backdrop-filter: blur(16px) saturate(180%);
                     -webkit-backdrop-filter: blur(16px) saturate(180%);
@@ -620,6 +643,30 @@ export default function AirQualityMap() {
                 input[type=range] { -webkit-appearance: none; appearance: none; outline: none; border-radius: 6px; height: 6px; }
                 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: currentColor; cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); transition: transform 0.1s; }
                 input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+                @media (max-width: 1024px) {
+                    .aqi-map-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    .map-view-container {
+                        height: 450px;
+                    }
+                    .map-floating-card {
+                        width: calc(100% - 32px);
+                    }
+                    .analytics-mini-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .page-header {
+                        flex-direction: column;
+                        align-items: flex-start !important;
+                    }
+                    .map-view-container {
+                        height: 400px;
+                    }
+                }
             `}</style>
         </div>
     )
