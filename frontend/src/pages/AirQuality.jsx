@@ -226,7 +226,7 @@ export default function AirQuality() {
                         <div className="text-label">Environmental Health</div>
                         <h1 className="text-page-title" style={{ marginTop: 4 }}>Air Quality</h1>
                     </div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <div className="aq-header-actions">
                         <form onSubmit={handleSearch} className="search-bar-form">
                             <input
                                 type="text"
@@ -408,6 +408,12 @@ export default function AirQuality() {
           grid-template-columns: 280px 1fr;
           gap: var(--sp-md);
           align-items: start;
+        }
+        .aq-header-actions {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
         }
         .aq-gauge-card {
           display: flex;

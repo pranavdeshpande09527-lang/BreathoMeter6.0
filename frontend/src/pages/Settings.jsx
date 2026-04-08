@@ -30,6 +30,15 @@ export default function Settings() {
     const [passStatus, setPassStatus] = useState('idle')
     const [passError, setPassError] = useState('')
 
+    // Notifications state
+    const [notifications, setNotifications] = useState({
+        'Health alerts': true,
+        'AQI warnings': true,
+        'Analysis complete': true,
+        'Medication reminders': false,
+        'Doctor messages': true,
+    })
+
     // Load profile from localStorage on mount, then try to fetch latest from backend
     useEffect(() => {
         let userData = {}
@@ -377,18 +386,26 @@ export default function Settings() {
                     <div className="text-card-title">Notifications</div>
                 </div>
                 {[
-                    { label: 'Health alerts', desc: 'Critical SpO2 and breath quality alerts', on: true },
-                    { label: 'AQI warnings', desc: 'When air quality affects your area', on: true },
-                    { label: 'Analysis complete', desc: 'When your breath analysis is ready', on: true },
-                    { label: 'Medication reminders', desc: 'Scheduled medication and check reminders', on: false },
-                    { label: 'Doctor messages', desc: 'Messages from your assigned specialist', on: true },
+                    { label: 'Health alerts', desc: 'Critical SpO2 and breath quality alerts' },
+                    { label: 'AQI warnings', desc: 'When air quality affects your area' },
+                    { label: 'Analysis complete', desc: 'When your breath analysis is ready' },
+                    { label: 'Medication reminders', desc: 'Scheduled medication and check reminders' },
+                    { label: 'Doctor messages', desc: 'Messages from your assigned specialist' },
                 ].map(n => (
                     <div key={n.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 0', borderBottom: '1px solid var(--color-border)' }}>
                         <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{n.label}</div>
                             <div className="text-meta">{n.desc}</div>
                         </div>
-                        <div className={`s-toggle ${n.on ? 's-toggle--on' : ''}`} role="switch" aria-checked={n.on} tabIndex={0} aria-label={n.label} />
+                        <div 
+                            className={`s-toggle ${notifications[n.label] ? 's-toggle--on' : ''}`} 
+                            role="switch" 
+                            aria-checked={notifications[n.label]} 
+                            tabIndex={0} 
+                            aria-label={n.label}
+                            onClick={() => setNotifications(prev => ({ ...prev, [n.label]: !prev[n.label] }))}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setNotifications(prev => ({ ...prev, [n.label]: !prev[n.label] })); } }}
+                        />
                     </div>
                 ))}
             </div>
