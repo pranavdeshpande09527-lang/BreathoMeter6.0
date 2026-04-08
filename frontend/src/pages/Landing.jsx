@@ -40,7 +40,10 @@ const features = [
 ]
 
 const stats = [
-  { value: '24/7',    label: 'Always Available' },
+  { value: '24/7',      label: 'Always Available' },
+  { value: 'Smart',     label: 'AI Health Assessment' },
+  { value: 'Real-time', label: 'Air Quality Tracking' },
+  { value: 'Secure',    label: 'Private Medical Data' },
 ]
 
 const API_BASE = 'https://breathometer6-0.onrender.com'
