@@ -38,6 +38,8 @@ export default function Settings() {
         'Medication reminders': false,
         'Doctor messages': true,
     })
+    const [notifLoaded, setNotifLoaded] = useState(false)
+    const [notifSaving, setNotifSaving] = useState(false)
 
     // Load profile from localStorage on mount, then try to fetch latest from backend
     useEffect(() => {
@@ -89,6 +91,14 @@ export default function Settings() {
                 }))
             }
         }).catch(() => { /* non-critical */ })
+
+        // Load notification preferences from backend
+        api.auth.getNotifications().then(res => {
+            if (res?.preferences && Object.keys(res.preferences).length > 0) {
+                setNotifications(prev => ({ ...prev, ...res.preferences }))
+            }
+            setNotifLoaded(true)
+        }).catch(() => { setNotifLoaded(true) })
     }, [])
 
     function handleField(e) {
@@ -159,13 +169,30 @@ export default function Settings() {
         }
         setPassStatus('saving')
         setPassError('')
-        // TODO: wire password update to backend when endpoint is available
-        // For now show success after 1s to not block the user
-        setTimeout(() => {
+        try {
+            await api.auth.changePassword(passForm.newPass)
             setPassStatus('success')
             setPassForm({ current: '', newPass: '', confirm: '' })
             setTimeout(() => setPassStatus('idle'), 3000)
-        }, 800)
+        } catch (err) {
+            setPassStatus('error')
+            setPassError(err.message || 'Failed to update password. Please try again.')
+        }
+    }
+
+    async function handleToggleNotification(label) {
+        const updated = { ...notifications, [label]: !notifications[label] }
+        setNotifications(updated)
+        if (!notifLoaded) return
+        setNotifSaving(true)
+        try {
+            await api.auth.updateNotifications(updated)
+        } catch (e) {
+            // Revert on failure
+            setNotifications(notifications)
+        } finally {
+            setNotifSaving(false)
+        }
     }
 
     const saveBtnLabel = saveStatus === 'saving'
@@ -411,11 +438,12 @@ export default function Settings() {
                             aria-checked={notifications[n.label]} 
                             tabIndex={0} 
                             aria-label={n.label}
-                            onClick={() => setNotifications(prev => ({ ...prev, [n.label]: !prev[n.label] }))}
-                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setNotifications(prev => ({ ...prev, [n.label]: !prev[n.label] })); } }}
+                            onClick={() => handleToggleNotification(n.label)}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleNotification(n.label); } }}
                         />
                     </div>
                 ))}
+                {notifSaving && <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 8 }}>Saving…</div>}
             </div>
 
             {/* ── Security / Password ───────────────────────────────── */}

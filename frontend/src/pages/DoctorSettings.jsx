@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Stethoscope } from 'lucide-react'
 import { api } from '../utils/api'
 import { toast } from 'react-toastify'
 
@@ -14,53 +13,30 @@ export default function DoctorSettings() {
         license: ''
     })
 
-    const [notifications, setNotifications] = useState([
+    // Password state
+    const [passForm, setPassForm] = useState({ newPass: '', confirm: '' })
+    const [passStatus, setPassStatus] = useState('idle') // idle | saving | success | error
+    const [passError, setPassError] = useState('')
+
+    // Notification preference state
+    const NOTIF_DEFAULTS = [
         { id: 'critical_alerts', label: 'Critical patient alerts', desc: 'SpO2, FEV1 emergency thresholds', on: true },
         { id: 'report_reminders', label: 'Report reminders', desc: 'When reports await sign-off > 24h', on: true },
         { id: 'new_assignments', label: 'New patient assignments', desc: 'When a new patient is assigned to you', on: true },
         { id: 'weekly_summary', label: 'Weekly summary', desc: 'Your panel health summary every Monday', on: false },
-    ])
+    ]
+    const [notifications, setNotifications] = useState(NOTIF_DEFAULTS)
+    const [notifLoaded, setNotifLoaded] = useState(false)
+    const [notifSaving, setNotifSaving] = useState(false)
 
-    const handleSaveProfile = async () => {
-        setSaving(true)
-        try {
-            await api.auth.updateProfile({
-                first_name: profile.fname,
-                last_name: profile.lname,
-                phone: profile.phone
-            })
-            
-            const stored = localStorage.getItem('user_data')
-            if (stored && stored !== 'undefined') {
-                const parsed = JSON.parse(stored)
-                parsed.first_name = profile.fname
-                parsed.last_name = profile.lname
-                parsed.full_name = `${profile.fname} ${profile.lname}`.trim()
-                parsed.phone = profile.phone
-                localStorage.setItem('user_data', JSON.stringify(parsed))
-            }
-            toast.success("Profile saved successfully!")
-        } catch (e) {
-            toast.error(e.message || "Failed to save profile")
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    const toggleNotification = (id) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, on: !n.on } : n))
-    }
-
-    const handleUpdatePassword = () => {
-        toast.info("A password reset link has been sent to your email.")
-    }
-
+    // ── Load profile + notifications on mount ─────────────────────────────
     useEffect(() => {
+        // Load profile from localStorage
         try {
             const stored = localStorage.getItem('user_data')
             if (stored && stored !== 'undefined') {
                 const parsed = JSON.parse(stored)
-                
+
                 let fn = parsed.first_name || ''
                 let ln = parsed.last_name || ''
                 if (!fn && parsed.full_name) {
@@ -82,10 +58,90 @@ export default function DoctorSettings() {
                     license: parsed.license || 'Pending'
                 })
             }
-        } catch(e) {
+        } catch (e) {
             console.error('Failed to parse user_data for doctor settings:', e)
         }
+
+        // Load notification preferences from backend
+        api.auth.getNotifications().then(res => {
+            if (res?.preferences && Object.keys(res.preferences).length > 0) {
+                setNotifications(prev => prev.map(n => ({
+                    ...n,
+                    on: n.id in res.preferences ? Boolean(res.preferences[n.id]) : n.on
+                })))
+            }
+            setNotifLoaded(true)
+        }).catch(() => { setNotifLoaded(true) })
     }, [])
+
+    // ── Save Profile ──────────────────────────────────────────────────────
+    const handleSaveProfile = async () => {
+        setSaving(true)
+        try {
+            await api.auth.updateProfile({
+                first_name: profile.fname,
+                last_name: profile.lname,
+                phone: profile.phone
+            })
+
+            const stored = localStorage.getItem('user_data')
+            if (stored && stored !== 'undefined') {
+                const parsed = JSON.parse(stored)
+                parsed.first_name = profile.fname
+                parsed.last_name = profile.lname
+                parsed.full_name = `${profile.fname} ${profile.lname}`.trim()
+                parsed.phone = profile.phone
+                localStorage.setItem('user_data', JSON.stringify(parsed))
+            }
+            toast.success("Profile saved successfully!")
+        } catch (e) {
+            toast.error(e.message || "Failed to save profile")
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // ── Toggle + auto-save notification ───────────────────────────────────
+    const toggleNotification = async (id) => {
+        const updated = notifications.map(n => n.id === id ? { ...n, on: !n.on } : n)
+        setNotifications(updated)
+        if (!notifLoaded) return
+        setNotifSaving(true)
+        const prefsMap = Object.fromEntries(updated.map(n => [n.id, n.on]))
+        try {
+            await api.auth.updateNotifications(prefsMap)
+        } catch (e) {
+            // Revert on failure
+            setNotifications(notifications)
+            toast.error("Failed to save notification preference")
+        } finally {
+            setNotifSaving(false)
+        }
+    }
+
+    // ── Change Password ───────────────────────────────────────────────────
+    const handleUpdatePassword = async (e) => {
+        e.preventDefault()
+        if (!passForm.newPass || passForm.newPass.length < 8) {
+            setPassError('New password must be at least 8 characters.')
+            return
+        }
+        if (passForm.newPass !== passForm.confirm) {
+            setPassError('Passwords do not match.')
+            return
+        }
+        setPassStatus('saving')
+        setPassError('')
+        try {
+            await api.auth.changePassword(passForm.newPass)
+            setPassStatus('success')
+            setPassForm({ newPass: '', confirm: '' })
+            setTimeout(() => setPassStatus('idle'), 3000)
+        } catch (err) {
+            setPassStatus('error')
+            setPassError(err.message || 'Failed to update password. Please try again.')
+        }
+    }
 
     return (
         <div className="page-enter">
@@ -113,8 +169,8 @@ export default function DoctorSettings() {
                         </div>
                     ))}
                 </div>
-                <button 
-                    className="btn btn-primary" 
+                <button
+                    className="btn btn-primary"
                     style={{ marginTop: 20 }}
                     onClick={handleSaveProfile}
                     disabled={saving}
@@ -132,40 +188,66 @@ export default function DoctorSettings() {
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{n.label}</div>
                             <div className="text-meta">{n.desc}</div>
                         </div>
-                        <div 
-                            className={`al-toggle ${n.on ? 'al-toggle--on' : ''}`} 
-                            role="switch" 
-                            aria-checked={n.on} 
-                            tabIndex={0} 
+                        <div
+                            className={`al-toggle ${n.on ? 'al-toggle--on' : ''}`}
+                            role="switch"
+                            aria-checked={n.on}
+                            tabIndex={0}
                             aria-label={n.label}
                             onClick={() => toggleNotification(n.id)}
                             onKeyDown={(e) => e.key === 'Enter' && toggleNotification(n.id)}
                         />
                     </div>
                 ))}
+                {notifSaving && <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 8 }}>Saving…</div>}
             </div>
 
             {/* Security */}
-            <div className="card section">
+            <form className="card section" onSubmit={handleUpdatePassword} noValidate>
                 <div className="text-card-title" style={{ marginBottom: 16 }}>Security</div>
-                <div className="form-group">
-                    <label className="form-label" htmlFor="dr-curr-pass">Current Password</label>
-                    <input id="dr-curr-pass" type="password" className="form-input" placeholder="••••••••" />
-                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     <div className="form-group" style={{ margin: 0 }}>
                         <label className="form-label" htmlFor="dr-new-pass">New Password</label>
-                        <input id="dr-new-pass" type="password" className="form-input" placeholder="Min. 8 characters" />
+                        <input
+                            id="dr-new-pass"
+                            type="password"
+                            className="form-input"
+                            placeholder="Min. 8 characters"
+                            value={passForm.newPass}
+                            onChange={e => { setPassForm(f => ({ ...f, newPass: e.target.value })); setPassError('') }}
+                        />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
                         <label className="form-label" htmlFor="dr-confirm-pass">Confirm Password</label>
-                        <input id="dr-confirm-pass" type="password" className="form-input" placeholder="Confirm new password" />
+                        <input
+                            id="dr-confirm-pass"
+                            type="password"
+                            className="form-input"
+                            placeholder="Confirm new password"
+                            value={passForm.confirm}
+                            onChange={e => { setPassForm(f => ({ ...f, confirm: e.target.value })); setPassError('') }}
+                        />
                     </div>
                 </div>
-                <button className="btn btn-outline" style={{ marginTop: 16 }} onClick={handleUpdatePassword}>Update Password</button>
-            </div>
-
-
+                {passError && (
+                    <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--color-danger-muted, #FEE2E2)', borderRadius: 6, fontSize: 13, color: 'var(--color-danger)' }}>
+                        {passError}
+                    </div>
+                )}
+                {passStatus === 'success' && (
+                    <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--color-safe-muted, #DCFCE7)', borderRadius: 6, fontSize: 13, color: 'var(--color-safe)' }}>
+                        ✓ Password updated successfully.
+                    </div>
+                )}
+                <button
+                    type="submit"
+                    className="btn btn-outline"
+                    disabled={passStatus === 'saving'}
+                    style={{ marginTop: 16 }}
+                >
+                    {passStatus === 'saving' ? 'Updating...' : 'Update Password'}
+                </button>
+            </form>
 
             <style>{`
         .al-toggle { width:34px; height:18px; border-radius:var(--radius-full); background:var(--color-border); position:relative; cursor:pointer; transition:background 0.2s; flex-shrink:0; }

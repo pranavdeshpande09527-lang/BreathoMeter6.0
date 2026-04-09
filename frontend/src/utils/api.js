@@ -97,6 +97,15 @@ export const api = {
             method: 'PATCH',
             body: JSON.stringify(data)
         }),
+        changePassword: (newPassword) => fetchWithAuth('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ new_password: newPassword })
+        }),
+        getNotifications: () => fetchWithAuth('/auth/notifications'),
+        updateNotifications: (preferences) => fetchWithAuth('/auth/notifications', {
+            method: 'PUT',
+            body: JSON.stringify({ preferences })
+        }),
         listPatients: () => fetchWithAuth('/auth/patients'),
         listDoctors: () => fetchWithAuth('/auth/doctors'),
         getPatientDetail: (patientId) => fetchWithAuth(`/auth/patients/${patientId}`),
