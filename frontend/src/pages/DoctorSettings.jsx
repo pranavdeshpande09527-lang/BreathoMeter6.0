@@ -8,6 +8,7 @@ export default function DoctorSettings() {
         fname: '',
         lname: '',
         email: '',
+        contact_email: '',
         phone: '',
         specialization: '',
         license: ''
@@ -31,36 +32,34 @@ export default function DoctorSettings() {
 
     // ── Load profile + notifications on mount ─────────────────────────────
     useEffect(() => {
-        // Load profile from localStorage
-        try {
-            const stored = localStorage.getItem('user_data')
-            if (stored && stored !== 'undefined') {
-                const parsed = JSON.parse(stored)
-
-                let fn = parsed.first_name || ''
-                let ln = parsed.last_name || ''
-                if (!fn && parsed.full_name) {
-                    const parts = parsed.full_name.split(' ')
-                    fn = parts[0] || ''
-                    ln = parts.slice(1).join(' ') || ''
-                } else if (!fn && parsed.user_metadata?.full_name) {
-                    const parts = parsed.user_metadata.full_name.split(' ')
+        // Load profile from backend
+        api.auth.getProfile().then(res => {
+            if (res?.user) {
+                const u = res.user
+                const p = u.profile || {}
+                
+                let fn = p.first_name || ''
+                let ln = p.last_name || ''
+                if (!fn && u.full_name) {
+                    const parts = u.full_name.split(' ')
                     fn = parts[0] || ''
                     ln = parts.slice(1).join(' ') || ''
                 }
 
-                setProfile({
+                setProfile(prev => ({
+                    ...prev,
                     fname: fn,
                     lname: ln,
-                    email: parsed.email || '',
-                    phone: parsed.phone || '+91 00000 00000',
-                    specialization: parsed.specialty || parsed.specialization || 'Doctor',
-                    license: parsed.license || 'Pending'
-                })
+                    email: u.email || p.email || '',
+                    contact_email: p.contact_email || prev.contact_email,
+                    phone: p.phone || prev.phone || '+91 00000 00000',
+                    specialization: p.specialty || p.specialization || prev.specialization || 'Doctor',
+                    license: p.license || prev.license || 'Pending'
+                }))
             }
-        } catch (e) {
-            console.error('Failed to parse user_data for doctor settings:', e)
-        }
+        }).catch(err => {
+            console.error('Failed to parse user profile for doctor settings:', err)
+        })
 
         // Load notification preferences from backend
         api.auth.getNotifications().then(res => {
@@ -79,9 +78,10 @@ export default function DoctorSettings() {
         setSaving(true)
         try {
             await api.auth.updateProfile({
-                first_name: profile.fname,
-                last_name: profile.lname,
-                phone: profile.phone
+                first_name: profile.fname.trim() || null,
+                last_name: profile.lname.trim() || null,
+                contact_email: profile.contact_email.trim() || null,
+                phone: profile.phone.trim() || null
             })
 
             const stored = localStorage.getItem('user_data')
@@ -89,6 +89,7 @@ export default function DoctorSettings() {
                 const parsed = JSON.parse(stored)
                 parsed.first_name = profile.fname
                 parsed.last_name = profile.lname
+                parsed.contact_email = profile.contact_email
                 parsed.full_name = `${profile.fname} ${profile.lname}`.trim()
                 parsed.phone = profile.phone
                 localStorage.setItem('user_data', JSON.stringify(parsed))
@@ -156,14 +157,15 @@ export default function DoctorSettings() {
                     {[
                         { id: 'dr-fname', label: 'First Name', value: profile.fname, type: 'text', stateKey: 'fname' },
                         { id: 'dr-lname', label: 'Last Name', value: profile.lname, type: 'text', stateKey: 'lname' },
-                        { id: 'dr-email', label: 'Email', value: profile.email, type: 'email', stateKey: 'email', disabled: true },
+                        { id: 'dr-email', label: 'Login Email', value: profile.email, type: 'email', stateKey: 'email', disabled: true },
+                        { id: 'dr-contact-email', label: 'Notification Email', value: profile.contact_email, type: 'email', stateKey: 'contact_email', placeholder: 'your@gmail.com' },
                         { id: 'dr-phone', label: 'Phone', value: profile.phone, type: 'tel', stateKey: 'phone' },
                         { id: 'dr-spec', label: 'Specialization', value: profile.specialization, type: 'text', stateKey: 'specialization', disabled: true },
                         { id: 'dr-lic', label: 'License No.', value: profile.license, type: 'text', stateKey: 'license', disabled: true },
                     ].map(f => (
                         <div key={f.id} className="form-group" style={{ margin: 0 }}>
                             <label className="form-label" htmlFor={f.id}>{f.label}</label>
-                            <input id={f.id} type={f.type} className="form-input" disabled={f.disabled} defaultValue={f.value} key={`${f.id}-${f.value}`} onChange={(e) => {
+                            <input id={f.id} type={f.type} className="form-input" disabled={f.disabled} defaultValue={f.value} placeholder={f.placeholder} key={`${f.id}-${f.value}`} onChange={(e) => {
                                 setProfile(p => ({...p, [f.stateKey]: e.target.value}))
                             }} />
                         </div>
