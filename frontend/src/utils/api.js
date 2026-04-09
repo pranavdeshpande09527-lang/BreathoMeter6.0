@@ -70,9 +70,12 @@ async function fetchWithAuth(url, options = {}) {
         return await response.json();
     } catch (error) {
         // Show an error toast for API failures
-        if (error.status !== 401) {
-            toast.error(error.message || "Failed to connect to server");
-        } else if (window.location.pathname !== '/login') {
+        // Suppress infrastructure-level errors (Supabase key errors, cold-start noise)
+        const msg = error.message || '';
+        const isInfraError = /supabase|api.?key|invalid.*key|anon.*key/i.test(msg);
+        if (error.status !== 401 && !isInfraError) {
+            toast.error(msg || "Failed to connect to server");
+        } else if (error.status === 401 && window.location.pathname !== '/login') {
             toast.info("Session expired, please log in again.");
         }
         throw error;

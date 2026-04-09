@@ -92,7 +92,7 @@ const Logo = ({ size, height, width, className = '', iconOnly = false }) => {
               padding: 0,
               fontSize: `13px`,
               fontWeight: '800',
-              letterSpacing: `6.5px`,
+              letterSpacing: `3.5px`,
               fontFamily: "'Inter', sans-serif",
               textTransform: 'uppercase',
               position: 'relative',

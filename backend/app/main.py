@@ -5,14 +5,15 @@ from contextlib import asynccontextmanager
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from app.core.errors import setup_error_handlers
 from app.core.rate_limit import setup_rate_limiting
 from app.database import init_db_clients, close_db_clients
 
 sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
+    traces_sample_rate=0.0,
+    profiles_sample_rate=0.0,
 )
 
 logger = logging.getLogger("breathometer")
@@ -83,8 +84,17 @@ def _audit_environment() -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage startup/shutdown of shared resources (DB connection pools)."""
-    _audit_environment()          # ← Logs full env var status on every deploy
+    _audit_environment()          # ← Logs env var status
     await init_db_clients()       # Open persistent HTTP pools on startup
+    
+    # Warm-up the database connection
+    try:
+        from app.database import supabase_request
+        await supabase_request("health_data", "GET", query_params={"limit": "1"})
+        logger.info("Database connection warmed up successfully.")
+    except Exception as e:
+        logger.warning(f"Database warm-up failed (ignorable on cold start): {e}")
+        
     yield
     await close_db_clients()      # Gracefully drain pools on shutdown
 
@@ -138,8 +148,18 @@ def read_root():
 
 @app.get("/health", tags=["System"])
 def health_check():
-    """Liveness probe for monitoring and deployment health checks."""
-    return {"status": "ok", "service": "breathometer-backend", "version": "1.0.0"}
+    """Ultra-light liveness probe."""
+    return PlainTextResponse("OK")
+
+@app.get("/ping", tags=["System"])
+def ping_check():
+    """Ultra-light ping probe."""
+    return PlainTextResponse("OK")
+
+@app.get("/status", tags=["System"])
+def status_check():
+    """Ultra-light status probe."""
+    return PlainTextResponse("OK")
 
 @app.get("/system-status", tags=["System"])
 async def system_status():

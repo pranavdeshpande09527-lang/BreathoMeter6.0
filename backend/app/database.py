@@ -54,10 +54,10 @@ async def init_db_clients():
     """Call this ONCE at application startup (lifespan or startup event)."""
     global _anon_client, _admin_client, _auth_client, _admin_auth_client
     limits = _make_limits()
-    _anon_client = httpx.AsyncClient(timeout=15.0, limits=limits)
-    _admin_client = httpx.AsyncClient(timeout=15.0, limits=limits)
-    _auth_client = httpx.AsyncClient(timeout=15.0, limits=limits)
-    _admin_auth_client = httpx.AsyncClient(timeout=15.0, limits=limits)
+    _anon_client = httpx.AsyncClient(timeout=5.0, limits=limits)
+    _admin_client = httpx.AsyncClient(timeout=5.0, limits=limits)
+    _auth_client = httpx.AsyncClient(timeout=5.0, limits=limits)
+    _admin_auth_client = httpx.AsyncClient(timeout=5.0, limits=limits)
     # Critical: log key presence so we can diagnose auth failures from logs
     key_status = "SET ✓" if SUPABASE_SERVICE_ROLE_KEY else "MISSING ✗"
     logger.info(f"Supabase HTTP connection pools initialised. SERVICE_ROLE_KEY: {key_status}")

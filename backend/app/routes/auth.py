@@ -3,6 +3,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
 import re
+import traceback
+import asyncio
 from app.schemas.user import UserCreate, UserLogin
 from app.database import supabase_auth_request, supabase_admin_auth_request, supabase_admin_request
 from app.config import settings
@@ -185,7 +187,6 @@ async def signup(user: UserCreate, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
         app_logger.error(f"[SIGNUP] Unhandled error for {user.username}: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
@@ -449,25 +450,52 @@ async def list_patients(user=Depends(require_role(["doctor"]))):
             "users", 
             "GET", 
             query_params={"role": "eq.patient", "order": "created_at.desc"}, 
-            token=user.token
+            token=user.token,
+            use_cache=True
         )
         patients = res or []
         
-        # Enrich patients with the latest risk category
         try:
-            for p in patients:
-                pred_res = await supabase_request(
-                    "risk_predictions", 
-                    "GET", 
-                    query_params={"user_id": f"eq.{p.get('id')}", "select": "risk_category,final_risk_score", "order": "created_at.desc", "limit": "1"}, 
-                    token=user.token
-                )
-                if pred_res:
-                    p['risk_category'] = pred_res[0].get("risk_category")
-                    p['risk'] = pred_res[0].get("risk_category")
-                    p['risk_score'] = pred_res[0].get("final_risk_score")
+            if patients:
+                # Extract all unique patient IDs
+                patient_ids = [p.get('id') for p in patients if p.get('id')]
+                
+                # Fetch risk predictions for all patients in one query, assuming the response limit allows it
+                # We sort by created_at.desc to get the latest easily when we process the array
+                if patient_ids:
+                    # In PostgREST, we can use the 'in' filter
+                    in_filter = ",".join(patient_ids)
+                    pred_res = await supabase_request(
+                        "risk_predictions", 
+                        "GET", 
+                        query_params={
+                            "user_id": f"in.({in_filter})", 
+                            "select": "user_id,risk_category,final_risk_score,created_at", 
+                            "order": "created_at.desc"
+                        }, 
+                        token=user.token,
+                        use_cache=True
+                    )
+                    
+                    if pred_res:
+                        # Group by user_id, taking the first (latest) due to the desc order
+                        latest_preds = {}
+                        for pr in pred_res:
+                            uid = pr.get("user_id")
+                            if uid and uid not in latest_preds:
+                                latest_preds[uid] = pr
+                        
+                        # Apply to patients array
+                        for p in patients:
+                            uid = p.get('id')
+                            if uid in latest_preds:
+                                pred = latest_preds[uid]
+                                p['risk_category'] = pred.get("risk_category")
+                                p['risk'] = pred.get("risk_category")
+                                p['risk_score'] = pred.get("final_risk_score")
+                            
         except Exception as inner_e:
-            app_logger.warning(f"Failed to fetch risk data for patients: {inner_e}")
+            app_logger.warning(f"Failed to fetch aggregated risk data for patients: {inner_e}")
 
         return {"patients": patients}
     except Exception as e:
@@ -484,37 +512,47 @@ async def get_patient_detail(patient_id: str, user=Depends(require_role(["doctor
     from app.database import supabase_request
     
     try:
-        # 1. Get patient profile from users table
-        user_res = await supabase_request("users", "GET", query_params={"id": f"eq.{patient_id}"}, token=user.token)
-        patient = user_res[0] if user_res else {}
+        # Fetch all patient details concurrently using asyncio.gather
         
-        # 2. Get health profile if exists
-        try:
-            hp_res = await supabase_request("health_profiles", "GET", query_params={"user_id": f"eq.{patient_id}", "limit": "1"}, token=user.token)
-            health_profile = hp_res[0] if hp_res else {}
-        except Exception:
-            health_profile = {}
-        
-        # 3. Get latest risk prediction
-        try:
-            pred_res = await supabase_request("risk_predictions", "GET", query_params={"user_id": f"eq.{patient_id}", "order": "created_at.desc", "limit": "1"}, token=user.token)
-            latest_prediction = pred_res[0] if pred_res else {}
-        except Exception:
-            latest_prediction = {}
-        
-        # 4. Get latest breath test
-        try:
-            bt_res = await supabase_request("breath_tests", "GET", query_params={"user_id": f"eq.{patient_id}", "order": "created_at.desc", "limit": "1"}, token=user.token)
-            latest_breath_test = bt_res[0] if bt_res else {}
-        except Exception:
-            latest_breath_test = {}
-        
-        # 5. Get recent prediction history (for trend)
-        try:
-            trend_res = await supabase_request("risk_predictions", "GET", query_params={"user_id": f"eq.{patient_id}", "select": "final_risk_score,created_at", "order": "created_at.desc", "limit": "6"}, token=user.token)
-            prediction_trend = trend_res or []
-        except Exception:
-            prediction_trend = []
+        async def fetch_user():
+            res = await supabase_request("users", "GET", query_params={"id": f"eq.{patient_id}"}, token=user.token, use_cache=True)
+            return res[0] if res else {}
+            
+        async def fetch_health_profile():
+            try:
+                res = await supabase_request("health_profiles", "GET", query_params={"user_id": f"eq.{patient_id}", "limit": "1"}, token=user.token)
+                return res[0] if res else {}
+            except Exception:
+                return {}
+                
+        async def fetch_latest_prediction():
+            try:
+                res = await supabase_request("risk_predictions", "GET", query_params={"user_id": f"eq.{patient_id}", "order": "created_at.desc", "limit": "1"}, token=user.token)
+                return res[0] if res else {}
+            except Exception:
+                return {}
+                
+        async def fetch_latest_breath_test():
+            try:
+                res = await supabase_request("breath_tests", "GET", query_params={"user_id": f"eq.{patient_id}", "order": "created_at.desc", "limit": "1"}, token=user.token)
+                return res[0] if res else {}
+            except Exception:
+                return {}
+                
+        async def fetch_prediction_trend():
+            try:
+                res = await supabase_request("risk_predictions", "GET", query_params={"user_id": f"eq.{patient_id}", "select": "final_risk_score,created_at", "order": "created_at.desc", "limit": "6"}, token=user.token)
+                return res or []
+            except Exception:
+                return []
+
+        patient, health_profile, latest_prediction, latest_breath_test, prediction_trend = await asyncio.gather(
+            fetch_user(),
+            fetch_health_profile(),
+            fetch_latest_prediction(),
+            fetch_latest_breath_test(),
+            fetch_prediction_trend()
+        )
         
         return {
             "patient": patient,

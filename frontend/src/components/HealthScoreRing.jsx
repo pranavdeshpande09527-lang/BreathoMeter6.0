@@ -32,15 +32,39 @@ export default function HealthScoreRing({ score = 78, label = 'Health Score' }) 
                     height={radius * 2}
                     role="img"
                     aria-label={`${label}: ${score} out of 100`}
+                    style={{ overflow: 'visible' }}
                 >
-                    {/* Track */}
+                    <defs>
+                        <filter id="hsrGlow" x="-40%" y="-40%" width="180%" height="180%">
+                            <feGaussianBlur stdDeviation="4" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                    </defs>
+                    {/* Track — fixed rgba visible in both light and dark */}
                     <circle
                         cx={radius} cy={radius} r={normalizedR}
                         fill="none"
-                        stroke="var(--color-border)"
+                        stroke="rgba(148, 163, 184, 0.28)"
                         strokeWidth={stroke}
                     />
-                    {/* Progress */}
+                    {/* Glow layer — soft halo behind active arc, mirrors AQIGauge */}
+                    <circle
+                        cx={radius} cy={radius} r={normalizedR}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={stroke + 6}
+                        strokeDasharray={`${circumference} ${circumference}`}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        opacity="0.18"
+                        style={{
+                            transform: 'rotate(-90deg)',
+                            transformOrigin: '50% 50%',
+                            filter: 'blur(5px)',
+                            transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                    />
+                    {/* Progress arc */}
                     <circle
                         cx={radius} cy={radius} r={normalizedR}
                         fill="none"
@@ -79,7 +103,7 @@ export default function HealthScoreRing({ score = 78, label = 'Health Score' }) 
           gap: 16px;
         }
         .hsr-ring-container {
-          filter: drop-shadow(0 2px 12px rgba(37,99,235,0.08));
+          filter: drop-shadow(0 2px 16px rgba(37,99,235,0.15));
         }
         .hsr-info {
           text-align: center;

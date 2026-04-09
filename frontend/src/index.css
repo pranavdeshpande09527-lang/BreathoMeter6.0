@@ -131,9 +131,9 @@
   --color-surface:   rgba(26, 31, 43, 0.55);
   --color-surface-2: rgba(36, 41, 56, 0.65);
   --color-surface-3: rgba(45, 51, 69, 0.75);
-  --color-border:    rgba(45, 51, 69, 0.25);
-  --color-border-2:  rgba(61, 68, 93, 0.35);
-  --color-border-3:  rgba(74, 81, 108, 0.45);
+  --color-border:    rgba(255, 255, 255, 0.10);
+  --color-border-2:  rgba(255, 255, 255, 0.15);
+  --color-border-3:  rgba(255, 255, 255, 0.20);
 
   --color-text:   #F8FAFC;
   --color-text-2: #E2E8F0;
@@ -147,10 +147,10 @@
   --glass-shadow:  0 12px 40px 0 rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.05);
 
   /* Dark Mesh */
-  --mesh-gradient-1: #0B0E14;
-  --mesh-gradient-2: #1e1b4b;
-  --mesh-gradient-3: #111827;
-  --mesh-gradient-4: #2e1065;
+  --mesh-gradient-1: #080D18;
+  --mesh-gradient-2: #0F1E3C;
+  --mesh-gradient-3: #0D1525;
+  --mesh-gradient-4: #091528;
 
   /* Primary & Semantic Adjustments for Dark */
   --color-primary:        #3B82F6;
@@ -513,17 +513,21 @@ button, a {
 }
 
 .btn-primary {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, #3B82F6 0%, var(--color-primary) 50%, var(--color-primary-deep) 100%);
   color: #fff;
-  border: 1px solid var(--color-primary);
-  box-shadow: var(--shadow-primary-sm);
+  border: 1px solid rgba(37, 99, 235, 0.8);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.30),
+              0 1px 3px rgba(37, 99, 235, 0.18),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .btn-primary:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, var(--color-primary) 100%);
+  border-color: rgba(59, 130, 246, 0.9);
   color: #fff;
-  box-shadow: var(--shadow-primary);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.40),
+              0 2px 6px rgba(37, 99, 235, 0.22),
+              inset 0 1px 0 rgba(255, 255, 255, 0.20);
   transform: translateY(-1px);
 }
 
