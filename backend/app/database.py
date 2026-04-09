@@ -118,6 +118,7 @@ async def supabase_request(
     query_params: Optional[Dict[str, str]] = None,
     token: Optional[str] = None,
     use_cache: bool = False,
+    upsert: bool = False,
 ) -> Union[List[Dict], Dict, None]:
     """
     Unified HTTP helper to interact with Supabase PostgREST tables.
@@ -127,6 +128,8 @@ async def supabase_request(
         use_cache: When True and method is GET, results are cached for
                    CACHE_TTL seconds. Set this only for relatively static data
                    (e.g. doctor lists, city lists).
+        upsert: When True, sends POST with Prefer: resolution=merge-duplicates
+                for a native PostgREST UPSERT (INSERT ON CONFLICT UPDATE).
     """
     if _anon_client is None:
         raise RuntimeError("DB clients not initialised — call init_db_clients() at startup.")
@@ -143,6 +146,10 @@ async def supabase_request(
     req_headers = _ANON_HEADERS.copy()
     if token:
         req_headers["Authorization"] = f"Bearer {token}"
+
+    # For upsert, override the Prefer header so PostgREST does ON CONFLICT UPDATE
+    if upsert and method == "POST":
+        req_headers["Prefer"] = "return=representation,resolution=merge-duplicates"
 
     response = await _dispatch(_anon_client, method, url, req_headers, data, query_params)
 

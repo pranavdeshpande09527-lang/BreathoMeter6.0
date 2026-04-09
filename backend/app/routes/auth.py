@@ -319,6 +319,14 @@ class ProfileUpdate(BaseModel):
     activity_level: Optional[str] = None
 
 
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+
+
+class NotificationPreferences(BaseModel):
+    preferences: dict  # e.g. {"health_alerts": True, "aqi_warnings": False, ...}
+
+
 @router.patch("/profile")
 async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
     """Update the authenticated user's profile fields."""
@@ -341,12 +349,16 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
         app_logger.info(f"Skipping auth metadata update — SERVICE_ROLE_KEY not configured")
 
     try:
-        # 2. Upsert profile data into health_profiles table using user's JWT
-        profile_record = {
-            "user_id": user.id,
+        # 2. Upsert profile data into health_profiles table using user's JWT.
+        # Always include user_id as the conflict-resolution key.
+        # Keep None values out of non-email fields, but always include contact_email
+        # (even if empty string) so clearing the field is persisted.
+        profile_record: dict = {"user_id": user.id}
+
+        # Fields that should only be included if non-None (avoids overwriting with nulls)
+        optional_fields = {
             "first_name": data.first_name,
             "last_name": data.last_name,
-            "contact_email": data.contact_email,
             "phone": data.phone,
             "date_of_birth": data.date_of_birth,
             "blood_group": data.blood_group,
@@ -358,26 +370,21 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "smoking_status": data.smoking_status,
             "activity_level": data.activity_level,
         }
-        # Remove None values to allow partial updates
-        profile_record = {k: v for k, v in profile_record.items() if v is not None}
+        profile_record.update({k: v for k, v in optional_fields.items() if v is not None})
 
-        # Try to PATCH (update) existing row first
-        patched = await supabase_request(
+        # contact_email is always included so the user can set or clear it
+        profile_record["contact_email"] = data.contact_email  # may be None → clears the field
+
+        # Use PostgREST native UPSERT (POST with merge-duplicates) instead of
+        # the fragile PATCH→POST fallback that silently failed on RLS mismatch.
+        await supabase_request(
             "health_profiles",
-            "PATCH",
+            "POST",
             profile_record,
-            query_params={"user_id": f"eq.{user.id}"},
+            query_params={},  # no WHERE needed — conflict on user_id handles it
             token=user.token,
+            upsert=True,      # adds Prefer: resolution=merge-duplicates
         )
-
-        # If no row existed (empty result), insert a new one
-        if patched == []:
-            await supabase_request(
-                "health_profiles",
-                "POST",
-                {"user_id": user.id, **profile_record},
-                token=user.token,
-            )
 
     except Exception as e:
         app_logger.error(f"Failed to save health_profiles for user {user.id}: {e}")
@@ -567,4 +574,89 @@ async def get_patient_detail(patient_id: str, user=Depends(require_role(["doctor
     except Exception as e:
         app_logger.error(f"Failed to get patient detail for {patient_id}: {e}")
         raise HTTPException(status_code=500, detail="Could not retrieve patient details.")
+
+
+@router.post("/change-password")
+async def change_password(req: ChangePasswordRequest, user=Depends(get_current_user)):
+    """
+    Changes the authenticated user's password via the Supabase Admin API.
+    Requires SUPABASE_SERVICE_ROLE_KEY to be set.
+    """
+    if not req.new_password or len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+
+    if not settings.supabase_service_role_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Password change is not available (service key not configured)."
+        )
+
+    try:
+        await supabase_admin_auth_request(
+            f"users/{user.id}",
+            "PUT",
+            {"password": req.new_password}
+        )
+        app_logger.info(f"Password changed for user {user.id}")
+        return {"message": "Password updated successfully."}
+    except Exception as e:
+        app_logger.error(f"Failed to change password for user {user.id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update password: {str(e)}")
+
+
+@router.get("/notifications")
+async def get_notifications(user=Depends(get_current_user)):
+    """
+    Returns the user's saved notification preferences from health_profiles.
+    Falls back to sensible defaults if no preferences are stored.
+    """
+    from app.database import supabase_request
+    try:
+        hp = await supabase_request(
+            "health_profiles",
+            "GET",
+            query_params={"user_id": f"eq.{user.id}", "select": "notification_prefs", "limit": "1"},
+            token=user.token,
+        )
+        prefs = hp[0].get("notification_prefs") if hp else None
+        if prefs is None:
+            # Default preferences (all on except weekly_summary / medication_reminders)
+            prefs = {
+                "Health alerts": True,
+                "AQI warnings": True,
+                "Analysis complete": True,
+                "Medication reminders": False,
+                "Doctor messages": True,
+                "critical_alerts": True,
+                "report_reminders": True,
+                "new_assignments": True,
+                "weekly_summary": False,
+            }
+        return {"preferences": prefs}
+    except Exception as e:
+        app_logger.warning(f"Failed to fetch notification prefs for {user.id}: {e}")
+        return {"preferences": {}}
+
+
+@router.put("/notifications")
+async def update_notifications(req: NotificationPreferences, user=Depends(get_current_user)):
+    """
+    Persists the user's notification preferences into health_profiles.notification_prefs (JSONB).
+    """
+    from app.database import supabase_request
+    import json as _json
+    try:
+        # Use PostgREST UPSERT (ON CONFLICT UPDATE) — reliable on both new and existing rows
+        await supabase_request(
+            "health_profiles",
+            "POST",
+            {"user_id": user.id, "notification_prefs": req.preferences},
+            token=user.token,
+            upsert=True,
+        )
+        app_logger.info(f"Notification prefs updated for user {user.id}")
+        return {"message": "Notification preferences saved.", "preferences": req.preferences}
+    except Exception as e:
+        app_logger.error(f"Failed to save notification prefs for {user.id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save preferences: {str(e)}")
 
