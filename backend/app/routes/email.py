@@ -59,13 +59,35 @@ async def send_health_report(
 ):
     """
     User-triggered: generates a personalised AI health report email
-    and sends it to the authenticated user's registered email address.
+    and sends it to the user's contact_email (saved in Settings).
     """
-    user_email: str = getattr(user, "email", None)
+    # ── Resolve recipient email ──────────────────────────────────────────────
+    # Priority: contact_email from health_profiles > fallback error
+    user_email: str | None = None
     user_name: str = getattr(user, "full_name", None) or getattr(user, "name", None) or "Valued User"
 
+    try:
+        from app.database import supabase_request
+        hp = await supabase_request(
+            "health_profiles",
+            "GET",
+            query_params={"user_id": f"eq.{user.id}", "select": "contact_email,first_name,last_name", "limit": "1"},
+            token=user.token,
+        )
+        if hp:
+            user_email = hp[0].get("contact_email") or None
+            first = hp[0].get("first_name", "")
+            last = hp[0].get("last_name", "")
+            if first or last:
+                user_name = f"{first} {last}".strip()
+    except Exception as e:
+        logger.warning(f"Could not fetch health_profile for email lookup: {e}")
+
     if not user_email:
-        raise HTTPException(status_code=400, detail="No email address associated with your account.")
+        raise HTTPException(
+            status_code=400,
+            detail="No email address found. Please go to Settings and enter your Gmail address in the 'Notification Email' field, then save your profile."
+        )
 
     # ── Resolve AQI data ──────────────────────────────────────────────────────
     try:

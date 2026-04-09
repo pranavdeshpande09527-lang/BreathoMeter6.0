@@ -306,6 +306,7 @@ async def refresh_token(req: RefreshTokenRequest):
 class ProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    contact_email: Optional[str] = None  # User's real Gmail for notifications
     phone: Optional[str] = None
     date_of_birth: Optional[str] = None
     blood_group: Optional[str] = None
@@ -345,6 +346,7 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "user_id": user.id,
             "first_name": data.first_name,
             "last_name": data.last_name,
+            "contact_email": data.contact_email,
             "phone": data.phone,
             "date_of_birth": data.date_of_birth,
             "blood_group": data.blood_group,
@@ -387,6 +389,7 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "first_name": data.first_name,
             "last_name": data.last_name,
             "full_name": full_name,
+            "contact_email": data.contact_email,
             "phone": data.phone,
             "date_of_birth": data.date_of_birth,
             "blood_group": data.blood_group,

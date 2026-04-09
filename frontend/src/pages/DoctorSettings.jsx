@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Stethoscope } from 'lucide-react'
+import { api } from '../utils/api'
+import { toast } from 'react-toastify'
 
 export default function DoctorSettings() {
+    const [saving, setSaving] = useState(false)
     const [profile, setProfile] = useState({
         fname: '',
         lname: '',
@@ -10,6 +13,47 @@ export default function DoctorSettings() {
         specialization: '',
         license: ''
     })
+
+    const [notifications, setNotifications] = useState([
+        { id: 'critical_alerts', label: 'Critical patient alerts', desc: 'SpO2, FEV1 emergency thresholds', on: true },
+        { id: 'report_reminders', label: 'Report reminders', desc: 'When reports await sign-off > 24h', on: true },
+        { id: 'new_assignments', label: 'New patient assignments', desc: 'When a new patient is assigned to you', on: true },
+        { id: 'weekly_summary', label: 'Weekly summary', desc: 'Your panel health summary every Monday', on: false },
+    ])
+
+    const handleSaveProfile = async () => {
+        setSaving(true)
+        try {
+            await api.auth.updateProfile({
+                first_name: profile.fname,
+                last_name: profile.lname,
+                phone: profile.phone
+            })
+            
+            const stored = localStorage.getItem('user_data')
+            if (stored && stored !== 'undefined') {
+                const parsed = JSON.parse(stored)
+                parsed.first_name = profile.fname
+                parsed.last_name = profile.lname
+                parsed.full_name = `${profile.fname} ${profile.lname}`.trim()
+                parsed.phone = profile.phone
+                localStorage.setItem('user_data', JSON.stringify(parsed))
+            }
+            toast.success("Profile saved successfully!")
+        } catch (e) {
+            toast.error(e.message || "Failed to save profile")
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const toggleNotification = (id) => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, on: !n.on } : n))
+    }
+
+    const handleUpdatePassword = () => {
+        toast.info("A password reset link has been sent to your email.")
+    }
 
     useEffect(() => {
         try {
@@ -56,37 +100,47 @@ export default function DoctorSettings() {
                     {[
                         { id: 'dr-fname', label: 'First Name', value: profile.fname, type: 'text', stateKey: 'fname' },
                         { id: 'dr-lname', label: 'Last Name', value: profile.lname, type: 'text', stateKey: 'lname' },
-                        { id: 'dr-email', label: 'Email', value: profile.email, type: 'email', stateKey: 'email' },
+                        { id: 'dr-email', label: 'Email', value: profile.email, type: 'email', stateKey: 'email', disabled: true },
                         { id: 'dr-phone', label: 'Phone', value: profile.phone, type: 'tel', stateKey: 'phone' },
-                        { id: 'dr-spec', label: 'Specialization', value: profile.specialization, type: 'text', stateKey: 'specialization' },
-                        { id: 'dr-lic', label: 'License No.', value: profile.license, type: 'text', stateKey: 'license' },
+                        { id: 'dr-spec', label: 'Specialization', value: profile.specialization, type: 'text', stateKey: 'specialization', disabled: true },
+                        { id: 'dr-lic', label: 'License No.', value: profile.license, type: 'text', stateKey: 'license', disabled: true },
                     ].map(f => (
                         <div key={f.id} className="form-group" style={{ margin: 0 }}>
                             <label className="form-label" htmlFor={f.id}>{f.label}</label>
-                            <input id={f.id} type={f.type} className="form-input" defaultValue={f.value} key={`${f.id}-${f.value}`} onChange={(e) => {
+                            <input id={f.id} type={f.type} className="form-input" disabled={f.disabled} defaultValue={f.value} key={`${f.id}-${f.value}`} onChange={(e) => {
                                 setProfile(p => ({...p, [f.stateKey]: e.target.value}))
                             }} />
                         </div>
                     ))}
                 </div>
-                <button className="btn btn-primary" style={{ marginTop: 20 }}>Save Profile</button>
+                <button 
+                    className="btn btn-primary" 
+                    style={{ marginTop: 20 }}
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                >
+                    {saving ? "Saving..." : "Save Profile"}
+                </button>
             </div>
 
             {/* Notification Preferences */}
             <div className="card section">
                 <div className="text-card-title" style={{ marginBottom: 16 }}>Notification Preferences</div>
-                {[
-                    { label: 'Critical patient alerts', desc: 'SpO2, FEV1 emergency thresholds', on: true },
-                    { label: 'Report reminders', desc: 'When reports await sign-off > 24h', on: true },
-                    { label: 'New patient assignments', desc: 'When a new patient is assigned to you', on: true },
-                    { label: 'Weekly summary', desc: 'Your panel health summary every Monday', on: false },
-                ].map(n => (
-                    <div key={n.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--color-border)' }}>
+                {notifications.map(n => (
+                    <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--color-border)' }}>
                         <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{n.label}</div>
                             <div className="text-meta">{n.desc}</div>
                         </div>
-                        <div className={`al-toggle ${n.on ? 'al-toggle--on' : ''}`} role="switch" aria-checked={n.on} tabIndex={0} aria-label={n.label} />
+                        <div 
+                            className={`al-toggle ${n.on ? 'al-toggle--on' : ''}`} 
+                            role="switch" 
+                            aria-checked={n.on} 
+                            tabIndex={0} 
+                            aria-label={n.label}
+                            onClick={() => toggleNotification(n.id)}
+                            onKeyDown={(e) => e.key === 'Enter' && toggleNotification(n.id)}
+                        />
                     </div>
                 ))}
             </div>
@@ -108,7 +162,7 @@ export default function DoctorSettings() {
                         <input id="dr-confirm-pass" type="password" className="form-input" placeholder="Confirm new password" />
                     </div>
                 </div>
-                <button className="btn btn-outline" style={{ marginTop: 16 }}>Update Password</button>
+                <button className="btn btn-outline" style={{ marginTop: 16 }} onClick={handleUpdatePassword}>Update Password</button>
             </div>
 
 

@@ -9,7 +9,7 @@ export default function Settings() {
     const [form, setForm] = useState({
         first_name: '',
         last_name: '',
-        email: '',
+        contact_email: '',   // User's real Gmail for email notifications
         phone: '',
         date_of_birth: '',
         blood_group: '',
@@ -57,7 +57,7 @@ export default function Settings() {
             ...prev,
             first_name: userData.first_name || fullParts[0] || '',
             last_name: userData.last_name || fullParts.slice(1).join(' ') || '',
-            email: userData.email || '',
+            contact_email: userData.contact_email || '',
             phone: userData.phone || '',
             date_of_birth: userData.date_of_birth || '',
             blood_group: userData.blood_group || '',
@@ -75,7 +75,7 @@ export default function Settings() {
                     ...prev,
                     first_name: p.first_name || parts[0] || '',
                     last_name: p.last_name || parts.slice(1).join(' ') || '',
-                    email: u.email || prev.email,
+                    contact_email: p.contact_email || prev.contact_email,
                     phone: p.phone || prev.phone,
                     date_of_birth: p.date_of_birth || prev.date_of_birth,
                     blood_group: p.blood_group || prev.blood_group,
@@ -104,6 +104,7 @@ export default function Settings() {
             await api.auth.updateProfile({
                 first_name: form.first_name.trim() || null,
                 last_name: form.last_name.trim() || null,
+                contact_email: form.contact_email.trim() || null,
                 phone: form.phone.trim() || null,
                 date_of_birth: form.date_of_birth || null,
                 blood_group: form.blood_group || null,
@@ -131,6 +132,7 @@ export default function Settings() {
                 ...stored,
                 first_name: form.first_name,
                 last_name: form.last_name,
+                contact_email: form.contact_email,
                 phone: form.phone,
                 date_of_birth: form.date_of_birth,
                 blood_group: form.blood_group,
@@ -211,16 +213,22 @@ export default function Settings() {
                         />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" htmlFor="s-email">Email</label>
+                        <label className="form-label" htmlFor="s-contact-email">
+                            Notification Email (Gmail)
+                        </label>
                         <input
-                            id="s-email"
-                            name="email"
+                            id="s-contact-email"
+                            name="contact_email"
                             type="email"
                             className="form-input"
-                            value={form.email}
-                            readOnly
-                            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+                            value={form.contact_email}
+                            onChange={handleField}
+                            placeholder="your@gmail.com"
+                            autoComplete="email"
                         />
+                        <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 4 }}>
+                            Health reports &amp; AQI warnings will be sent here.
+                        </div>
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
                         <label className="form-label" htmlFor="s-phone">Phone</label>
