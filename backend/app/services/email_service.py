@@ -4,23 +4,22 @@ Sends HTML emails via smtp-relay.brevo.com:587
 Free tier: 300 emails/day, sends to any email address.
 """
 import logging
-import os
-from email.message import EmailMessage
 import aiosmtplib
+from email.message import EmailMessage
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 # Configuration
 SMTP_HOST = "smtp-relay.brevo.com"
 SMTP_PORT = 587
-# The BREVO_API_KEY env var now contains the SMTP key (xsmtpsib-...)
-SMTP_PASSWORD = os.getenv("BREVO_API_KEY", "")
+# Read from config to ensure it loads AFTER .env is parsed
+SMTP_PASSWORD = settings.brevo_api_key or ""
 # Brevo SMTP user is the login provided in your dashboard
 SMTP_USER = "a6f289001@smtp-brevo.com"
 
 SENDER_NAME = "Breathometer"
 SENDER_EMAIL = "pranavdeshpande09527@gmail.com"
-
 
 async def send_email(to: str, subject: str, html: str) -> dict:
     """
