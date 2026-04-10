@@ -10,16 +10,18 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Configuration
-SMTP_HOST = "smtp-relay.brevo.com"
-SMTP_PORT = 587
-# Read from config to ensure it loads AFTER .env is parsed
-SMTP_PASSWORD = settings.brevo_api_key or ""
-# Brevo SMTP user is the login provided in your dashboard
-SMTP_USER = "a6f289001@smtp-brevo.com"
+# --- GMAIL SMTP CONFIGURATION ---
+# Gmail allows up to 500 emails/day for free using an App Password.
+SMTP_HOST = settings.smtp_host or "smtp.gmail.com"
+SMTP_PORT = settings.smtp_port or 587
+
+# Your Gmail address (e.g., pranavdeshpande09527@gmail.com)
+SMTP_USER = settings.smtp_user or "pranavdeshpande09527@gmail.com"
+# Your 16-character Google App Password
+SMTP_PASSWORD = settings.smtp_password or ""
 
 SENDER_NAME = "Breathometer"
-SENDER_EMAIL = "pranavdeshpande09527@gmail.com"
+SENDER_EMAIL = SMTP_USER
 
 async def send_email(to: str, subject: str, html: str) -> dict:
     """
