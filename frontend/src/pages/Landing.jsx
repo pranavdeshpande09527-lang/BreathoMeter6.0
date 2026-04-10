@@ -188,14 +188,14 @@ export default function Landing() {
             interval = setInterval(() => fetchLiveData(q), 120000)
           },
           () => {
-            const q = `lat=37.7749&lon=-122.4194`
+            const q = `location=Mumbai`
             fetchLiveData(q)
             interval = setInterval(() => fetchLiveData(q), 120000)
           },
           { timeout: 10000 }
         )
       } else {
-        fetchLiveData(`lat=37.7749&lon=-122.4194`)
+        fetchLiveData(`location=Mumbai`)
       }
     }
     getLocationAndFetch()
