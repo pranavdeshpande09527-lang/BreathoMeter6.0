@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Wind, Activity, Cloud, ShieldCheck, ArrowRight, CheckCircle2, MapPin, Loader2, Moon, Sun } from 'lucide-react'
+import { Wind, Activity, Cloud, ShieldCheck, ArrowRight, CheckCircle2, Moon, Sun } from 'lucide-react'
 import Logo from '../components/Logo'
 import { playThemeTransition } from '../utils/themeTransition'
 
@@ -48,27 +48,7 @@ const stats = [
 
 const API_BASE = 'https://breathometer6-0.onrender.com'
 
-function getAqiColor(aqi) {
-  if (aqi <= 50)  return 'var(--color-safe)'
-  if (aqi <= 100) return '#F59E0B'
-  if (aqi <= 150) return '#F97316'
-  if (aqi <= 200) return 'var(--color-danger)'
-  return '#7C3AED'
-}
-
-function getAqiLabel(aqi) {
-  if (aqi <= 50)  return 'Good'
-  if (aqi <= 100) return 'Moderate'
-  if (aqi <= 150) return 'Unhealthy (Sensitive)'
-  if (aqi <= 200) return 'Unhealthy'
-  return 'Hazardous'
-}
-
 export default function Landing() {
-  const [aqiData, setAqiData] = useState(null)
-  const [weatherData, setWeatherData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
   const canvasRef = useRef(null)
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
 
@@ -161,57 +141,6 @@ export default function Landing() {
     setTimeout(() => ripple.remove(), 620)
   }, [])
 
-  async function fetchLiveData(query) {
-    setLoading(true)
-    try {
-      const [aqiRes, weatherRes] = await Promise.all([
-        fetch(`${API_BASE}/environment/aqi?${query}`),
-        fetch(`${API_BASE}/environment/weather?${query}`)
-      ])
-      if (aqiRes.ok)     setAqiData(await aqiRes.json())
-      if (weatherRes.ok) setWeatherData(await weatherRes.json())
-    } catch (e) {
-      console.error('Failed to fetch live data:', e)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    let interval
-    function getLocationAndFetch() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            const q = `lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
-            fetchLiveData(q)
-            interval = setInterval(() => fetchLiveData(q), 120000)
-          },
-          () => {
-            const q = `location=Mumbai`
-            fetchLiveData(q)
-            interval = setInterval(() => fetchLiveData(q), 120000)
-          },
-          { timeout: 10000 }
-        )
-      } else {
-        fetchLiveData(`location=Mumbai`)
-      }
-    }
-    getLocationAndFetch()
-    return () => { if (interval) clearInterval(interval) }
-  }, [])
-
-  const handleSearch = e => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
-    fetchLiveData(`location=${encodeURIComponent(searchQuery)}`)
-  }
-
-  const aqi = aqiData?.aqi ?? 0
-  const aqiColor = getAqiColor(aqi)
-  const aqiFraction = Math.min(aqi / 300, 1)
-
   return (
     <div className="land">
       {/* Navbar */}
@@ -295,99 +224,7 @@ export default function Landing() {
               ))}
             </div>
           </div>
-
-
-          {/* Live AQI Panel */}
-          <div className="land-hero-panel stagger-2">
-            <div className="land-hero-card glass-surface-deep hover-lift">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div className="panel-title">Environmental Intelligence</div>
-                <div className="land-live-badge glow-danger">
-                  <span className="land-live-dot" />
-                  LIVE
-                </div>
-              </div>
-
-              <form onSubmit={handleSearch} className="land-search-form">
-                <div className="land-search-input-wrapper">
-                  <MapPin size={14} className="search-icon" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Enter city (e.g. Mumbai)"
-                    className="land-search-input"
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary btn-sm glow-primary">
-                  Search
-                </button>
-              </form>
-
-              {loading ? (
-                <div className="land-aqi-loading">
-                  <div className="loading-spinner-outer">
-                    <Loader2 size={32} className="spin" color="var(--color-primary)" />
-                  </div>
-                  <span className="loading-text">Getting air quality data...</span>
-                </div>
-              ) : aqiData ? (
-                <div className="fade-in-fast" style={{ width: '100%' }}>
-                  <div className="land-aqi-visual-wrap">
-                    <div className="aqi-ring-container" style={{ '--aqi-glow': `${aqiColor}22` }}>
-                      <svg width="160" height="160" viewBox="0 0 160 160" style={{ position: 'relative', zIndex: 1 }}>
-                        <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="10" />
-                        <circle
-                          cx="80" cy="80" r="68" fill="none"
-                          stroke={aqiColor} strokeWidth="10"
-                          strokeDasharray={`${2 * Math.PI * 68 * aqiFraction} ${2 * Math.PI * 68 * (1 - aqiFraction)}`}
-                          strokeLinecap="round"
-                          className="aqi-ring-progress"
-                          style={{
-                            stroke: aqiColor,
-                            filter: `drop-shadow(0 0 8px ${aqiColor}80)`,
-                          }}
-                        />
-                      </svg>
-                      <div className="aqi-content">
-                        <span className="aqi-value">{aqi}</span>
-                        <span className="aqi-label">AQI</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <div className="aqi-status-pill" style={{ backgroundColor: `${aqiColor}15`, color: aqiColor, borderColor: `${aqiColor}30` }}>
-                      {getAqiLabel(aqi)}
-                    </div>
-                  </div>
-
-                  <div className="land-mini-metrics">
-                    {[
-                      { label: 'PM2.5', value: aqiData.pm25, isPrimary: aqiData.pm25 === aqi },
-                      { label: 'PM10',  value: aqiData.pm10, isPrimary: aqiData.pm10 === aqi },
-                      { label: 'Temp',  value: weatherData ? `${Math.round(weatherData.temperature)}°` : '—' }
-                    ].map(m => (
-                      <div key={m.label} className={`land-mini-metric ${m.isPrimary ? 'is-active glow-primary' : ''}`}>
-                        <span className="m-label">{m.label}</span>
-                        <span className="m-value">{typeof m.value === 'number' ? Math.round(m.value) : m.value}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="land-card-footer">
-                    <MapPin size={12} color="var(--color-primary)" />
-                    <span>{aqiData.location_name?.split(',')[0] || 'Current Location'}</span>
-                    <div className="footer-dot" />
-                    <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="land-aqi-error">Data source unavailable.</div>
-              )}
-          </div>
         </div>
-      </div>
     </section>
 
       {/* Stats Bar */}
