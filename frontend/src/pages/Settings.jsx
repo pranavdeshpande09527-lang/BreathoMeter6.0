@@ -381,25 +381,7 @@ export default function Settings() {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', marginTop: 16 }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" htmlFor="s-aqi-threshold">AQI Alert Threshold</label>
-                        <input
-                            id="s-aqi-threshold"
-                            name="aqi_threshold"
-                            type="number"
-                            min="0"
-                            max="500"
-                            className="form-input"
-                            value={form.aqi_threshold}
-                            onChange={handleField}
-                            placeholder="100"
-                        />
-                        <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 4 }}>
-                            Alerts trigger when AQI exceeds this value
-                        </div>
-                    </div>
-                </div>
+
 
                 <div className="form-group" style={{ marginTop: 16, marginBottom: 0 }}>
                     <label className="form-label" htmlFor="s-conditions">Known Conditions</label>

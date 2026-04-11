@@ -186,6 +186,53 @@ export default function AirQualityMap() {
     const [alertsEnabled,  setAlertsEnabled]  = useState(false)
     const [alertThreshold, setAlertThreshold] = useState(100)
     const [showRoute,      setShowRoute]      = useState(false)
+
+    // Load initial settings
+    useEffect(() => {
+        const localUser = localStorage.getItem('user_data');
+        if (localUser) {
+            try {
+                const userData = JSON.parse(localUser);
+                if (userData.aqi_threshold) {
+                    setAlertThreshold(userData.aqi_threshold);
+                }
+            } catch (e) {}
+        }
+        
+        api.auth.getNotifications()
+            .then(notifs => {
+                if (notifs && notifs['AQI warnings'] !== undefined) {
+                    setAlertsEnabled(notifs['AQI warnings']);
+                }
+            })
+            .catch(err => console.error("Error loading notifications:", err));
+    }, []);
+
+    const saveThreshold = async (val) => {
+        try {
+            await api.auth.updateProfile({ aqi_threshold: val });
+            const localUser = localStorage.getItem('user_data');
+            if (localUser) {
+                const userData = JSON.parse(localUser);
+                userData.aqi_threshold = val;
+                localStorage.setItem('user_data', JSON.stringify(userData));
+            }
+        } catch (e) {
+            console.error("Failed to save threshold:", e);
+        }
+    };
+
+    const handleToggleAlerts = async () => {
+        const newVal = !alertsEnabled;
+        setAlertsEnabled(newVal);
+        try {
+            const current = await api.auth.getNotifications() || {};
+            await api.auth.updateNotifications({ ...current, 'AQI warnings': newVal });
+        } catch (err) {
+            console.error("Failed to toggle alerts:", err);
+            setAlertsEnabled(!newVal); // revert on error
+        }
+    };
     
     const displayAqi  = aqiData ? (trendData[sliderIdx]?.value ?? aqiData.aqi) : null
     const band        = displayAqi != null ? getAqiBand(displayAqi) : null
@@ -538,7 +585,7 @@ export default function AirQualityMap() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                             <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><Bell size={18} color="var(--color-warning)"/> Smart Alerts</h3>
                             <button 
-                                onClick={() => setAlertsEnabled(!alertsEnabled)}
+                                onClick={handleToggleAlerts}
                                 style={{
                                     width: 44, height: 24, borderRadius: 12, background: alertsEnabled ? 'var(--color-safe)' : 'var(--color-border-2)',
                                     border: 'none', position: 'relative', cursor: 'pointer', transition: 'background 0.3s'
@@ -555,7 +602,18 @@ export default function AirQualityMap() {
                                 <span>Warn me when AQI exceeds:</span>
                                 <span style={{ color: getAqiBand(alertThreshold).color, fontWeight: 800 }}>{alertThreshold}</span>
                             </div>
-                            <input type="range" min="50" max="300" step="10" value={alertThreshold} onChange={(e) => setAlertThreshold(Number(e.target.value))} disabled={!alertsEnabled} style={{ width: '100%', accentColor: getAqiBand(alertThreshold).color }} />
+                            <input 
+                                type="range" 
+                                min="50" 
+                                max="300" 
+                                step="10" 
+                                value={alertThreshold} 
+                                onChange={(e) => setAlertThreshold(Number(e.target.value))} 
+                                onMouseUp={(e) => saveThreshold(Number(e.target.value))}
+                                onTouchEnd={(e) => saveThreshold(Number(e.target.value))}
+                                disabled={!alertsEnabled} 
+                                style={{ width: '100%', accentColor: getAqiBand(alertThreshold).color }} 
+                            />
                         </div>
                     </div>
 
