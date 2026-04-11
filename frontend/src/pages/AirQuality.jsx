@@ -140,6 +140,17 @@ export default function AirQuality() {
                     setAqiData(data)
                     setLocationName(data.location_name || cityQuery)
                     setLoading(false)
+                    // Also store to backend so danger alerts fire for city searches
+                    try {
+                        await api.environment.storeData({
+                            pm25: data.pm25 ?? 0,
+                            pm10: data.pm10 ?? 0,
+                            aqi: data.aqi,
+                            location: data.location_name || cityQuery
+                        })
+                    } catch (storeErr) {
+                        console.warn('Could not store environment data to backend:', storeErr)
+                    }
                     return
                 } catch (e) {
                     console.error('Search fetch failed:', e)
