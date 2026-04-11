@@ -205,6 +205,21 @@ async def login(user: UserLogin, request: Request):
         if user_obj:
             user_obj["username"] = user.username
             
+            # Fetch the user's health profile so frontend has contact_email etc immediately on login
+            try:
+                from app.database import supabase_request
+                hp_res = await supabase_request("health_profiles", "GET", query_params={"user_id": f"eq.{user_obj['id']}", "limit": "1"}, token=response.get("access_token"))
+                if hp_res and len(hp_res) > 0:
+                    profile_data = hp_res[0]
+                    # Inject contact_email and other profile data directly into user_obj
+                    user_obj["contact_email"] = profile_data.get("contact_email")
+                    user_obj["first_name"] = profile_data.get("first_name")
+                    user_obj["last_name"] = profile_data.get("last_name")
+                    user_obj["phone"] = profile_data.get("phone")
+                    user_obj["aqi_threshold"] = profile_data.get("aqi_threshold")
+            except Exception as e:
+                app_logger.warning(f"Could not load health_profile during login for {user.username}: {e}")
+            
         return {
             "message": "Login successful",
             "session": {
