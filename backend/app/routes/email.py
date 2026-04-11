@@ -154,9 +154,9 @@ async def _send_report_background(
 
 # ─── Internal: trigger_danger_alert ──────────────────────────────────────────
 
-async def trigger_danger_alert(user_email: str, user_name: str, aqi_data: dict):
+async def trigger_danger_alert(user_email: str, user_name: str, aqi_data: dict, user_threshold: int = 100):
     """
-    Called internally when AQI > 150.
+    Called internally when AQI > user_threshold.
     Respects per-email cooldown to avoid spam.
     """
     if not user_email:
@@ -170,7 +170,7 @@ async def trigger_danger_alert(user_email: str, user_name: str, aqi_data: dict):
     category = aqi_data.get("pollution_category", _classify_aqi(aqi))
 
     try:
-        html = await generate_danger_email(user_name, aqi, city, category)
+        html = await generate_danger_email(user_name, aqi, city, category, user_threshold)
         result = await send_email(
             to=user_email,
             subject="🚨 Air Quality Alert – Immediate Attention Required",

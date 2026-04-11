@@ -32,18 +32,34 @@ async def store_environment_data(data: EnvironmentRequest, background_tasks: Bac
         }, token=user.token)
 
         # ── Auto danger alert ──────────────────────────────────────────────
-        if data.aqi > 150:
+        target_email = getattr(user, "email", None)
+        aqi_threshold = 100
+        try:
+            hp_res = await supabase_request(
+                "health_profiles", 
+                "GET", 
+                query_params={"user_id": f"eq.{user.id}", "select": "aqi_threshold,contact_email", "limit": "1"}, 
+                token=user.token
+            )
+            if hp_res and len(hp_res) > 0:
+                if hp_res[0].get("aqi_threshold") is not None:
+                    aqi_threshold = int(hp_res[0].get("aqi_threshold"))
+                if hp_res[0].get("contact_email"):
+                    target_email = hp_res[0].get("contact_email")
+        except Exception as hp_err:
+            logger.warning(f"Failed to fetch health profile for AQI threshold check: {hp_err}")
+
+        if data.aqi > aqi_threshold:
             try:
                 from app.routes.email import trigger_danger_alert
-                user_email = getattr(user, "email", None)
                 user_name = getattr(user, "full_name", None) or getattr(user, "name", None) or "Valued User"
-                if user_email:
+                if target_email:
                     aqi_data = {
                         "aqi": int(data.aqi),
                         "location_name": data.location or "Your Location",
                         "pollution_category": _classify_aqi(int(data.aqi)),
                     }
-                    background_tasks.add_task(trigger_danger_alert, user_email, user_name, aqi_data)
+                    background_tasks.add_task(trigger_danger_alert, target_email, user_name, aqi_data, aqi_threshold)
             except Exception as alert_err:
                 logger.warning(f"Could not schedule danger alert: {alert_err}")
 

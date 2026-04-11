@@ -94,7 +94,7 @@ def _build_email_shell(title: str, accent: str, badge_text: str, body_html: str)
 </html>"""
 
 
-async def generate_danger_email(user_name: str, aqi: int, city: str, category: str) -> str:
+async def generate_danger_email(user_name: str, aqi: int, city: str, category: str, user_threshold: int = 100) -> str:
     """
     Generate an AI-powered AQI danger alert email.
     Returns a complete HTML string ready to send.
@@ -142,7 +142,7 @@ async def generate_danger_email(user_name: str, aqi: int, city: str, category: s
                   <div style="font-size:12px;font-weight:700;color:{color};text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Current Air Quality Index</div>
                   <div style="font-size:54px;font-weight:800;color:{color};line-height:1;margin-bottom:4px;">{aqi}</div>
                   <div style="font-size:15px;font-weight:600;color:#1e293b;">{category}</div>
-                  <div style="font-size:13px;color:#64748b;margin-top:4px;">📍 {city}</div>
+                  <div style="font-size:13px;color:#64748b;margin-top:4px;">📍 {city} | ⚠️ Your Threshold: {user_threshold}</div>
                 </td>
                 <td align="right" style="vertical-align:top;">
                   <div style="font-size:48px;">🚨</div>

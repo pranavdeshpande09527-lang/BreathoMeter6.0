@@ -20,6 +20,7 @@ export default function Settings() {
         weight: '',
         smoking_status: '',
         activity_level: '',
+        aqi_threshold: 100,
     })
 
     const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | success | error
@@ -64,6 +65,7 @@ export default function Settings() {
             date_of_birth: userData.date_of_birth || '',
             blood_group: userData.blood_group || '',
             known_conditions: userData.known_conditions || '',
+            aqi_threshold: userData.aqi_threshold ?? 100,
         }))
 
         // Also try to load the latest saved profile from the backend health_profiles table
@@ -88,6 +90,7 @@ export default function Settings() {
                     weight: p.weight || '',
                     smoking_status: p.smoking_status || '',
                     activity_level: p.activity_level || '',
+                    aqi_threshold: p.aqi_threshold ?? prev.aqi_threshold,
                 }))
             }
         }).catch(() => { /* non-critical */ })
@@ -125,6 +128,7 @@ export default function Settings() {
                 weight: form.weight ? parseFloat(form.weight) : null,
                 smoking_status: form.smoking_status || null,
                 activity_level: form.activity_level || null,
+                aqi_threshold: form.aqi_threshold ? parseInt(form.aqi_threshold) : 100,
             })
 
             // Update localStorage so dashboard etc. see the new name
@@ -147,6 +151,7 @@ export default function Settings() {
                 date_of_birth: form.date_of_birth,
                 blood_group: form.blood_group,
                 known_conditions: form.known_conditions,
+                aqi_threshold: form.aqi_threshold,
             }))
 
             setSaveStatus('success')
@@ -373,6 +378,26 @@ export default function Settings() {
                             <option value="Moderate">Moderate (Active)</option>
                             <option value="High">High (Very Active)</option>
                         </select>
+                    </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', marginTop: 16 }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" htmlFor="s-aqi-threshold">AQI Alert Threshold</label>
+                        <input
+                            id="s-aqi-threshold"
+                            name="aqi_threshold"
+                            type="number"
+                            min="0"
+                            max="500"
+                            className="form-input"
+                            value={form.aqi_threshold}
+                            onChange={handleField}
+                            placeholder="100"
+                        />
+                        <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 4 }}>
+                            Alerts trigger when AQI exceeds this value
+                        </div>
                     </div>
                 </div>
 

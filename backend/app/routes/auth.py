@@ -317,6 +317,7 @@ class ProfileUpdate(BaseModel):
     weight: Optional[float] = None
     smoking_status: Optional[str] = None
     activity_level: Optional[str] = None
+    aqi_threshold: Optional[int] = None
 
 
 class ChangePasswordRequest(BaseModel):
@@ -369,6 +370,7 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "weight": data.weight,
             "smoking_status": data.smoking_status,
             "activity_level": data.activity_level,
+            "aqi_threshold": data.aqi_threshold,
         }
         profile_record.update({k: v for k, v in optional_fields.items() if v is not None})
 
@@ -406,7 +408,8 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "height": data.height,
             "weight": data.weight,
             "smoking_status": data.smoking_status,
-            "activity_level": data.activity_level
+            "activity_level": data.activity_level,
+            "aqi_threshold": data.aqi_threshold
         }
     }
 
