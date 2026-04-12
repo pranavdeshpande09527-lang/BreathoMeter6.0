@@ -2,8 +2,8 @@ import { toast } from 'react-toastify';
 
 // Base URL for the backend API
 // Switch these based on your environment
-// const API_BASE = 'http://127.0.0.1:8000'; // Development
-const API_BASE = 'https://breathometer6-0.onrender.com'; // Production
+const API_BASE = 'http://127.0.0.1:8000'; // Development
+// const API_BASE = 'https://breathometer6-0.onrender.com'; // Production
 
 class ApiError extends Error {
     constructor(status, message) {

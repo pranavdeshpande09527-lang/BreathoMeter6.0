@@ -249,7 +249,8 @@ async def login(user: UserLogin, request: Request):
 async def get_profile(user=Depends(get_current_user)):
     """Generic profile fetcher using JWT. Includes health profile if applicable."""
     from app.database import supabase_request
-    username = user.email.replace("@breathometer.local", "") if user.email else None
+    email = getattr(user, "email", None)
+    username = email.replace("@breathometer.local", "") if email else None
     
     profile_data = {}
     try:
@@ -259,12 +260,14 @@ async def get_profile(user=Depends(get_current_user)):
     except Exception as e:
         app_logger.warning(f"Failed to fetch health profile for user {user.id}: {e}")
 
+    user_metadata = getattr(user, "user_metadata", {})
+    
     return {
         "user": {
             "id": user.id,
-            "username": username,
-            "full_name": user.full_name,
-            "role": user.role,
+            "username": username or user_metadata.get("username"),
+            "full_name": user_metadata.get("full_name"),
+            "role": user_metadata.get("role") or getattr(user, "role", "patient"),
             "profile": profile_data
         }
     }

@@ -15,19 +15,41 @@ export default function Step3Activity({ data, update }) {
     const tests = [
         {
             id: 'breathHold',
-            title: 'Lung Capacity Test',
-            subtitle: 'Measure your respiratory strength',
-            instruction: 'Take a deep breath, then press and hold the button while holding your breath. Release when you exhale.',
+            title: 'Breath Hold',
+            subtitle: 'Measure your breath-holding capacity',
+            instruction: 'Take a deep breath, then press and hold the button while holding your breath. Release when you need to exhale.',
             keyAvg: 'breathHoldAverage', keyAttempts: 'breathHoldAttempts',
             anim: 'hold',
             target: 25, unit: 's', color: '#6366f1',
             hint: '🎯 Target: 25+ seconds for healthy lungs'
+        },
+        {
+            id: 'forcedExhale',
+            title: 'Forced Exhale',
+            subtitle: 'Measure your expiratory flow strength',
+            instruction: 'Take a full deep breath in, then press and hold the button while you exhale as hard and fast as possible. Release when fully exhaled.',
+            keyAvg: 'forcedExhaleAverage', keyAttempts: 'forcedExhaleAttempts',
+            anim: 'exhale',
+            target: 4, unit: 's', color: '#f59e0b',
+            hint: '🎯 Target: 3–5 seconds for normal forced expiratory volume'
+        },
+        {
+            id: 'peakInhale',
+            title: 'Peak Inhale',
+            subtitle: 'Measure your inspiratory muscle strength',
+            instruction: 'Exhale fully first, then press and hold the button while you inhale as deeply and slowly as you can. Release when your lungs are full.',
+            keyAvg: 'peakInhaleAverage', keyAttempts: 'peakInhaleAttempts',
+            anim: 'inhale',
+            target: 5, unit: 's', color: '#10b981',
+            hint: '🎯 Target: 4–6 seconds for strong inspiratory capacity'
         }
     ]
 
     useEffect(() => {
         if (!data.breathHoldAverage) setTestPhase(0)
-        else setTestPhase(1)
+        else if (!data.forcedExhaleAverage) setTestPhase(1)
+        else if (!data.peakInhaleAverage) setTestPhase(2)
+        else setTestPhase(3)
     }, [data])
 
     useEffect(() => {
@@ -70,12 +92,17 @@ export default function Step3Activity({ data, update }) {
             [`${currentTest.id}SignalStability`]: signalStability
         })
         setCurrentAttempts([]); setTime(0); setFeedback("")
+        if (testPhase < tests.length - 1) setTestPhase(prev => prev + 1)
     }
 
     const resetTests = () => {
         update({
             breathHoldAverage: null, breathHoldAttempts: null,
             breathHoldPeakAirflow: null, breathHoldSignalStability: null,
+            forcedExhaleAverage: null, forcedExhaleAttempts: null,
+            forcedExhalePeakAirflow: null, forcedExhaleSignalStability: null,
+            peakInhaleAverage: null, peakInhaleAttempts: null,
+            peakInhalePeakAirflow: null, peakInhaleSignalStability: null,
             stairsDifficulty: null
         })
         setTestPhase(0); setCurrentAttempts([]); setTime(0); setIsRunning(false); setFeedback("")
@@ -100,7 +127,7 @@ export default function Step3Activity({ data, update }) {
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 {tests.map((test, index) => {
                     const isComplete = data[test.keyAvg] != null
-                    const isActive = index === testPhase && testPhase < 1
+                    const isActive = index === testPhase && testPhase < 3
                     return (
                         <div key={test.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}>
                             <div style={{
@@ -128,7 +155,7 @@ export default function Step3Activity({ data, update }) {
                 })}
             </div>
 
-            {testPhase < 1 ? (
+            {testPhase < 3 ? (
                 <div className="card" style={{
                     padding: 28, border: `2px solid ${currentTest.color}44`,
                     background: `linear-gradient(135deg, ${currentTest.color}08 0%, transparent 60%)`
@@ -137,7 +164,7 @@ export default function Step3Activity({ data, update }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
                         <div>
                             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: currentTest.color, marginBottom: 4 }}>
-                                Test 1 of 1
+                                Test {testPhase + 1} of 3
                             </div>
                             <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>{currentTest.title}</h3>
                             <div className="text-meta" style={{ marginTop: 4 }}>{currentTest.subtitle}</div>
@@ -147,7 +174,7 @@ export default function Step3Activity({ data, update }) {
                             borderRadius: 20, fontSize: 12, fontWeight: 700, color: currentTest.color,
                             border: `1px solid ${currentTest.color}33`
                         }}>
-                            Attempt 1 / 1
+                            Attempt 1 / 3
                         </div>
                     </div>
 
@@ -251,16 +278,16 @@ export default function Step3Activity({ data, update }) {
 
                 </div>
             ) : (
-                /* All 1 complete */
+                /* All 3 complete */
                 <div className="card" style={{
                     padding: 36, textAlign: 'center',
                     border: '2px solid var(--color-safe)',
                     background: 'linear-gradient(135deg, rgba(34,197,94,0.06) 0%, transparent 60%)'
                 }}>
                     <CheckCircle2 size={52} color="var(--color-safe)" style={{ margin: '0 auto 16px' }} />
-                    <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text)', margin: '0 0 8px 0' }}>Test Completed! 🎉</h3>
+                    <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text)', margin: '0 0 8px 0' }}>All 3 Tests Completed! 🎉</h3>
                     <div className="text-meta" style={{ marginBottom: 28 }}>
-                        Your results have been recorded.
+                        All lung capacity results have been recorded.
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
                         {tests.map(test => (
@@ -286,7 +313,7 @@ export default function Step3Activity({ data, update }) {
             )}
 
             {/* Stairs difficulty (after completion) */}
-            {testPhase === 1 && (
+            {testPhase === 3 && (
                 <div className="form-group" style={{ animation: 'fadeIn 0.5s ease-out' }}>
                     <label className="form-label" style={{ fontSize: 15 }}>
                         After climbing one flight of stairs, do you feel:
