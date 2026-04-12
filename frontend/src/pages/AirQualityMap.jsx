@@ -200,9 +200,10 @@ export default function AirQualityMap() {
         }
         
         api.auth.getNotifications()
-            .then(notifs => {
-                if (notifs && notifs['AQI warnings'] !== undefined) {
-                    setAlertsEnabled(notifs['AQI warnings']);
+            .then(res => {
+                const prefs = res?.preferences || {};
+                if (prefs['AQI warnings'] !== undefined) {
+                    setAlertsEnabled(prefs['AQI warnings']);
                 }
             })
             .catch(err => console.error("Error loading notifications:", err));
@@ -226,8 +227,9 @@ export default function AirQualityMap() {
         const newVal = !alertsEnabled;
         setAlertsEnabled(newVal);
         try {
-            const current = await api.auth.getNotifications() || {};
-            await api.auth.updateNotifications({ ...current, 'AQI warnings': newVal });
+            const res = await api.auth.getNotifications() || {};
+            const prefs = res.preferences || {};
+            await api.auth.updateNotifications({ ...prefs, 'AQI warnings': newVal });
         } catch (err) {
             console.error("Failed to toggle alerts:", err);
             setAlertsEnabled(!newVal); // revert on error
@@ -582,13 +584,20 @@ export default function AirQualityMap() {
 
                     {/* Smart Alerts */}
                     <div className="card" style={{ padding: 20, borderRadius: 20 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                             <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><Bell size={18} color="var(--color-warning)"/> Smart Alerts</h3>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                            <div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>Email Notifications</div>
+                                <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 2 }}>Receive warnings if AQI limit exceeded</div>
+                            </div>
                             <button 
                                 onClick={handleToggleAlerts}
                                 style={{
                                     width: 44, height: 24, borderRadius: 12, background: alertsEnabled ? 'var(--color-safe)' : 'var(--color-border-2)',
-                                    border: 'none', position: 'relative', cursor: 'pointer', transition: 'background 0.3s'
+                                    border: 'none', position: 'relative', cursor: 'pointer', transition: 'background 0.3s', flexShrink: 0
                                 }}
                             >
                                 <div style={{
@@ -597,7 +606,8 @@ export default function AirQualityMap() {
                                 }} />
                             </button>
                         </div>
-                        <div style={{ opacity: alertsEnabled ? 1 : 0.5, transition: 'opacity 0.3s' }}>
+
+                        <div style={{ opacity: alertsEnabled ? 1 : 0.5, transition: 'opacity 0.3s', borderTop: '1px solid var(--color-border-2)', paddingTop: 16 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)', marginBottom: 8 }}>
                                 <span>Warn me when AQI exceeds:</span>
                                 <span style={{ color: getAqiBand(alertThreshold).color, fontWeight: 800 }}>{alertThreshold}</span>
