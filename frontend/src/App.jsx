@@ -34,6 +34,8 @@ import SessionExpiryModal from './components/SessionExpiryModal'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://breathometer6-0.onrender.com'
+
 function ProtectedRoute({ children, allowedRole }) {
     let userString = sessionStorage.getItem('user_data');
     if (!userString || userString === 'undefined') {
@@ -97,7 +99,7 @@ export default function App() {
                         const refreshToken = sessionStorage.getItem('supabase_refresh_token') ||
                                              localStorage.getItem('supabase_refresh_token');
                         if (!refreshToken) return;
-                        const res = await fetch('https://breathometer6-0.onrender.com/auth/refresh', {
+                        const res = await fetch(`${API_BASE}/auth/refresh`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ refresh_token: refreshToken })
@@ -182,4 +184,3 @@ export default function App() {
         </BrowserRouter>
     );
 }
-

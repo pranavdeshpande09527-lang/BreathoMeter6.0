@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional
 import re
 import traceback
@@ -8,6 +8,7 @@ import asyncio
 from app.schemas.user import UserCreate, UserLogin
 from app.database import supabase_auth_request, supabase_admin_auth_request, supabase_admin_request
 from app.config import settings
+from app.core.security import ensure_doctor_patient_access, get_doctor_patient_ids, redact_value, sanitize_free_text
 from app.utils.logger import app_logger
 from app.utils.rate_limit import check_rate_limit
 from app.utils.email import send_verification_email
@@ -45,7 +46,7 @@ async def signup(user: UserCreate, request: Request):
             detail="Password must be at least 8 characters long, contain a number, and an uppercase letter."
         )
     
-    app_logger.info(f"Processing {role} signup for: {user.username} (Env: {settings.environment})")
+    app_logger.info(f"Processing {role} signup for: {redact_value(user.username)} (Env: {settings.environment})")
     
     user_metadata = {
         "full_name": user.full_name,
@@ -242,7 +243,7 @@ async def login(user: UserLogin, request: Request):
                 status_code=429,
                 detail="Too many login attempts. Please try again later."
             )
-        app_logger.error(f"Login error for username {user.username}: {e}")
+        app_logger.error(f"Login error for username {redact_value(user.username)}: {e}")
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
 @router.get("/profile")
@@ -274,10 +275,12 @@ async def get_profile(user=Depends(get_current_user)):
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: str
+    email: EmailStr
+    model_config = ConfigDict(extra="forbid")
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+    model_config = ConfigDict(extra="forbid")
 
 @router.post("/forgot-password")
 async def forgot_password(req: ForgotPasswordRequest, request: Request):
@@ -322,28 +325,31 @@ async def refresh_token(req: RefreshTokenRequest):
         raise HTTPException(status_code=401, detail="Token refresh failed. Please log in again.")
 
 class ProfileUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    contact_email: Optional[str] = None  # User's real Gmail for notifications
-    phone: Optional[str] = None
-    date_of_birth: Optional[str] = None
-    blood_group: Optional[str] = None
-    known_conditions: Optional[str] = None
+    first_name: Optional[str] = Field(None, max_length=80)
+    last_name: Optional[str] = Field(None, max_length=80)
+    contact_email: Optional[EmailStr] = None  # User's real Gmail for notifications
+    phone: Optional[str] = Field(None, max_length=30)
+    date_of_birth: Optional[str] = Field(None, max_length=20)
+    blood_group: Optional[str] = Field(None, max_length=8)
+    known_conditions: Optional[str] = Field(None, max_length=1000)
     age: Optional[int] = None
-    gender: Optional[str] = None
+    gender: Optional[str] = Field(None, max_length=30)
     height: Optional[float] = None
     weight: Optional[float] = None
-    smoking_status: Optional[str] = None
-    activity_level: Optional[str] = None
+    smoking_status: Optional[str] = Field(None, max_length=30)
+    activity_level: Optional[str] = Field(None, max_length=30)
     aqi_threshold: Optional[int] = None
+    model_config = ConfigDict(extra="forbid")
 
 
 class ChangePasswordRequest(BaseModel):
     new_password: str
+    model_config = ConfigDict(extra="forbid")
 
 
 class NotificationPreferences(BaseModel):
     preferences: dict  # e.g. {"health_alerts": True, "aqi_warnings": False, ...}
+    model_config = ConfigDict(extra="forbid")
 
 
 @router.patch("/profile")
@@ -376,24 +382,24 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
 
         # Fields that should only be included if non-None (avoids overwriting with nulls)
         optional_fields = {
-            "first_name": data.first_name,
-            "last_name": data.last_name,
-            "phone": data.phone,
-            "date_of_birth": data.date_of_birth,
-            "blood_group": data.blood_group,
-            "known_conditions": data.known_conditions,
+            "first_name": sanitize_free_text(data.first_name, max_length=80, field_name="first_name") if data.first_name is not None else None,
+            "last_name": sanitize_free_text(data.last_name, max_length=80, field_name="last_name") if data.last_name is not None else None,
+            "phone": sanitize_free_text(data.phone, max_length=30, field_name="phone") if data.phone is not None else None,
+            "date_of_birth": sanitize_free_text(data.date_of_birth, max_length=20, field_name="date_of_birth") if data.date_of_birth is not None else None,
+            "blood_group": sanitize_free_text(data.blood_group, max_length=8, field_name="blood_group") if data.blood_group is not None else None,
+            "known_conditions": sanitize_free_text(data.known_conditions, max_length=1000, field_name="known_conditions") if data.known_conditions is not None else None,
             "age": data.age,
-            "gender": data.gender,
+            "gender": sanitize_free_text(data.gender, max_length=30, field_name="gender") if data.gender is not None else None,
             "height": data.height,
             "weight": data.weight,
-            "smoking_status": data.smoking_status,
-            "activity_level": data.activity_level,
+            "smoking_status": sanitize_free_text(data.smoking_status, max_length=30, field_name="smoking_status") if data.smoking_status is not None else None,
+            "activity_level": sanitize_free_text(data.activity_level, max_length=30, field_name="activity_level") if data.activity_level is not None else None,
             "aqi_threshold": data.aqi_threshold,
         }
         profile_record.update({k: v for k, v in optional_fields.items() if v is not None})
 
         # contact_email is always included so the user can set or clear it
-        profile_record["contact_email"] = data.contact_email  # may be None → clears the field
+        profile_record["contact_email"] = str(data.contact_email) if data.contact_email is not None else None
 
         # Use PostgREST native UPSERT (POST with merge-duplicates) instead of
         # the fragile PATCH→POST fallback that silently failed on RLS mismatch.
@@ -437,29 +443,23 @@ async def list_doctors(user=Depends(get_current_user)):
     """
     Returns all users with role='doctor'.
     """
-    from app.database import supabase_admin_auth_request
+    from app.database import supabase_request
     
     try:
-        users_resp = await supabase_admin_auth_request("users", "GET")
+        users_resp = await supabase_request(
+            "users",
+            "GET",
+            query_params={"role": "eq.doctor", "select": "id,email,first_name,last_name", "order": "created_at.desc"},
+            token=user.token,
+            use_cache=True,
+        )
         doctors = []
-        for u in users_resp.get("users", []):
-            meta = u.get("user_metadata", {})
-            role_meta = str(meta.get("role", "")).lower()
-            name_meta = str(meta.get("full_name", "")).lower()
-            email_u = str(u.get("email", "")).lower()
-            
-            # Use robust heuristic MATCHING is_doctor and frontend logic
-            is_doc = role_meta == "doctor" or name_meta.startswith("dr. ") or email_u.startswith("dr.")
-            
-            if is_doc:
-                doctors.append({
-                    "id": u["id"],
-                    "email": u.get("email"),
-                    "full_name": meta.get("full_name") or u.get("email"),
-                    "specialty": meta.get("specialty"),
-                    "experience": meta.get("experience"),
-                    "availability": meta.get("availability")
-                })
+        for u in users_resp or []:
+            doctors.append({
+                "id": u["id"],
+                "email": u.get("email"),
+                "full_name": " ".join(filter(None, [u.get("first_name"), u.get("last_name")])).strip() or u.get("email"),
+            })
         return {"doctors": doctors}
     except Exception as e:
         from app.utils.logger import app_logger
@@ -476,11 +476,14 @@ async def list_patients(user=Depends(require_role(["doctor"]))):
     from app.database import supabase_request
     
     try:
-        # We use the user's token so RLS policies for doctors are applied
+        patient_ids = await get_doctor_patient_ids(user)
+        if not patient_ids:
+            return {"patients": []}
+
         res = await supabase_request(
             "users", 
             "GET", 
-            query_params={"role": "eq.patient", "order": "created_at.desc"}, 
+            query_params={"role": "eq.patient", "id": f"in.({','.join(patient_ids)})", "order": "created_at.desc"}, 
             token=user.token,
             use_cache=True
         )
@@ -543,6 +546,7 @@ async def get_patient_detail(patient_id: str, user=Depends(require_role(["doctor
     from app.database import supabase_request
     
     try:
+        await ensure_doctor_patient_access(user, patient_id)
         # Fetch all patient details concurrently using asyncio.gather
         
         async def fetch_user():
@@ -603,8 +607,8 @@ async def change_password(req: ChangePasswordRequest, user=Depends(get_current_u
     Changes the authenticated user's password via the Supabase Admin API.
     Requires SUPABASE_SERVICE_ROLE_KEY to be set.
     """
-    if not req.new_password or len(req.new_password) < 8:
-        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+    if not is_strong_password(req.new_password):
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters, include a number, and an uppercase letter.")
 
     if not settings.supabase_service_role_key:
         raise HTTPException(

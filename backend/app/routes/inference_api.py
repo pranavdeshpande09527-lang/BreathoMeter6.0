@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 import pandas as pd
 import numpy as np
@@ -13,6 +13,7 @@ from app.services.chatbot_service import chatbot_service
 from app.services.ml_service import ml_service
 from app.services.doctor_dataset import get_doctors
 from app.core.dependencies import get_current_user
+from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/inference", tags=["Prediction Engine"])
 logger = logging.getLogger(__name__)
@@ -85,10 +86,12 @@ class EnvironmentalData(BaseModel):
     CardiovascularCases: float
     HospitalAdmissions: float
     HealthImpactScore: float
+    model_config = ConfigDict(extra="forbid")
     
 class PredictionRequest(BaseModel):
     environmental_data: EnvironmentalData
     optional_patient_data: Optional[dict] = {}
+    model_config = ConfigDict(extra="forbid")
 
 def apply_feature_engineering(df):
     df['PollutionIndex'] = (df['PM2_5'] + df['PM10'] + df['NO2'] + df['SO2'] + df['O3']) / 5.0
@@ -105,7 +108,8 @@ def _to_float(value, default=0.0):
         return default
 
 @router.post("/predict")
-async def get_risk_prediction(environmental_data: EnvironmentalData, optional_patient_data: Optional[dict] = None, user = Depends(get_current_user), expand: bool = False):
+@limiter.limit("12/minute")
+async def get_risk_prediction(request: Request, environmental_data: EnvironmentalData, optional_patient_data: Optional[dict] = None, user = Depends(get_current_user), expand: bool = False):
     """
     Enhanced Hybrid Inference: Environmental + Clinical ML + AI Reasoning.
     Includes input quality scoring, insufficient-data detection, validity scoring, and confidence banding.

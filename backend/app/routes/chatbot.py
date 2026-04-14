@@ -1,23 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from app.services.chatbot_service import chatbot_service
 from app.core.dependencies import get_current_user
 from app.database import supabase_request
+from app.core.rate_limit import limiter
+from app.core.security import sanitize_free_text
 import logging
 
 router = APIRouter(prefix="/chatbot", tags=["Hava AI Chatbot"])
 logger = logging.getLogger(__name__)
 
 class ChatMessage(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, max_length=2000)
     user_context: Optional[dict] = {}
+    model_config = ConfigDict(extra="forbid")
 
 class ChatResponse(BaseModel):
     reply: str
 
 @router.post("/message", response_model=ChatResponse)
-async def send_message(request: ChatMessage, user = Depends(get_current_user)):
+@limiter.limit("15/minute")
+async def send_message(http_request: Request, request: ChatMessage, user = Depends(get_current_user)):
     """
     User sends a message to Hava AI Chatbot.
     Returns the AI-generated response with enriched user health context.
@@ -67,5 +71,5 @@ async def send_message(request: ChatMessage, user = Depends(get_current_user)):
         "Client Context": request.user_context
     }
     
-    reply = await chatbot_service.get_response(request.message, enriched_context)
+    reply = await chatbot_service.get_response(sanitize_free_text(request.message, max_length=2000, field_name="message"), enriched_context)
     return {"reply": reply}

@@ -1,5 +1,21 @@
 import logging
 import sys
+import re
+
+SECRET_PATTERNS = [
+    re.compile(r"Bearer\s+[A-Za-z0-9\-\._~\+/]+=*", re.IGNORECASE),
+    re.compile(r"(apikey|api_key|token|password|secret)=([^&\s]+)", re.IGNORECASE),
+]
+
+
+class SensitiveDataFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        for pattern in SECRET_PATTERNS:
+            message = pattern.sub(r"\1=[REDACTED]" if pattern.groups >= 2 else "Bearer [REDACTED]", message)
+        record.msg = message
+        record.args = ()
+        return True
 
 def setup_logger(name: str) -> logging.Logger:
     """
@@ -15,6 +31,7 @@ def setup_logger(name: str) -> logging.Logger:
         # Create console handler
         ch = logging.StreamHandler(sys.stdout)
         ch.setLevel(logging.INFO)
+        ch.addFilter(SensitiveDataFilter())
         
         # Create formatter
         formatter = logging.Formatter(

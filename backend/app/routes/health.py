@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.schemas.health_data import HealthDataCreate
 from app.core.dependencies import get_current_user
 from app.database import supabase_request
+from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/health", tags=["Health Data"])
 
 
 @router.post("/input")
-async def submit_health_data(data: HealthDataCreate, user=Depends(get_current_user)):
+@limiter.limit("20/minute")
+async def submit_health_data(request: Request, data: HealthDataCreate, user=Depends(get_current_user)):
     """Store health data for the authenticated user."""
     bmi = data.weight / ((data.height / 100) ** 2)
 
@@ -42,7 +44,7 @@ async def get_latest_health_data(user=Depends(get_current_user)):
             "user_id": f"eq.{user.id}",
             "order": "created_at.desc",
             "limit": "1"
-        })
+        }, token=user.token)
         if not response:
             return {"message": "No health data found", "data": None}
         return {"data": response[0]}

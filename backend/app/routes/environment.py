@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from app.database import supabase_request
 from app.core.dependencies import get_current_user
 import httpx
 import logging
 from app.config import settings
+from app.core.rate_limit import limiter
+from app.core.security import sanitize_free_text
 
 from app.services.aqi_service import aqi_service
 
@@ -17,18 +19,20 @@ class EnvironmentRequest(BaseModel):
     pm25: float
     pm10: float
     aqi: float
-    location: Optional[str] = None
+    location: Optional[str] = Field(None, max_length=120)
+    model_config = ConfigDict(extra="forbid")
 
 
 @router.post("")
-async def store_environment_data(data: EnvironmentRequest, background_tasks: BackgroundTasks, user = Depends(get_current_user)):
+@limiter.limit("30/minute")
+async def store_environment_data(request: Request, data: EnvironmentRequest, background_tasks: BackgroundTasks, user = Depends(get_current_user)):
     try:
         res = await supabase_request("environment_data", "POST", data={
             "user_id": user.id,
             "pm25": data.pm25,
             "pm10": data.pm10,
             "aqi": data.aqi,
-            "location": data.location
+            "location": sanitize_free_text(data.location, max_length=120, field_name="location") if data.location else None
         }, token=user.token)
 
         # ── Auto danger alert ──────────────────────────────────────────────

@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from app.core.dependencies import get_current_user
 from app.database import supabase_request
 from app.core.rate_limit import limiter
+from app.core.security import sanitize_free_text, sanitize_string_list
 import logging
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])
@@ -12,9 +13,9 @@ from typing import List, Optional
 
 class PredictionRequest(BaseModel):
     final_risk_score: float = 0.0
-    risk_category: str
-    ai_explanation: str
-    top_risk_factors: List[str]
+    risk_category: str = Field(..., min_length=1, max_length=120)
+    ai_explanation: str = Field(..., min_length=1, max_length=8000)
+    top_risk_factors: List[str] = Field(default_factory=list, max_length=20)
     disease_risks: Optional[List[dict]] = None
     ml_score: Optional[float] = None
     ai_score: Optional[float] = None
@@ -43,6 +44,7 @@ class PredictionRequest(BaseModel):
     insufficient_data: Optional[bool] = None
     recommended_doctors: Optional[List[dict]] = None
     priority_recommendation: Optional[bool] = None
+    model_config = ConfigDict(extra="forbid")
 
 @router.post("/store")
 @limiter.limit("10/minute")
@@ -53,10 +55,10 @@ async def store_prediction(request: Request, data: PredictionRequest, user = Dep
         payload = {
             "user_id": user_id,
             "final_risk_score": data.final_risk_score,
-            "predicted_condition": data.risk_category,
-            "risk_category": data.risk_category,
-            "ai_explanation": data.ai_explanation,
-            "top_risk_factors": data.top_risk_factors,
+            "predicted_condition": sanitize_free_text(data.risk_category, max_length=120, field_name="risk_category"),
+            "risk_category": sanitize_free_text(data.risk_category, max_length=120, field_name="risk_category"),
+            "ai_explanation": sanitize_free_text(data.ai_explanation, max_length=8000, field_name="ai_explanation"),
+            "top_risk_factors": sanitize_string_list(data.top_risk_factors, max_items=20, max_length=120, field_name="top_risk_factor"),
             "disease_risks": data.disease_risks
         }
         if data.ml_score is not None: payload["ml_score"] = data.ml_score

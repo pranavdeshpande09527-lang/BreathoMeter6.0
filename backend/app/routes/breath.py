@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from app.core.dependencies import get_current_user
 from app.database import supabase_request
+from app.core.rate_limit import limiter
 import logging
 
 router = APIRouter(prefix="/breath-test", tags=["breath"])
@@ -19,10 +20,12 @@ class BreathTestRequest(BaseModel):
     is_valid: bool = True
     background_noise_detected: bool = False
     cough_detected: bool = False
-    raw_attempts: List[Dict[str, Any]] = []
+    raw_attempts: List[Dict[str, Any]] = Field(default_factory=list, max_length=20)
+    model_config = ConfigDict(extra="forbid")
 
 @router.post("")
-async def submit_breath_test(data: BreathTestRequest, user = Depends(get_current_user)):
+@limiter.limit("20/minute")
+async def submit_breath_test(request: Request, data: BreathTestRequest, user = Depends(get_current_user)):
     user_id = user.id
     try:
         payload = {

@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # Move imports inside functions where needed to avoid circular dependencies
 from app.utils.logger import app_logger
+from app.core.security import redact_value
 import types
 
 security = HTTPBearer()
@@ -18,6 +19,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         from app.database import supabase_auth_request
         user_data = await supabase_auth_request("user", "GET", token=token)
+        app_logger.info(f"Authentication success for user={redact_value(user_data.get('email')) or user_data.get('id', '')}")
         # return user as object so we can use user.id, user.email etc.
         return types.SimpleNamespace(**user_data, token=token)
     except Exception as e:

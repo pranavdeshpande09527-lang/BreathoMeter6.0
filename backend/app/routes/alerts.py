@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from datetime import datetime, timedelta
 from app.core.dependencies import get_current_user, require_role
+from app.core.security import get_doctor_patient_ids
 from app.database import supabase_request
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -107,10 +108,21 @@ async def get_doctor_alerts(doctor_id: str, current_user = Depends(require_role(
     
     # Fetch recent high-risk predictions across the platform (doctor RLS allows this)
     try:
+        patient_ids = await get_doctor_patient_ids(current_user)
+        if not patient_ids:
+            return [{
+                "id": alert_id,
+                "severity": "low",
+                "title": "All Clear",
+                "description": "No critical alerts across your patient panel.",
+                "time": datetime.now().strftime("%B %d, %Y â€” %I:%M %p")
+            }]
+
+        in_filter = ",".join(patient_ids)
         res = await supabase_request(
             "risk_predictions", 
             "GET", 
-            query_params={"risk_level": "eq.High", "order": "created_at.desc", "limit": "5"}, 
+            query_params={"user_id": f"in.({in_filter})", "risk_level": "eq.High", "order": "created_at.desc", "limit": "5"}, 
             token=current_user.token
         )
         if res:

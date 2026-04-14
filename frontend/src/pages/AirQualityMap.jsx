@@ -6,6 +6,7 @@ import { Bell, Shield, Home, Wind, Activity, AlertTriangle, Sunrise, Sunset, Map
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 let L = null
+const WAQI_TILE_TOKEN = import.meta.env.VITE_WAQI_TILE_TOKEN
 
 const AQI_BANDS = [
     { min: 0,   max: 50,  label: 'Good',                 color: '#16A34A', bg: '#DCFCE7', text: '#14532D' },
@@ -323,9 +324,11 @@ export default function AirQualityMap() {
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map)
-            L.tileLayer('https://tiles.waqi.info/tiles/usepa-aqi/{z}/{x}/{y}.png?token=fa7c3846fee37c064fe2aaa109995f2a51e8448e', {
-                opacity: 0.5, attribution: '© WAQI', maxZoom: 13,
-            }).addTo(map)
+            if (WAQI_TILE_TOKEN) {
+                L.tileLayer(`https://tiles.waqi.info/tiles/usepa-aqi/{z}/{x}/{y}.png?token=${WAQI_TILE_TOKEN}`, {
+                    opacity: 0.5, attribution: '© WAQI', maxZoom: 13,
+                }).addTo(map)
+            }
 
             mapRef.current = map
             layerGroupRef.current = L.layerGroup().addTo(map)

@@ -3,8 +3,9 @@ import logging
 from contextlib import asynccontextmanager
 
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import PlainTextResponse
 from app.core.errors import setup_error_handlers
 from app.core.rate_limit import setup_rate_limiting
@@ -140,6 +141,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if ENVIRONMENT == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
+
+    @app.middleware("http")
+    async def security_headers_middleware(request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        return response
+
 # --- Health & System Status Endpoints ---
 
 @app.get("/", tags=["System"])
@@ -190,6 +204,8 @@ def debug_config():
     Shows full environment configuration status.
     Use this to verify a Render deployment has all required env vars.
     """
+    if ENVIRONMENT == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     audit = _audit_environment()
     return {
         "status": "ok" if audit["all_required_ok"] else "degraded",

@@ -5,6 +5,7 @@ import { api } from '../utils/api'
 import Logo from '../components/Logo'
 
 const roles = ['Patient', 'Doctor']
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://breathometer6-0.onrender.com'
 
 export default function Login() {
   const [role, setRole]             = useState('Patient')
@@ -20,7 +21,7 @@ export default function Login() {
     e.preventDefault()
     setForgotStatus('sending')
     try {
-      await fetch(`https://breathometer6-0.onrender.com/auth/forgot-password`, {
+      await fetch(`${API_BASE}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail })

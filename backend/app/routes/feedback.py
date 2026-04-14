@@ -6,11 +6,13 @@ Stored in prediction_feedback table for future model evaluation.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 import logging
 
 from app.core.dependencies import get_current_user
+from app.core.rate_limit import limiter
+from app.core.security import sanitize_free_text, validate_identifier
 from app.database import supabase_request
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
@@ -19,13 +21,15 @@ logger = logging.getLogger(__name__)
 
 class FeedbackRequest(BaseModel):
     prediction_id: str
-    confirmed_disease: Optional[str] = None
+    confirmed_disease: Optional[str] = Field(None, max_length=200)
     was_prediction_helpful: Optional[bool] = None
     doctor_clicked: Optional[bool] = False
-    doctor_name: Optional[str] = None
+    doctor_name: Optional[str] = Field(None, max_length=120)
+    model_config = ConfigDict(extra="forbid")
 
 
 @router.post("/submit")
+@limiter.limit("10/minute")
 async def submit_feedback(data: FeedbackRequest, user=Depends(get_current_user)):
     """
     Submit post-prediction feedback.
@@ -35,13 +39,23 @@ async def submit_feedback(data: FeedbackRequest, user=Depends(get_current_user))
     """
     user_id = user.id
     try:
+        validate_identifier(data.prediction_id, "prediction_id")
+        prediction = await supabase_request(
+            "risk_predictions",
+            "GET",
+            query_params={"id": f"eq.{data.prediction_id}", "user_id": f"eq.{user_id}", "select": "id", "limit": "1"},
+            token=user.token,
+        )
+        if not prediction:
+            raise HTTPException(status_code=403, detail="Not authorized to provide feedback for this prediction")
+
         payload = {
             "prediction_id": data.prediction_id,
             "user_id": user_id,
-            "confirmed_disease": data.confirmed_disease,
+            "confirmed_disease": sanitize_free_text(data.confirmed_disease, max_length=200, field_name="confirmed_disease") if data.confirmed_disease else None,
             "was_prediction_helpful": data.was_prediction_helpful,
             "doctor_clicked": data.doctor_clicked or False,
-            "doctor_name": data.doctor_name,
+            "doctor_name": sanitize_free_text(data.doctor_name, max_length=120, field_name="doctor_name") if data.doctor_name else None,
         }
         res = await supabase_request("prediction_feedback", "POST", data=payload, token=user.token)
 
@@ -51,12 +65,15 @@ async def submit_feedback(data: FeedbackRequest, user=Depends(get_current_user))
         )
 
         return {"success": True, "message": "Thank you for your feedback!", "id": res[0]["id"] if isinstance(res, list) and res else None}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error saving feedback: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/doctor-click")
+@limiter.limit("10/minute")
 async def log_doctor_click(
     prediction_id: str,
     doctor_name: str,
@@ -69,11 +86,20 @@ async def log_doctor_click(
     """
     user_id = user.id
     try:
+        validate_identifier(prediction_id, "prediction_id")
+        prediction = await supabase_request(
+            "risk_predictions",
+            "GET",
+            query_params={"id": f"eq.{prediction_id}", "user_id": f"eq.{user_id}", "select": "id", "limit": "1"},
+            token=user.token,
+        )
+        if not prediction:
+            raise HTTPException(status_code=403, detail="Not authorized to update feedback for this prediction")
         payload = {
             "prediction_id": prediction_id,
             "user_id": user_id,
             "doctor_clicked": True,
-            "doctor_name": doctor_name,
+            "doctor_name": sanitize_free_text(doctor_name, max_length=120, field_name="doctor_name"),
         }
         await supabase_request("prediction_feedback", "POST", data=payload, token=user.token)
 
