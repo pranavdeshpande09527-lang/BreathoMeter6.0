@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ─── Danger Alert Cooldown ───────────────────────────────────────────────────
 # Prevents alert spam: one auto-alert per email per 30-minute danger session.
 _danger_cooldown: dict[str, float] = {}
-COOLDOWN_SECONDS = 0  # Temporarily 0 for testing warning emails
+COOLDOWN_SECONDS = 6 * 60 * 60  # 6 hours
 
 
 def _is_on_cooldown(email: str) -> bool:
