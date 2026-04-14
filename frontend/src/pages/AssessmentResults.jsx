@@ -354,6 +354,22 @@ export default function AssessmentResults() {
         }
 
         // ── Weight / BMI ─────────────────────────────────────────────────────
+        const inhaleCapacity = Number(d.peakInhaleAverage) || 0
+        const exhaleCapacity = Number(d.forcedExhaleAverage) || 0
+        const breathHold = Number(d.breathHoldAverage) || 0
+        if (inhaleCapacity > 0 && inhaleCapacity < 4) {
+            recs.push({ icon: 'ðŸ«', text: 'Your inhaling capacity is below the healthy target range. Focus on diaphragmatic breathing and slow deep-inhalation drills twice daily.' })
+        }
+        if (exhaleCapacity > 0 && exhaleCapacity < 3) {
+            recs.push({ icon: 'ðŸŒ¬ï¸', text: 'Your exhaling capacity is reduced. Practice pursed-lip breathing and controlled exhalation exercises to improve airway emptying.' })
+        }
+        if (breathHold > 0 && breathHold < 20) {
+            recs.push({ icon: 'â±ï¸', text: 'Your breath-hold timing is below target. Build tolerance gradually with supervised breath-control practice rather than force-holding.' })
+        }
+        if (d.stairsDifficulty === 'Moderate breathlessness' || d.stairsDifficulty === 'Severe breathlessness') {
+            recs.push({ icon: 'ðŸªœ', text: 'Breathlessness after one flight of stairs suggests reduced reserve capacity. Pace exertion carefully and mention this symptom to your doctor.' })
+        }
+
         const bmi = Number(d.bmi) || 0
         if (bmi >= 30) {
             recs.push({ icon: '⚖️', text: 'Obesity increases respiratory strain and sleep apnea risk. A 5–10% weight reduction can significantly improve lung function and SpO2.' })

@@ -96,6 +96,14 @@ def apply_feature_engineering(df):
     df['PollutionHumidityInteraction'] = df['PM2_5'] * df['Humidity']
     return df
 
+def _to_float(value, default=0.0):
+    try:
+        if value in (None, ""):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 @router.post("/predict")
 async def get_risk_prediction(environmental_data: EnvironmentalData, optional_patient_data: Optional[dict] = None, user = Depends(get_current_user), expand: bool = False):
     """
@@ -104,6 +112,10 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
     """
     patient_data = optional_patient_data or {}
     env_dict = environmental_data.dict()
+    vitals = patient_data.get('vitals', {})
+    inhale_capacity = _to_float(vitals.get('inhale_capacity'))
+    exhale_capacity = _to_float(vitals.get('exhale_capacity'))
+    breath_hold_time = _to_float(vitals.get('breath_hold_time'))
 
     # ─── Input Quality & Insufficient Data Detection ─────────────────────────
     def _compute_input_quality(pd_data, ed_data):
@@ -114,6 +126,8 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
         vital_checks = [
             ('spo2', vitals.get('spo2') not in (None, 0)),
             ('breath_hold_time', vitals.get('breath_hold_time') not in (None, 0)),
+            ('inhale_capacity', vitals.get('inhale_capacity') not in (None, 0)),
+            ('exhale_capacity', vitals.get('exhale_capacity') not in (None, 0)),
             ('cough_severity', vitals.get('cough_severity') is not None),
         ]
         v_score = sum(1 for _, ok in vital_checks if ok) / len(vital_checks)
@@ -151,8 +165,16 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
         return round(score, 3), missing
 
     input_quality_score, missing_inputs = _compute_input_quality(patient_data, env_dict)
+    respiratory_quality_bonus = 0.0
+    if inhale_capacity >= 4:
+        respiratory_quality_bonus += 0.02
+    if exhale_capacity >= 3:
+        respiratory_quality_bonus += 0.02
+    if breath_hold_time >= 20:
+        respiratory_quality_bonus += 0.03
+    input_quality_score = min(1.0, input_quality_score + respiratory_quality_bonus)
 
-    critical_missing = [m for m in missing_inputs if m in ('vitals.spo2', 'symptoms', 'environment.AQI')]
+    critical_missing = [m for m in missing_inputs if m in ('vitals.spo2', 'vitals.inhale_capacity', 'vitals.exhale_capacity', 'symptoms', 'environment.AQI')]
     if input_quality_score < 0.20 and len(critical_missing) >= 3:
         return {
             "insufficient_data": True,
@@ -213,7 +235,9 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
                 'AQI': float(env_dict.get('AQI', 50)),
                 'BMI': float(patient_data.get('bmi', 24.5)),
                 'SpO2': float(patient_data.get('vitals', {}).get('spo2', 98)),
-                'BreathHold': float(patient_data.get('vitals', {}).get('breath_hold_time', 45))
+                'BreathHold': float(patient_data.get('vitals', {}).get('breath_hold_time', 45)),
+                'InhaleCapacity': float(patient_data.get('vitals', {}).get('inhale_capacity', 5)),
+                'ExhaleCapacity': float(patient_data.get('vitals', {}).get('exhale_capacity', 4))
             }
             for sym in clinical_symptoms:
                 input_dict[f'sym_{sym}'] = 1 if sym in raw_symptoms else 0
@@ -247,7 +271,8 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
     Age: {patient_data.get('age')}
     Symptoms: {patient_data.get('symptoms')}
     Smoking History: {patient_data.get('lifestyle', {}).get('smoking_habits')}
-    Vitals: SpO2 {patient_data.get('vitals', {}).get('spo2')}%, Breath Hold {patient_data.get('vitals', {}).get('breath_hold_time')}s
+    Vitals: SpO2 {patient_data.get('vitals', {}).get('spo2')}%, Inhale Capacity {patient_data.get('vitals', {}).get('inhale_capacity')}s, Exhale Capacity {patient_data.get('vitals', {}).get('exhale_capacity')}s, Breath Hold {patient_data.get('vitals', {}).get('breath_hold_time')}s
+    Functional Breathlessness: {patient_data.get('vitals', {}).get('stairs_difficulty')}
     Local AQI: {env_dict.get('AQI')}
     
     -------------------------------------
@@ -256,7 +281,7 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
     1. Identify up to 8 of the most likely respiratory or cardiovascular conditions.
     2. YOU MUST provide at least 3 distinct possibilities. If the symptoms are vague or confidence is low, provide up to 8.
     3. Provide a specific risk percentage (0-100) for EACH. ensure they are realistic.
-    4. Provide reasoning for each, especially how the environmental data (AQI) or vitals (SpO2) influenced the outcome.
+    4. Provide reasoning for each, especially how the environmental data (AQI) plus inhale, exhale, breath-hold, and SpO2 influenced the outcome.
     5. Output MUST be a valid JSON object.
     
     -------------------------------------
@@ -341,9 +366,31 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
                 }.items() if k in item["disease"].lower()), "General Physician")
             })
 
+    respiratory_strain = 0.0
+    if inhale_capacity and inhale_capacity < 4:
+        respiratory_strain += 0.08
+    elif inhale_capacity and inhale_capacity < 5:
+        respiratory_strain += 0.04
+
+    if exhale_capacity and exhale_capacity < 3:
+        respiratory_strain += 0.08
+    elif exhale_capacity and exhale_capacity < 4:
+        respiratory_strain += 0.04
+
+    if breath_hold_time and breath_hold_time < 15:
+        respiratory_strain += 0.10
+    elif breath_hold_time and breath_hold_time < 25:
+        respiratory_strain += 0.05
+
+    stairs_difficulty = str(vitals.get('stairs_difficulty', '') or '')
+    if stairs_difficulty == 'Severe breathlessness':
+        respiratory_strain += 0.10
+    elif stairs_difficulty == 'Moderate breathlessness':
+        respiratory_strain += 0.05
+
     # Metrics & Trust
     # FINAL RISK SCORE: Scaled between 0-1
-    final_risk_score = (ai_primary_risk * 0.70) + (clin_ml_score * 0.15) + (env_ml_score * 0.15)
+    final_risk_score = min(1.0, (ai_primary_risk * 0.70) + (clin_ml_score * 0.15) + (env_ml_score * 0.15) + respiratory_strain)
     
     agreement = 1.0 - abs(ai_primary_risk - clin_ml_score)
     # CONFIDENCE CALIBRATION: Higher trust in AI ensemble + input quality
@@ -377,7 +424,10 @@ async def get_risk_prediction(environmental_data: EnvironmentalData, optional_pa
         "risk_category": "High Risk" if final_risk_score >= 0.65 else ("Moderate Risk" if final_risk_score >= 0.30 else "Low Risk"),
         "top_risk_factors": [f for f in [
             "Low SpO2" if patient_data.get('vitals', {}).get('spo2', 100) < 95 else None,
+            "Reduced Inhaling Capacity" if inhale_capacity and inhale_capacity < 4 else None,
+            "Reduced Exhaling Capacity" if exhale_capacity and exhale_capacity < 3 else None,
             "Reduced Breath Hold" if patient_data.get('vitals', {}).get('breath_hold_time', 60) < 20 else None,
+            "Exertional Breathlessness" if stairs_difficulty in {"Moderate breathlessness", "Severe breathlessness"} else None,
             "High AQI Exposure" if env_dict.get('AQI', 0) > 100 else None,
             "Smoking History" if "smoker" in str(patient_data.get('lifestyle', {}).get('smoking_habits', '')).lower() else None
         ] if f],

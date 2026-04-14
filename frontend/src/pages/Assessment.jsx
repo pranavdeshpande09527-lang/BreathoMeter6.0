@@ -5,7 +5,8 @@ import {
     calculateRespiratoryRisk,
     calculateLungFunctionScore,
     calculateEnvironmentalRisk,
-    calculateOverallHealthScore
+    calculateOverallHealthScore,
+    getBreathingMetrics
 } from '../utils/scoring'
 
 import Step1Personal from '../components/assessment/Step1Personal'
@@ -17,6 +18,16 @@ import Step6Lifestyle from '../components/assessment/Step6Lifestyle'
 import Step7Environment from '../components/assessment/Step7Environment'
 import Step8Medication from '../components/assessment/Step8Medication'
 import Step9Daily from '../components/assessment/Step9Daily'
+
+const toNumber = (value, fallback = 0) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const getMaxSymptomDuration = (formData) => {
+    const durationKeys = ['coughSevDays', 'breathlessnessSevDays', 'chestPainDays', 'feverDays']
+    return durationKeys.reduce((max, key) => Math.max(max, toNumber(formData[key], 0)), 0)
+}
 
 export default function Assessment() {
     const navigate = useNavigate()
@@ -84,22 +95,28 @@ export default function Assessment() {
             },
             timestamp: new Date().toISOString()
         }
+        const breathingMetrics = getBreathingMetrics(data)
 
         // Save Breath Test Data
         try {
-            const hold = Number(data.breathHoldAverage) || 30;
+            const averagePeakAirflow = breathingMetrics.averagePeakAirflow || 0
+            const averageSignalStability = breathingMetrics.averageSignalStability || 0
 
             await api.breath.submitTest({
-                lung_capacity: hold,
-                breath_duration: hold,
-                breath_strength: hold, // approximation
-                test_accuracy: 95.0,
-                peak_airflow: data.breathHoldPeakAirflow || 0,
-                signal_stability: data.breathHoldSignalStability || 0,
+                lung_capacity: breathingMetrics.inhaleCapacity || breathingMetrics.breathHoldTime || 30,
+                breath_duration: breathingMetrics.breathHoldTime || breathingMetrics.exhaleCapacity || 30,
+                breath_strength: breathingMetrics.exhaleCapacity || breathingMetrics.inhaleCapacity || 30,
+                test_accuracy: Math.max(80, Math.round((lungFunction + respiratoryRisk) / 2)),
+                peak_airflow: averagePeakAirflow,
+                signal_stability: averageSignalStability,
                 is_valid: true,
                 background_noise_detected: false,
                 cough_detected: false,
-                raw_attempts: data.breathHoldAttempts || []
+                raw_attempts: {
+                    inhale: data.peakInhaleAttempts || [],
+                    exhale: data.forcedExhaleAttempts || [],
+                    hold: data.breathHoldAttempts || []
+                }
             });
         } catch (error) {
             console.error("Failed to save breath test to backend", error);
@@ -110,6 +127,12 @@ export default function Assessment() {
             let riskFactors = ["Symptom Reports", "Clinical Data"];
             if (data.smoking === 'Current') riskFactors.unshift("Smoking History");
             if (environmentalRisk > 50) riskFactors.push("High Environmental Risk");
+            if (breathingMetrics.inhaleCapacity > 0 && breathingMetrics.inhaleCapacity < 4) riskFactors.push("Reduced Inhaling Capacity");
+            if (breathingMetrics.exhaleCapacity > 0 && breathingMetrics.exhaleCapacity < 3) riskFactors.push("Reduced Exhaling Capacity");
+            if (breathingMetrics.breathHoldTime > 0 && breathingMetrics.breathHoldTime < 20) riskFactors.push("Reduced Breath-Hold Timing");
+            if (data.stairsDifficulty === 'Moderate breathlessness' || data.stairsDifficulty === 'Severe breathlessness') {
+                riskFactors.push("Exertional Breathlessness");
+            }
 
             // Build a rich symptom string from Step4Symptoms severity sliders
             const symptomEntries = [
@@ -138,10 +161,11 @@ export default function Assessment() {
             // Build lifestyle info from Step6Lifestyle
             const smokingStatus = data.smoking || 'Unknown';
             const outdoorHours = data.outdoorTimeHours || data.outdoorTime || 'Unknown';
+            const symptomDuration = getMaxSymptomDuration(data)
 
             let finalPredictionPayload = {
                 final_risk_score: respiratoryRisk / 100,
-                risk_category: respiratoryRisk > 50 ? "High Risk" : "Low Risk",
+                risk_category: respiratoryRisk >= 65 ? "High Risk" : respiratoryRisk >= 30 ? "Moderate Risk" : "Low Risk",
                 ai_explanation: "Waiting for AI ensemble analysis...",
                 top_risk_factors: riskFactors,
                 ml_score: respiratoryRisk / 100,
@@ -174,9 +198,30 @@ export default function Assessment() {
                         gender: data.gender || "Unknown",
                         symptoms: activeSymptoms,
                         medical_history: medicalHistory,
+                        smoking_history: smokingStatus,
+                        symptom_duration: symptomDuration,
+                        bmi: Number(data.bmi) || 24.5,
                         lifestyle: {
                             smoking_habits: smokingStatus,
                             outdoor_time_hours: outdoorHours
+                        },
+                        vitals: {
+                            spo2: toNumber(data.spO2, 98),
+                            spo2_level: toNumber(data.spO2, 98),
+                            breath_hold_time: breathingMetrics.breathHoldTime || null,
+                            inhale_capacity: breathingMetrics.inhaleCapacity || null,
+                            exhale_capacity: breathingMetrics.exhaleCapacity || null,
+                            average_signal_stability: breathingMetrics.averageSignalStability,
+                            average_peak_airflow: breathingMetrics.averagePeakAirflow,
+                            cough_severity: Number(data.coughSev) || 0,
+                            shortness_of_breath: Number(data.breathlessnessSev) || 0,
+                            stairs_difficulty: data.stairsDifficulty || null,
+                        },
+                        respiratory_metrics: {
+                            inhale_capacity_seconds: breathingMetrics.inhaleCapacity || null,
+                            exhale_capacity_seconds: breathingMetrics.exhaleCapacity || null,
+                            breath_hold_seconds: breathingMetrics.breathHoldTime || null,
+                            stairs_difficulty: data.stairsDifficulty || null,
                         }
                     }
                 });

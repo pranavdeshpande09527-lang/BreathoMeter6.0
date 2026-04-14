@@ -9,6 +9,39 @@ const normalizeRisk = (score, max) => Math.min(100, Math.max(0, (score / max) * 
 // Normalizes a score to 0-100 standard (higher meaning healthier)
 const normalizeHealth = (score, max) => Math.min(100, Math.max(0, (score / max) * 100))
 
+const toNumber = (value, fallback = 0) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : fallback
+}
+
+export const getBreathingMetrics = (data) => {
+    const inhaleCapacity = toNumber(data.peakInhaleAverage)
+    const exhaleCapacity = toNumber(data.forcedExhaleAverage)
+    const breathHoldTime = toNumber(data.breathHoldAverage)
+    const signalStabilityValues = [
+        toNumber(data.peakInhaleSignalStability),
+        toNumber(data.forcedExhaleSignalStability),
+        toNumber(data.breathHoldSignalStability),
+    ].filter(value => value > 0)
+    const peakAirflowValues = [
+        toNumber(data.peakInhalePeakAirflow),
+        toNumber(data.forcedExhalePeakAirflow),
+        toNumber(data.breathHoldPeakAirflow),
+    ].filter(value => value > 0)
+
+    return {
+        inhaleCapacity,
+        exhaleCapacity,
+        breathHoldTime,
+        averageSignalStability: signalStabilityValues.length
+            ? signalStabilityValues.reduce((sum, value) => sum + value, 0) / signalStabilityValues.length
+            : null,
+        averagePeakAirflow: peakAirflowValues.length
+            ? peakAirflowValues.reduce((sum, value) => sum + value, 0) / peakAirflowValues.length
+            : null,
+    }
+}
+
 export const calculateRespiratoryRisk = (data) => {
     let risk = 0
     // Step 2 factors
@@ -43,6 +76,20 @@ export const calculateRespiratoryRisk = (data) => {
     addDurationRisk('chestPain', 'chestPainDays', 15)
     addDurationRisk('fever', 'feverDays', 10)
 
+    const { inhaleCapacity, exhaleCapacity, breathHoldTime } = getBreathingMetrics(data)
+    if (inhaleCapacity > 0 && inhaleCapacity < 4) risk += 12
+    else if (inhaleCapacity >= 4 && inhaleCapacity < 5) risk += 6
+
+    if (exhaleCapacity > 0 && exhaleCapacity < 3) risk += 12
+    else if (exhaleCapacity >= 3 && exhaleCapacity < 4) risk += 6
+
+    if (breathHoldTime > 0 && breathHoldTime < 15) risk += 18
+    else if (breathHoldTime >= 15 && breathHoldTime < 25) risk += 8
+
+    if (data.stairsDifficulty === 'Severe breathlessness') risk += 18
+    else if (data.stairsDifficulty === 'Moderate breathlessness') risk += 10
+    else if (data.stairsDifficulty === 'Slight breathlessness') risk += 4
+
     return Math.round(normalizeRisk(risk, 100))
 }
 
@@ -50,16 +97,38 @@ export const calculateLungFunctionScore = (data) => {
     let score = 50 // Base score
 
     // SpO2
-    const spo2 = Number(data.spO2) || 98
+    const spo2 = toNumber(data.spO2, 98)
     if (spo2 >= 95) score += 20
     else if (spo2 >= 90) score += 10
     else score -= 20
 
-    // Breath hold (Lung Capacity)
-    const hold = Number(data.breathHoldAverage) || 30
-    if (hold > 45) score += 30
-    else if (hold > 30) score += 15
-    else if (hold < 15) score -= 25
+    const {
+        inhaleCapacity,
+        exhaleCapacity,
+        breathHoldTime,
+        averageSignalStability,
+    } = getBreathingMetrics(data)
+
+    if (inhaleCapacity >= 6) score += 15
+    else if (inhaleCapacity >= 4) score += 8
+    else if (inhaleCapacity > 0) score -= 12
+
+    if (exhaleCapacity >= 5) score += 15
+    else if (exhaleCapacity >= 3) score += 8
+    else if (exhaleCapacity > 0) score -= 12
+
+    if (breathHoldTime >= 40) score += 20
+    else if (breathHoldTime >= 25) score += 12
+    else if (breathHoldTime > 0 && breathHoldTime < 15) score -= 18
+
+    if (averageSignalStability != null) {
+        if (averageSignalStability >= 92) score += 5
+        else if (averageSignalStability < 80) score -= 5
+    }
+
+    if (data.stairsDifficulty === 'No breathlessness') score += 5
+    else if (data.stairsDifficulty === 'Moderate breathlessness') score -= 6
+    else if (data.stairsDifficulty === 'Severe breathlessness') score -= 12
 
     return Math.round(normalizeHealth(score, 100))
 }
