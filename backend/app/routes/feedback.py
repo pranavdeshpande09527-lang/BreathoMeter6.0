@@ -30,7 +30,7 @@ class FeedbackRequest(BaseModel):
 
 @router.post("/submit")
 @limiter.limit("10/minute")
-async def submit_feedback(data: FeedbackRequest, user=Depends(get_current_user)):
+async def submit_feedback(request: Request, data: FeedbackRequest, user=Depends(get_current_user)):
     """
     Submit post-prediction feedback.
     - confirmed_disease: what the user actually had (if known)
@@ -75,6 +75,7 @@ async def submit_feedback(data: FeedbackRequest, user=Depends(get_current_user))
 @router.post("/doctor-click")
 @limiter.limit("10/minute")
 async def log_doctor_click(
+    request: Request,
     prediction_id: str,
     doctor_name: str,
     user=Depends(get_current_user)
