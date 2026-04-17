@@ -191,10 +191,18 @@ async def system_status():
     
     # Check ML models loaded
     try:
-        from app.routes.inference_api import calibrated_model, preprocessor
-        status["ml_models"] = "loaded" if calibrated_model and preprocessor else "not_loaded"
-    except Exception:
-        status["ml_models"] = "not_loaded"
+        from app.routes.inference_api import calibrated_model, preprocessor, clinical_pipeline
+        if calibrated_model and preprocessor and clinical_pipeline:
+            status["ml_models"] = "fully_loaded"
+        elif clinical_pipeline:
+            # Environmental model absent (expected on free-tier — too large to deploy).
+            # Clinical diagnostic model IS active; AI ensemble covers the rest.
+            status["ml_models"] = "clinical_only"
+        else:
+            status["ml_models"] = "not_loaded"
+    except Exception as e:
+        logger.warning(f"System status: ML model check failed: {e}")
+        status["ml_models"] = "error"
     
     return status
 
