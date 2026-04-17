@@ -94,7 +94,7 @@ async def store_prediction(request: Request, data: PredictionRequest, user = Dep
         return {"message": "Prediction saved successfully", "data": res[0] if isinstance(res, list) and res else res}
     except Exception as e:
         logger.error(f"Error storing prediction: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to save prediction. Please try again.")
 
 @router.get("/{user_id_param}")
 @limiter.limit("10/minute")

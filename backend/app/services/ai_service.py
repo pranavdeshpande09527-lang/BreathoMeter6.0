@@ -1,22 +1,17 @@
-import httpx
 import logging
-from app.config import settings
+from app.services.ai_fallback_router import call_with_fallback
 
 logger = logging.getLogger(__name__)
 
 class AIService:
     def __init__(self):
-        self.api_key = settings.gemini_api_key
-        self.model = "gemini-1.5-flash"
+        # API keys and models are now managed centrally by the ai_fallback_router
+        pass
 
     async def generate_explanation(self, topic: str, user_data: dict) -> str:
         """
-        Generates explanation using Gemini REST API based on topic and user context.
-        Bypasses broken google-generativeai library dependencies.
+        Generates explanation using the central AI router for max reliability.
         """
-        if not self.api_key:
-            return "AI service is currently unavailable as it is not configured."
-
         prompt = (
             f"As a respiratory health AI assistant for Breathometer 5.0, explain this topic to the user:\n"
             f"Topic: {topic}\n"
@@ -25,23 +20,14 @@ class AIService:
         )
         
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    url,
-                    headers={"Content-Type": "application/json"},
-                    json={
-                        "contents": [{"parts": [{"text": prompt}]}],
-                        "generationConfig": {
-                            "temperature": 0.1
-                        }
-                    }
-                )
-                response.raise_for_status()
-                data = response.json()
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+            return await call_with_fallback(
+                purpose="explanation",
+                user_prompt=prompt,
+                json_mode=False
+            )
         except Exception as e:
-            logger.error(f"Gemini Explanation failed: {e}")
-            return f"Unable to generate explanation at this time. (API Service Unavailable)"
+            # Failsafe
+            logger.error(f"FATAL: Explanation fallback router failed entirely: {e}")
+            return "Unable to generate explanation at this time. (System Error)"
 
 ai_service = AIService()

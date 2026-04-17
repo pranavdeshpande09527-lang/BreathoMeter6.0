@@ -1,17 +1,17 @@
 """
-Email Generator — AI-Powered HTML Email Content via Gemini
+Email Generator — AI-Powered HTML Email Content
 Generates professional, Apple-style HTML emails for:
   - AQI Danger Alerts  (auto-triggered when AQI > 150)
   - Health Report      (user-triggered on demand)
+
+All AI calls are routed through the central ai_fallback_router for
+full provider fallback, retry, timeout, and static response guarantees.
 """
-import httpx
 import logging
-import os
+
+from app.services.ai_fallback_router import call_with_fallback
 
 logger = logging.getLogger(__name__)
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
 
 def _aqi_color(aqi: int) -> str:
@@ -31,25 +31,22 @@ def _aqi_status(aqi: int) -> str:
     return "Hazardous"
 
 
-async def _call_gemini(prompt: str) -> str:
-    """Call Gemini REST API and return the generated text."""
-    if not GEMINI_API_KEY:
-        return ""
+async def _call_ai(prompt: str) -> str:
+    """
+    Route AI prompt through the central fallback router.
+    Returns generated text or an empty string on total failure (callers handle the empty case).
+    """
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                f"{GEMINI_URL}?key={GEMINI_API_KEY}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.4, "maxOutputTokens": 512},
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        # purpose="chat" gives plain-text output with the full 4-provider chain
+        result = await call_with_fallback(
+            purpose="chat",
+            user_prompt=prompt,
+            json_mode=False,
+        )
+        return result
     except Exception as e:
-        logger.error(f"Gemini email generation failed: {e}")
+        # call_with_fallback itself never raises, but be defensive
+        logger.error(f"Email AI generation failed unexpectedly: {e}")
         return ""
 
 
@@ -108,7 +105,7 @@ async def generate_danger_email(user_name: str, aqi: int, city: str, category: s
         f"Format as plain bullet points (no markdown, no numbering). Each bullet must be under 15 words. "
         f"Be calm but urgent. Focus on immediate protective actions (e.g. wear N95 mask, stay indoors, avoid exercise)."
     )
-    ai_tips = await _call_gemini(gemini_prompt)
+    ai_tips = await _call_ai(gemini_prompt)
     
     # Convert plain text bullets to HTML list items
     tips_html = ""
@@ -210,7 +207,7 @@ async def generate_report_email(
         f"Include: 1 sentence health status overview, then 3 personalised recommendations.\n"
         f"Format: plain text only, no markdown. Max 140 words. Warm, supportive, clinical tone."
     )
-    ai_summary = await _call_gemini(gemini_prompt)
+    ai_summary = await _call_ai(gemini_prompt)
     if not ai_summary:
         ai_summary = (
             f"Your current AQI exposure of {aqi} ({category}) poses a risk to respiratory health. "

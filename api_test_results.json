@@ -1,0 +1,36 @@
+[
+  {
+    "name": "Auth - Signup",
+    "url": "https://breathometer6-0.onrender.com/auth/signup",
+    "method": "POST",
+    "status": "\u2705 Working",
+    "time": "4.12s",
+    "error": ""
+  },
+  {
+    "name": "Auth - Get Profile",
+    "url": "https://breathometer6-0.onrender.com/auth/profile",
+    "method": "GET",
+    "status": "\u2705 Working",
+    "time": "1.75s",
+    "error": ""
+  },
+  {
+    "name": "Chatbot - Message",
+    "url": "https://breathometer6-0.onrender.com/chatbot/message",
+    "method": "POST",
+    "status": "\u274c Failed (500)",
+    "time": "4.52s",
+    "error": {
+      "detail": "An unexpected server error occurred."
+    }
+  },
+  {
+    "name": "Inference - Predict",
+    "url": "https://breathometer6-0.onrender.com/inference/predict?expand=true",
+    "method": "POST",
+    "status": "\u2705 Working",
+    "time": "4.35s",
+    "error": ""
+  }
+]
