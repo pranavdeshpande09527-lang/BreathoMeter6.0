@@ -13,8 +13,8 @@ from app.database import init_db_clients, close_db_clients
 
 sentry_sdk.init(
     dsn=os.getenv("SENTRY_DSN"),
-    traces_sample_rate=0.0,
-    profiles_sample_rate=0.0,
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
 )
 
 logger = logging.getLogger("breathometer")
@@ -106,6 +106,26 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+import time
+
+@app.middleware("http")
+async def sentry_monitoring_middleware(request, call_next):
+    sentry_sdk.set_tag("endpoint_name", request.url.path)
+    sentry_sdk.set_tag("model_used", "none")
+    
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    if process_time > 3.0:
+        sentry_sdk.capture_message(
+            "HIGH_LATENCY_WARNING",
+            level="warning",
+            contexts={"latency_info": {"process_time_seconds": process_time, "endpoint": request.url.path}}
+        )
+        
+    return response
 
 setup_error_handlers(app)
 setup_rate_limiting(app)

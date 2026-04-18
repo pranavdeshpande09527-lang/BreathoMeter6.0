@@ -8,6 +8,7 @@ import os
 import json
 import logging
 from datetime import datetime, timezone
+import sentry_sdk
 
 from app.services.chatbot_service import chatbot_service
 from app.services.ml_service import ml_service
@@ -180,6 +181,11 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
 
     critical_missing = [m for m in missing_inputs if m in ('vitals.spo2', 'vitals.inhale_capacity', 'vitals.exhale_capacity', 'symptoms', 'environment.AQI')]
     if input_quality_score < 0.20 and len(critical_missing) >= 3:
+        sentry_sdk.capture_message(
+            "ML_INVALID_INPUT",
+            level="warning",
+            contexts={"ml_input": {"missing_inputs": critical_missing, "quality_score": input_quality_score}}
+        )
         return {
             "insufficient_data": True,
             "input_quality_score": input_quality_score,

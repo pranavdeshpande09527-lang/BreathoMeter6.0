@@ -26,6 +26,7 @@ import time
 from collections import OrderedDict
 from typing import Optional
 
+import sentry_sdk
 import httpx
 from app.config import settings
 
@@ -254,6 +255,7 @@ async def _call_with_retry(
                     json_mode=json_mode,
                 )
             logger.info(f"[AIRouter] ✅ {provider['id']} succeeded on attempt {attempt}")
+            sentry_sdk.set_tag("model_used", provider["model"])
             return result
         except Exception as exc:
             last_exc = exc
@@ -315,6 +317,8 @@ async def call_with_fallback(
     cached = _cache.get(purpose, user_prompt)
     if cached:
         logger.warning("[AIRouter] 🗄️  All providers failed. Serving cached response.")
+        sentry_sdk.capture_message("AI_FALLBACK_TRIGGERED", level="warning", contexts={"fallback_info": {"type": "cache", "purpose": purpose}})
+        sentry_sdk.set_tag("model_used", "fallback_cache")
         if purpose == "chat":
             return (
                 "⚡ _AI providers are currently busy. Showing a recent response:_\n\n"
@@ -327,6 +331,8 @@ async def call_with_fallback(
         f"[AIRouter] 🚨 ALL providers failed and no cache hit for purpose={purpose}. "
         "Serving static guaranteed response."
     )
+    sentry_sdk.capture_message("AI_FALLBACK_TRIGGERED", level="warning", contexts={"fallback_info": {"type": "static", "purpose": purpose}})
+    sentry_sdk.set_tag("model_used", "fallback_static")
     fallback = STATIC_FALLBACKS.get(purpose, STATIC_FALLBACKS["chat"])
     if isinstance(fallback, dict):
         # ensemble returns a dict — serialise for consistency
