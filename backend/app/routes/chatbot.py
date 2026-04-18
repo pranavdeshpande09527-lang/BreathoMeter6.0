@@ -21,7 +21,7 @@ class ChatResponse(BaseModel):
 
 @router.post("/message", response_model=ChatResponse)
 @limiter.limit("15/minute")
-async def send_message(http_request: Request, request: ChatMessage, user = Depends(get_current_user)):
+async def send_message(request: Request, payload: ChatMessage, user = Depends(get_current_user)):
     """
     User sends a message to Hava AI Chatbot.
     Returns the AI-generated response with enriched user health context.
@@ -68,8 +68,8 @@ async def send_message(http_request: Request, request: ChatMessage, user = Depen
         "Latest Breath Test": latest_test,
         "Latest Risk Prediction": latest_pred,
         "Latest Logged Environment/AQI Data": latest_env,
-        "Client Context": request.user_context
+        "Client Context": payload.user_context
     }
     
-    reply = await chatbot_service.get_response(sanitize_free_text(request.message, max_length=2000, field_name="message"), enriched_context)
+    reply = await chatbot_service.get_response(sanitize_free_text(payload.message, max_length=2000, field_name="message"), enriched_context)
     return {"reply": reply}
