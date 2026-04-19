@@ -1,0 +1,234 @@
+{
+  "EXTREME": {
+    "model_version": "v5.0-hybrid-ensemble",
+    "timestamp": "2026-04-19T12:58:13.042177+00:00",
+    "final_risk_score": 1.0,
+    "confidence_score": 0.8787,
+    "confidence_tier": "high",
+    "risk_category": "High Risk",
+    "top_risk_factors": [
+      "Low SpO2",
+      "Reduced Inhaling Capacity",
+      "Reduced Exhaling Capacity",
+      "Reduced Breath Hold",
+      "Exertional Breathlessness",
+      "High AQI Exposure",
+      "Smoking History"
+    ],
+    "disease_risks": [
+      {
+        "disease": "Chronic Obstructive Pulmonary Disease (Copd)",
+        "risk_percentage": 87,
+        "reason": "The patient's symptoms of chronic cough, shortness of breath, and wheezing, combined with a smoking history, are highly indicative of COPD. The low SpO2 level (85%) and reduced inhale capacity (0.8s) further support this diagnosis. The severe breathlessness and high AQI (250.0) also contribute to the likelihood of COPD.",
+        "severity": "high",
+        "specialty": "Pulmonologist"
+      },
+      {
+        "disease": "Asthma",
+        "risk_percentage": 65,
+        "reason": "The patient's symptoms of wheezing and shortness of breath, combined with a smoking history, could be indicative of asthma. However, the lack of specific triggers or allergen exposure history reduces the confidence in this diagnosis. The low SpO2 level and reduced inhale capacity also suggest a possible underlying respiratory condition.",
+        "severity": "moderate",
+        "specialty": "Pulmonologist"
+      },
+      {
+        "disease": "Pulmonary Embolism",
+        "risk_percentage": 40,
+        "reason": "The patient's severe breathlessness and low SpO2 level could be indicative of a pulmonary embolism. However, the lack of specific symptoms such as chest pain or coughing up blood reduces the confidence in this diagnosis. The high AQI and reduced inhale capacity may also contribute to the patient's symptoms.",
+        "severity": "moderate",
+        "specialty": "General Physician"
+      }
+    ],
+    "primary_prediction": "Chronic Obstructive Pulmonary Disease (Copd)",
+    "ai_explanation": "The patient's symptoms and vital signs suggest a possible respiratory or cardiovascular condition. The high AQI and reduced inhale capacity may contribute to the patient's symptoms. Further testing and evaluation are necessary to determine the exact diagnosis.",
+    "input_quality_score": 0.83,
+    "recommended_specialty": "Pulmonologist",
+    "urgent_attention": true,
+    "safety_flags": null,
+    "medical_disclaimer": "This system provides AI-assisted insights and is NOT a medical diagnosis. Consult a doctor.",
+    "recommended_doctors": [
+      {
+        "doctor_name": "Dr. Kamal P. Bhutada",
+        "hospital_name": "CARE Hospital Nagpur",
+        "experience": 25,
+        "score": 0.982,
+        "rating": "97%",
+        "address": "3 Farmland, Panchsheel Square, Wardha Rd, Nagpur \u0393\u00c7\u00f4 440012",
+        "phone": "+91 712-2244444",
+        "specialty": "Internal Medicine & Critical Care",
+        "geo_coordinates": {
+          "lat": 21.1384,
+          "lng": 79.0788
+        }
+      },
+      {
+        "doctor_name": "Dr. Neeta Kochar",
+        "hospital_name": "CARE Hospital Nagpur",
+        "experience": 42,
+        "score": 0.982,
+        "rating": "97%",
+        "address": "3 Farmland, Panchsheel Square, Wardha Rd, Nagpur \u0393\u00c7\u00f4 440012",
+        "phone": "+91 712-2244444",
+        "specialty": "Internal Medicine",
+        "geo_coordinates": {
+          "lat": 21.1384,
+          "lng": 79.0788
+        }
+      },
+      {
+        "doctor_name": "Dr. Manoj Pethe",
+        "hospital_name": "Max Super Speciality Hospital (Alexis)",
+        "experience": 17,
+        "score": 0.9099999999999999,
+        "rating": "95%",
+        "address": "232, Mankapur, Koradi Rd, Nagpur \u0393\u00c7\u00f4 440030",
+        "phone": "+91 712-6652525",
+        "specialty": "Pulmonology & Respiratory Medicine",
+        "geo_coordinates": {
+          "lat": 21.1564,
+          "lng": 79.0477
+        }
+      },
+      {
+        "doctor_name": "Dr. Vaibhav Agarwal",
+        "hospital_name": "CARE Hospital Nagpur",
+        "experience": 16,
+        "score": 0.896,
+        "rating": "96%",
+        "address": "3 Farmland, Panchsheel Square, Wardha Rd, Nagpur \u0393\u00c7\u00f4 440012",
+        "phone": "+91 712-2244444",
+        "specialty": "Internal Medicine",
+        "geo_coordinates": {
+          "lat": 21.1384,
+          "lng": 79.0788
+        }
+      },
+      {
+        "doctor_name": "Dr. Padam Patani",
+        "hospital_name": "Chest Clinic, Mahal, Nagpur",
+        "experience": 40,
+        "score": 0.7,
+        "rating": null,
+        "address": "Darodkar Square, Near Sai Gate, Central Avenue Road, Nagpur",
+        "phone": null,
+        "specialty": "Internal Medicine",
+        "geo_coordinates": {
+          "lat": 21.1458,
+          "lng": 79.0882
+        }
+      }
+    ],
+    "priority_recommendation": true
+  },
+  "MODERATE": {
+    "model_version": "v5.0-hybrid-ensemble",
+    "timestamp": "2026-04-19T12:58:22.031720+00:00",
+    "final_risk_score": 0.6074,
+    "confidence_score": 0.75,
+    "confidence_tier": "high",
+    "risk_category": "Moderate Risk",
+    "top_risk_factors": [],
+    "disease_risks": [
+      {
+        "disease": "Asthma",
+        "risk_percentage": 57,
+        "reason": "The patient's inhale capacity of 6.0s and exhale capacity of 5.0s suggest some level of respiratory restriction, which could be indicative of asthma. Additionally, the local AQI of 40.0 may exacerbate asthma symptoms.",
+        "severity": "moderate",
+        "specialty": "Pulmonologist"
+      },
+      {
+        "disease": "Chronic Obstructive Pulmonary Disease (Copd)",
+        "risk_percentage": 38,
+        "reason": "The patient's breath hold time of 50s is relatively normal, but the combination of low inhale and exhale capacities may indicate some level of airway obstruction, which is consistent with COPD. However, the risk is lower due to the patient's young age and lack of smoking history.",
+        "severity": "high",
+        "specialty": "Pulmonologist"
+      },
+      {
+        "disease": "Pulmonary Embolism",
+        "risk_percentage": 19,
+        "reason": "The patient's SpO2 level of 99% is within the normal range, but the combination of low inhale and exhale capacities may indicate some level of respiratory distress, which could be consistent with a pulmonary embolism. However, the risk is lower due to the patient's young age and lack of symptoms.",
+        "severity": "moderate",
+        "specialty": "General Physician"
+      }
+    ],
+    "primary_prediction": "Asthma",
+    "ai_explanation": "The patient's respiratory function is within the normal range, but the combination of low inhale and exhale capacities and the local AQI of 40.0 may indicate some level of respiratory restriction or distress. Further testing and evaluation are necessary to determine the underlying cause of these findings.",
+    "input_quality_score": 0.65,
+    "recommended_specialty": "Pulmonologist",
+    "urgent_attention": true,
+    "safety_flags": null,
+    "medical_disclaimer": "This system provides AI-assisted insights and is NOT a medical diagnosis. Consult a doctor.",
+    "recommended_doctors": [
+      {
+        "doctor_name": "Dr. Kamal P. Bhutada",
+        "hospital_name": "CARE Hospital Nagpur",
+        "experience": 25,
+        "score": 0.982,
+        "rating": "97%",
+        "address": "3 Farmland, Panchsheel Square, Wardha Rd, Nagpur \u0393\u00c7\u00f4 440012",
+        "phone": "+91 712-2244444",
+        "specialty": "Internal Medicine & Critical Care",
+        "geo_coordinates": {
+          "lat": 21.1384,
+          "lng": 79.0788
+        }
+      },
+      {
+        "doctor_name": "Dr. Neeta Kochar",
+        "hospital_name": "CARE Hospital Nagpur",
+        "experience": 42,
+        "score": 0.982,
+        "rating": "97%",
+        "address": "3 Farmland, Panchsheel Square, Wardha Rd, Nagpur \u0393\u00c7\u00f4 440012",
+        "phone": "+91 712-2244444",
+        "specialty": "Internal Medicine",
+        "geo_coordinates": {
+          "lat": 21.1384,
+          "lng": 79.0788
+        }
+      },
+      {
+        "doctor_name": "Dr. Manoj Pethe",
+        "hospital_name": "Max Super Speciality Hospital (Alexis)",
+        "experience": 17,
+        "score": 0.9099999999999999,
+        "rating": "95%",
+        "address": "232, Mankapur, Koradi Rd, Nagpur \u0393\u00c7\u00f4 440030",
+        "phone": "+91 712-6652525",
+        "specialty": "Pulmonology & Respiratory Medicine",
+        "geo_coordinates": {
+          "lat": 21.1564,
+          "lng": 79.0477
+        }
+      },
+      {
+        "doctor_name": "Dr. Vaibhav Agarwal",
+        "hospital_name": "CARE Hospital Nagpur",
+        "experience": 16,
+        "score": 0.896,
+        "rating": "96%",
+        "address": "3 Farmland, Panchsheel Square, Wardha Rd, Nagpur \u0393\u00c7\u00f4 440012",
+        "phone": "+91 712-2244444",
+        "specialty": "Internal Medicine",
+        "geo_coordinates": {
+          "lat": 21.1384,
+          "lng": 79.0788
+        }
+      },
+      {
+        "doctor_name": "Dr. Padam Patani",
+        "hospital_name": "Chest Clinic, Mahal, Nagpur",
+        "experience": 40,
+        "score": 0.7,
+        "rating": null,
+        "address": "Darodkar Square, Near Sai Gate, Central Avenue Road, Nagpur",
+        "phone": null,
+        "specialty": "Internal Medicine",
+        "geo_coordinates": {
+          "lat": 21.1458,
+          "lng": 79.0882
+        }
+      }
+    ],
+    "priority_recommendation": true
+  }
+}

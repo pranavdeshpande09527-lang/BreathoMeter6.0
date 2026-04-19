@@ -37,3 +37,13 @@ final_report.txt
 # Agent/Logs
 .antigravity/
 push_error*.txt
+
+# Automation artifacts
+*.html
+*.png
+*.webp
+*.json
+!clinical_validation_results.json
+!firebase.json
+!package.json
+!deno.json*
