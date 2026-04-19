@@ -112,11 +112,11 @@ export default function Assessment() {
                 is_valid: true,
                 background_noise_detected: false,
                 cough_detected: false,
-                raw_attempts: {
-                    inhale: data.peakInhaleAttempts || [],
-                    exhale: data.forcedExhaleAttempts || [],
-                    hold: data.breathHoldAttempts || []
-                }
+                raw_attempts: [
+                    { type: 'inhale', attempts: data.peakInhaleAttempts || [] },
+                    { type: 'exhale', attempts: data.forcedExhaleAttempts || [] },
+                    { type: 'hold', attempts: data.breathHoldAttempts || [] }
+                ]
             });
         } catch (error) {
             console.error("Failed to save breath test to backend", error);
