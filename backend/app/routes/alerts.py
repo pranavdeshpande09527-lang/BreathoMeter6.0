@@ -34,7 +34,7 @@ async def get_user_alerts(user_id: str, current_user = Depends(get_current_user)
         res = await supabase_request(
             "environment_data", 
             "GET", 
-            query_params={"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": "1"}, 
+            query_params={"user_id": f"eq.{user_id}", "order": "recorded_at.desc", "limit": "1"}, 
             token=current_user.token
         )
         if res:

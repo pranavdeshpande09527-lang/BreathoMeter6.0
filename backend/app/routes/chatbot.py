@@ -56,7 +56,7 @@ async def send_message(request: Request, payload: ChatMessage, user = Depends(ge
     # 4. Fetch latest environment data
     latest_env = {}
     try:
-        env_res = await supabase_request("environment_data", "GET", query_params={"user_id": f"eq.{user.id}", "order": "created_at.desc", "limit": "1"}, token=user.token)
+        env_res = await supabase_request("environment_data", "GET", query_params={"user_id": f"eq.{user.id}", "order": "recorded_at.desc", "limit": "1"}, token=user.token)
         if env_res:
             latest_env = env_res[0]
     except Exception as e:
