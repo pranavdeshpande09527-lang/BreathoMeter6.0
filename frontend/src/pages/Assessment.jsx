@@ -97,152 +97,162 @@ export default function Assessment() {
         }
         const breathingMetrics = getBreathingMetrics(data)
 
-        // Save Breath Test Data
+        // ── All API calls are wrapped individually so a single failure
+        // ── (including a 401 from an expired token) NEVER blocks the
+        // ── navigate() at the end. The user always reaches the results page.
         try {
-            const averagePeakAirflow = breathingMetrics.averagePeakAirflow || 0
-            const averageSignalStability = breathingMetrics.averageSignalStability || 0
-
-            await api.breath.submitTest({
-                lung_capacity: breathingMetrics.inhaleCapacity || breathingMetrics.breathHoldTime || 30,
-                breath_duration: breathingMetrics.breathHoldTime || breathingMetrics.exhaleCapacity || 30,
-                breath_strength: breathingMetrics.exhaleCapacity || breathingMetrics.inhaleCapacity || 30,
-                test_accuracy: Math.max(80, Math.round((lungFunction + respiratoryRisk) / 2)),
-                peak_airflow: averagePeakAirflow,
-                signal_stability: averageSignalStability,
-                is_valid: true,
-                background_noise_detected: false,
-                cough_detected: false,
-                raw_attempts: [
-                    { type: 'inhale', attempts: data.peakInhaleAttempts || [] },
-                    { type: 'exhale', attempts: data.forcedExhaleAttempts || [] },
-                    { type: 'hold', attempts: data.breathHoldAttempts || [] }
-                ]
-            });
-        } catch (error) {
-            console.error("Failed to save breath test to backend", error);
-        }
-
-        // Save Risk Prediction
-        try {
-            let riskFactors = ["Symptom Reports", "Clinical Data"];
-            if (data.smoking === 'Current') riskFactors.unshift("Smoking History");
-            if (environmentalRisk > 50) riskFactors.push("High Environmental Risk");
-            if (breathingMetrics.inhaleCapacity > 0 && breathingMetrics.inhaleCapacity < 4) riskFactors.push("Reduced Inhaling Capacity");
-            if (breathingMetrics.exhaleCapacity > 0 && breathingMetrics.exhaleCapacity < 3) riskFactors.push("Reduced Exhaling Capacity");
-            if (breathingMetrics.breathHoldTime > 0 && breathingMetrics.breathHoldTime < 20) riskFactors.push("Reduced Breath-Hold Timing");
-            if (data.stairsDifficulty === 'Moderate breathlessness' || data.stairsDifficulty === 'Severe breathlessness') {
-                riskFactors.push("Exertional Breathlessness");
-            }
-
-            // Build a rich symptom string from Step4Symptoms severity sliders
-            const symptomEntries = [
-                { key: 'coughSev', label: 'Cough' },
-                { key: 'breathlessnessSev', label: 'Breathlessness' },
-                { key: 'chestPain', label: 'Chest Pain' },
-                { key: 'fatigue', label: 'Fatigue' },
-                { key: 'fever', label: 'Fever' },
-                { key: 'sleepDisturbance', label: 'Sleep Disturbance' },
-                { key: 'nightCoughSev', label: 'Night Cough' },
-                { key: 'phlegmSev', label: 'Phlegm/Mucus' },
-                { key: 'wheezingSev', label: 'Wheezing' },
-                { key: 'dizzinessSev', label: 'Dizziness' },
-                { key: 'nasalCongestionSev', label: 'Nasal Congestion' }
-            ];
-            const activeSymptoms = symptomEntries
-                .filter(s => (Number(data[s.key]) || 0) > 0)
-                .map(s => `${s.label} (severity ${data[s.key]}/5${data[`${s.key}Days`] ? `, ${data[`${s.key}Days`]} days` : ''})`)
-                .join(', ') || 'None reported';
-
-            // Build medical history string from Step5Medical conditions
-            const medicalHistory = (data.conditions && data.conditions.length > 0)
-                ? data.conditions.join(', ')
-                : 'No known conditions';
-
-            // Build lifestyle info from Step6Lifestyle
-            const smokingStatus = data.smoking || 'Unknown';
-            const outdoorHours = data.outdoorTimeHours || data.outdoorTime || 'Unknown';
-            const symptomDuration = getMaxSymptomDuration(data)
-
-            let finalPredictionPayload = {
-                final_risk_score: respiratoryRisk / 100,
-                risk_category: respiratoryRisk >= 65 ? "High Risk" : respiratoryRisk >= 30 ? "Moderate Risk" : "Low Risk",
-                ai_explanation: "Waiting for AI ensemble analysis...",
-                top_risk_factors: riskFactors,
-                ml_score: respiratoryRisk / 100,
-                ai_score: respiratoryRisk / 100,
-                agreement_score: 0.9,
-                confidence_score: 0.9,
-                disease_risks: []
-            };
-
+            // Save Breath Test Data
             try {
-                // Call actual inference API with rich patient data
-                const inferenceRes = await api.inference.predict({
-                    environmental_data: {
-                        AQI: Number(data.aqi) || 50.0,
-                        PM10: Number(data.pm10) || 20.0,
-                        PM2_5: Number(data.pm25) || 12.0,
-                        NO2: Number(data.no2) || 15.0,
-                        SO2: Number(data.so2) || 5.0,
-                        O3: Number(data.o3) || 25.0,
-                        Temperature: Number(data.temperature) || 25.0,
-                        Humidity: Number(data.humidity) || 50.0,
-                        WindSpeed: Number(data.windSpeed) || 5.0,
-                        RespiratoryCases: 5.0,
-                        CardiovascularCases: 2.0,
-                        HospitalAdmissions: 1.0,
-                        HealthImpactScore: environmentalRisk || 20.0
-                    },
-                    optional_patient_data: {
-                        age: Number(data.age) || 30,
-                        gender: data.gender || "Unknown",
-                        symptoms: activeSymptoms,
-                        medical_history: medicalHistory,
-                        smoking_history: smokingStatus,
-                        symptom_duration: symptomDuration,
-                        bmi: Number(data.bmi) || 24.5,
-                        lifestyle: {
-                            smoking_habits: smokingStatus,
-                            outdoor_time_hours: outdoorHours
-                        },
-                        vitals: {
-                            spo2: toNumber(data.spO2, 98),
-                            spo2_level: toNumber(data.spO2, 98),
-                            breath_hold_time: breathingMetrics.breathHoldTime || null,
-                            inhale_capacity: breathingMetrics.inhaleCapacity || null,
-                            exhale_capacity: breathingMetrics.exhaleCapacity || null,
-                            average_signal_stability: breathingMetrics.averageSignalStability,
-                            average_peak_airflow: breathingMetrics.averagePeakAirflow,
-                            cough_severity: Number(data.coughSev) || 0,
-                            shortness_of_breath: Number(data.breathlessnessSev) || 0,
-                            stairs_difficulty: data.stairsDifficulty || null,
-                        },
-                        respiratory_metrics: {
-                            inhale_capacity_seconds: breathingMetrics.inhaleCapacity || null,
-                            exhale_capacity_seconds: breathingMetrics.exhaleCapacity || null,
-                            breath_hold_seconds: breathingMetrics.breathHoldTime || null,
-                            stairs_difficulty: data.stairsDifficulty || null,
-                        }
-                    }
-                });
+                const averagePeakAirflow = breathingMetrics.averagePeakAirflow || 0
+                const averageSignalStability = breathingMetrics.averageSignalStability || 0
 
-                if (inferenceRes) {
-                    // Merge inference results into payload — inference is source of truth
-                    finalPredictionPayload = { ...finalPredictionPayload, ...inferenceRes };
-                }
-            } catch (inferenceErr) {
-                console.error("Failed to call inference API, using basic fallback.", inferenceErr);
-                finalPredictionPayload.ai_explanation = `Based on your assessment, you are at ${respiratoryRisk > 50 ? 'an elevated' : 'a low'} risk for respiratory distress. Key factors: ${riskFactors.join(', ')}. AI ensemble was unavailable.`;
+                await api.breath.submitTest({
+                    lung_capacity: breathingMetrics.inhaleCapacity || breathingMetrics.breathHoldTime || 30,
+                    breath_duration: breathingMetrics.breathHoldTime || breathingMetrics.exhaleCapacity || 30,
+                    breath_strength: breathingMetrics.exhaleCapacity || breathingMetrics.inhaleCapacity || 30,
+                    test_accuracy: Math.max(80, Math.round((lungFunction + respiratoryRisk) / 2)),
+                    peak_airflow: averagePeakAirflow,
+                    signal_stability: averageSignalStability,
+                    is_valid: true,
+                    background_noise_detected: false,
+                    cough_detected: false,
+                    raw_attempts: [
+                        { type: 'inhale', attempts: data.peakInhaleAttempts || [] },
+                        { type: 'exhale', attempts: data.forcedExhaleAttempts || [] },
+                        { type: 'hold', attempts: data.breathHoldAttempts || [] }
+                    ]
+                });
+            } catch (breathErr) {
+                console.error("[Assessment] Breath test save failed (non-blocking):", breathErr);
             }
 
-            const predictionRes = await api.prediction.storePrediction(finalPredictionPayload);
+            // Save Risk Prediction
+            try {
+                let riskFactors = ["Symptom Reports", "Clinical Data"];
+                if (data.smoking === 'Current') riskFactors.unshift("Smoking History");
+                if (environmentalRisk > 50) riskFactors.push("High Environmental Risk");
+                if (breathingMetrics.inhaleCapacity > 0 && breathingMetrics.inhaleCapacity < 4) riskFactors.push("Reduced Inhaling Capacity");
+                if (breathingMetrics.exhaleCapacity > 0 && breathingMetrics.exhaleCapacity < 3) riskFactors.push("Reduced Exhaling Capacity");
+                if (breathingMetrics.breathHoldTime > 0 && breathingMetrics.breathHoldTime < 20) riskFactors.push("Reduced Breath-Hold Timing");
+                if (data.stairsDifficulty === 'Moderate breathlessness' || data.stairsDifficulty === 'Severe breathlessness') {
+                    riskFactors.push("Exertional Breathlessness");
+                }
 
-            payload.predictionDetails = predictionRes?.data || {};
-        } catch (error) {
-            console.error("Failed to save risk prediction to backend", error);
+                // Build a rich symptom string from Step4Symptoms severity sliders
+                const symptomEntries = [
+                    { key: 'coughSev', label: 'Cough' },
+                    { key: 'breathlessnessSev', label: 'Breathlessness' },
+                    { key: 'chestPain', label: 'Chest Pain' },
+                    { key: 'fatigue', label: 'Fatigue' },
+                    { key: 'fever', label: 'Fever' },
+                    { key: 'sleepDisturbance', label: 'Sleep Disturbance' },
+                    { key: 'nightCoughSev', label: 'Night Cough' },
+                    { key: 'phlegmSev', label: 'Phlegm/Mucus' },
+                    { key: 'wheezingSev', label: 'Wheezing' },
+                    { key: 'dizzinessSev', label: 'Dizziness' },
+                    { key: 'nasalCongestionSev', label: 'Nasal Congestion' }
+                ];
+                const activeSymptoms = symptomEntries
+                    .filter(s => (Number(data[s.key]) || 0) > 0)
+                    .map(s => `${s.label} (severity ${data[s.key]}/5${data[`${s.key}Days`] ? `, ${data[`${s.key}Days`]} days` : ''})`)
+                    .join(', ') || 'None reported';
+
+                // Build medical history string from Step5Medical conditions
+                const medicalHistory = (data.conditions && data.conditions.length > 0)
+                    ? data.conditions.join(', ')
+                    : 'No known conditions';
+
+                // Build lifestyle info from Step6Lifestyle
+                const smokingStatus = data.smoking || 'Unknown';
+                const outdoorHours = data.outdoorTimeHours || data.outdoorTime || 'Unknown';
+                const symptomDuration = getMaxSymptomDuration(data)
+
+                let finalPredictionPayload = {
+                    final_risk_score: respiratoryRisk / 100,
+                    risk_category: respiratoryRisk >= 65 ? "High Risk" : respiratoryRisk >= 30 ? "Moderate Risk" : "Low Risk",
+                    ai_explanation: "Waiting for AI ensemble analysis...",
+                    top_risk_factors: riskFactors,
+                    ml_score: respiratoryRisk / 100,
+                    ai_score: respiratoryRisk / 100,
+                    agreement_score: 0.9,
+                    confidence_score: 0.9,
+                    disease_risks: []
+                };
+
+                try {
+                    // Call actual inference API with rich patient data
+                    const inferenceRes = await api.inference.predict({
+                        environmental_data: {
+                            AQI: Number(data.aqi) || 50.0,
+                            PM10: Number(data.pm10) || 20.0,
+                            PM2_5: Number(data.pm25) || 12.0,
+                            NO2: Number(data.no2) || 15.0,
+                            SO2: Number(data.so2) || 5.0,
+                            O3: Number(data.o3) || 25.0,
+                            Temperature: Number(data.temperature) || 25.0,
+                            Humidity: Number(data.humidity) || 50.0,
+                            WindSpeed: Number(data.windSpeed) || 5.0,
+                            RespiratoryCases: 5.0,
+                            CardiovascularCases: 2.0,
+                            HospitalAdmissions: 1.0,
+                            HealthImpactScore: environmentalRisk || 20.0
+                        },
+                        optional_patient_data: {
+                            age: Number(data.age) || 30,
+                            gender: data.gender || "Unknown",
+                            symptoms: activeSymptoms,
+                            medical_history: medicalHistory,
+                            smoking_history: smokingStatus,
+                            symptom_duration: symptomDuration,
+                            bmi: Number(data.bmi) || 24.5,
+                            lifestyle: {
+                                smoking_habits: smokingStatus,
+                                outdoor_time_hours: outdoorHours
+                            },
+                            vitals: {
+                                spo2: toNumber(data.spO2, 98),
+                                spo2_level: toNumber(data.spO2, 98),
+                                breath_hold_time: breathingMetrics.breathHoldTime || null,
+                                inhale_capacity: breathingMetrics.inhaleCapacity || null,
+                                exhale_capacity: breathingMetrics.exhaleCapacity || null,
+                                average_signal_stability: breathingMetrics.averageSignalStability,
+                                average_peak_airflow: breathingMetrics.averagePeakAirflow,
+                                cough_severity: Number(data.coughSev) || 0,
+                                shortness_of_breath: Number(data.breathlessnessSev) || 0,
+                                stairs_difficulty: data.stairsDifficulty || null,
+                            },
+                            respiratory_metrics: {
+                                inhale_capacity_seconds: breathingMetrics.inhaleCapacity || null,
+                                exhale_capacity_seconds: breathingMetrics.exhaleCapacity || null,
+                                breath_hold_seconds: breathingMetrics.breathHoldTime || null,
+                                stairs_difficulty: data.stairsDifficulty || null,
+                            }
+                        }
+                    });
+
+                    if (inferenceRes) {
+                        // Merge inference results into payload — inference is source of truth
+                        finalPredictionPayload = { ...finalPredictionPayload, ...inferenceRes };
+                    }
+                } catch (inferenceErr) {
+                    console.error("[Assessment] Inference API failed, using fallback:", inferenceErr);
+                    finalPredictionPayload.ai_explanation = `Based on your assessment, you are at ${respiratoryRisk > 50 ? 'an elevated' : 'a low'} risk for respiratory distress. Key factors: ${riskFactors.join(', ')}. AI ensemble was unavailable.`;
+                }
+
+                const predictionRes = await api.prediction.storePrediction(finalPredictionPayload);
+                payload.predictionDetails = predictionRes?.data || {};
+            } catch (predictionErr) {
+                console.error("[Assessment] Prediction save failed (non-blocking):", predictionErr);
+            }
+        } catch (outerErr) {
+            // Safety net — should never reach here, but log if it does
+            console.error("[Assessment] Unexpected error during submission:", outerErr);
+        } finally {
+            // ── ALWAYS navigate to results regardless of API success/failure ──
+            // ── Token expiry / server errors must NEVER kick the user out here ──
+            setIsSubmitting(false)
+            navigate('/assessment/results', { state: { payload } })
         }
-
-        navigate('/assessment/results', { state: { payload } })
     }
 
     const renderStep = () => {

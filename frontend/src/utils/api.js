@@ -21,9 +21,14 @@ async function fetchWithAuth(url, options = {}) {
         token = null;
     }
 
+    // suppressAuthRedirect: when true, a 401 will NOT fire the session-expired
+    // event or clear storage. Use this for background/non-critical saves where
+    // a token expiry should not interrupt the user's current flow.
+    const { suppressAuthRedirect = false, ...fetchOptions } = options;
+
     const headers = {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...fetchOptions.headers,
     };
 
     if (token) {
@@ -32,11 +37,11 @@ async function fetchWithAuth(url, options = {}) {
 
     try {
         const response = await fetch(`${API_BASE}${url}`, {
-            ...options,
+            ...fetchOptions,
             headers,
         });
 
-        if (response.status === 401) {
+        if (response.status === 401 && !suppressAuthRedirect) {
             // Unauthorized — clear storage and fire a graceful session-expired event
             localStorage.removeItem('supabase_token');
             localStorage.removeItem('user_data');
@@ -76,7 +81,7 @@ async function fetchWithAuth(url, options = {}) {
         const isInfraError = /supabase|api.?key|invalid.*key|anon.*key/i.test(msg);
         if (error.status !== 401 && !isInfraError) {
             toast.error(msg || "Failed to connect to server");
-        } else if (error.status === 401 && window.location.pathname !== '/login') {
+        } else if (error.status === 401 && !suppressAuthRedirect && window.location.pathname !== '/login') {
             toast.info("Session expired, please log in again.");
         }
         throw error;
@@ -131,6 +136,7 @@ export const api = {
     breath: {
         submitTest: (data) => fetchWithAuth('/breath-test', {
             method: 'POST',
+            suppressAuthRedirect: true,
             body: JSON.stringify(data)
         }),
         getHistory: (userId) => fetchWithAuth(`/breath-test/${userId}`)
@@ -138,6 +144,7 @@ export const api = {
     prediction: {
         storePrediction: (data) => fetchWithAuth('/prediction/store', {
             method: 'POST',
+            suppressAuthRedirect: true,
             body: JSON.stringify(data)
         }),
         getHistory: (userId) => fetchWithAuth(`/prediction/${userId}`)
@@ -145,6 +152,7 @@ export const api = {
     inference: {
         predict: (data, expand = true) => fetchWithAuth(`/inference/predict${expand ? '?expand=true' : ''}`, {
             method: 'POST',
+            suppressAuthRedirect: true,
             body: JSON.stringify(data)
         })
     },
