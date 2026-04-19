@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "breathometer6"
-  }
+  },
+  "targets": {
+    "breathometer6": {
+      "hosting": {
+        "breathometer": [
+          "breathometer"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

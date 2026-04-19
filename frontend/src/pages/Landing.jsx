@@ -297,7 +297,7 @@ export default function Landing() {
           <div className="footer-links">
             <Link to="/privacy-policy">Privacy</Link>
             <Link to="/terms-of-service">Terms</Link>
-            <a href="#">Security</a>
+            <Link to="/security">Security</Link>
           </div>
         </div>
         <div className="footer-bottom">
