@@ -136,7 +136,9 @@ import os
 # Allowed production domains are Firebase Hosting URLs
 ALLOWED_ORIGINS = [
     "https://breathometer6.web.app",
-    "https://breathometer6.firebaseapp.com"
+    "https://breathometer6.firebaseapp.com",
+    "https://breathometer.web.app",
+    "https://breathometer.firebaseapp.com"
 ]
 
 # Keep the environment as development until frontend domain is finalized and env=production
