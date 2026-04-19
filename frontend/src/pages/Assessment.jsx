@@ -251,7 +251,7 @@ export default function Assessment() {
             // ── ALWAYS navigate to results regardless of API success/failure ──
             // ── Token expiry / server errors must NEVER kick the user out here ──
             setIsSubmitting(false)
-            navigate('/assessment/results', { state: { payload } })
+            navigate('/assessment-results', { state: { payload } })
         }
     }
 
