@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Wind, Activity, Cloud, ShieldCheck, ArrowRight, CheckCircle2, Moon, Sun } from 'lucide-react'
+import { Wind, Activity, Cloud, ShieldCheck, ArrowRight, CheckCircle2, Moon, Sun, Download, Smartphone, X } from 'lucide-react'
 import Logo from '../components/Logo'
 import { playThemeTransition } from '../utils/themeTransition'
 
@@ -51,6 +51,68 @@ const API_BASE = 'https://breathometer6-0.onrender.com'
 export default function Landing() {
   const canvasRef = useRef(null)
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
+  
+  // PWA & Installation State
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [isInstallable, setIsInstallable] = useState(false)
+  const [showInstallModal, setShowInstallModal] = useState(false)
+  const [platform, setPlatform] = useState({ isIOS: false, isAndroid: false })
+
+  useEffect(() => {
+    // 1. Listen for PWA install prompt
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setIsInstallable(true)
+      console.log('PWA: deferred prompt captured')
+    }
+
+    // 2. Listen for successful install
+    const handleAppInstalled = () => {
+      setIsInstallable(false)
+      setDeferredPrompt(null)
+      console.log('PWA: app installed successfully')
+    }
+
+    // 3. Detect Platform
+    const ua = window.navigator.userAgent.toLowerCase()
+    const isIOS = /iphone|ipad|ipod/.test(ua)
+    const isAndroid = /android/.test(ua)
+    setPlatform({ isIOS, isAndroid })
+    
+    // Always show "Download" button on iOS if not in standalone (installed) mode
+    if (isIOS && !window.navigator.standalone) {
+      setIsInstallable(true)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
+  const handleInstallClick = async () => {
+    if (platform.isIOS) {
+      setShowInstallModal(true)
+      return
+    }
+
+    if (!deferredPrompt) {
+      // If we don't have the prompt, it might already be installed or browser doesn't support it
+      // For simplicity, we can show a general "How to install" or just do nothing if not applicable
+      return
+    }
+
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === 'accepted') {
+      setIsInstallable(false)
+      setDeferredPrompt(null)
+    }
+  }
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -165,6 +227,16 @@ export default function Landing() {
             <a href="#features" className="land-nav-link">Features</a>
             <a href="#stats"    className="land-nav-link">Platform</a>
             <div className="nav-divider" />
+            {isInstallable && (
+              <button 
+                onClick={handleInstallClick}
+                className="btn btn-ghost btn-sm text-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}
+              >
+                <Download size={14} /> Download App
+              </button>
+            )}
+            <div className="nav-divider" />
             <Link to="/login"  className="btn btn-ghost btn-sm">Login</Link>
             <Link to="/signup" className="btn btn-primary btn-sm glow-primary">
               Get Started <ArrowRight size={12} />
@@ -209,6 +281,15 @@ export default function Landing() {
               <Link to="/login" className="btn glass-surface-btn hover-lift">
                 Sign In
               </Link>
+              {isInstallable && (
+                <button 
+                  onClick={handleInstallClick}
+                  className="btn btn-ghost hover-lift"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}
+                >
+                  <Smartphone size={18} /> Download App
+                </button>
+              )}
             </div>
 
             <div className="land-hero-trust stagger-4">
@@ -306,6 +387,75 @@ export default function Landing() {
         </div>
       </footer>
 
+
+      {/* iOS Installation Instruction Modal */}
+      {showInstallModal && (
+        <div 
+          className="modal-overlay" 
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000, 
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px', animation: 'fade-in 0.3s ease'
+          }}
+          onClick={() => setShowInstallModal(false)}
+        >
+          <div 
+            className="glass-surface-deep p-6 w-full max-w-sm relative"
+            style={{ borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              className="btn btn-ghost p-1 absolute top-4 right-4"
+              onClick={() => setShowInstallModal(false)}
+            >
+              <X size={20} />
+            </button>
+
+            <div className="text-center mb-6">
+              <div 
+                className="mx-auto w-16 h-16 mb-4 flex items-center justify-center"
+                style={{ background: 'var(--color-primary-light)', borderRadius: '16px', color: 'var(--color-primary)' }}
+              >
+                <Smartphone size={32} />
+              </div>
+              <h2 className="text-xl font-bold mb-2">Install BreathoMeter</h2>
+              <p className="text-sm opacity-80">Add this app to your home screen for quick access and offline use.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >1</div>
+                <p className="text-sm">Tap the <strong>Share</strong> button (the box with an upward arrow) at the bottom of your browser.</p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >2</div>
+                <p className="text-sm">Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >3</div>
+                <p className="text-sm">Tap <strong>"Add"</strong> in the top right corner.</p>
+              </div>
+            </div>
+
+            <button 
+              className="btn btn-primary w-full mt-8"
+              onClick={() => setShowInstallModal(false)}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
