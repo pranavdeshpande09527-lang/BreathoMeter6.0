@@ -56,7 +56,6 @@ export default function Landing() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [isInstallable, setIsInstallable] = useState(false)
   const [showInstallModal, setShowInstallModal] = useState(false)
-  const [showApkModal, setShowApkModal] = useState(false)
   const [platform, setPlatform] = useState({ isIOS: false, isAndroid: false })
 
   useEffect(() => {
@@ -279,9 +278,6 @@ export default function Landing() {
               >
                 Get Started <ArrowRight size={16} />
               </Link>
-              <Link to="/login" className="btn glass-surface-btn hover-lift">
-                Sign In
-              </Link>
               {isInstallable && (
                 <button 
                   onClick={handleInstallClick}
@@ -289,15 +285,6 @@ export default function Landing() {
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}
                 >
                   <Smartphone size={18} /> Install App
-                </button>
-              )}
-              {platform.isAndroid && (
-                <button 
-                  onClick={() => setShowApkModal(true)}
-                  className="btn btn-ghost hover-lift"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}
-                >
-                  <Download size={18} /> Download APK
                 </button>
               )}
             </div>
@@ -389,7 +376,6 @@ export default function Landing() {
             <Link to="/privacy-policy">Privacy</Link>
             <Link to="/terms-of-service">Terms</Link>
             <Link to="/security">Security</Link>
-            <a href="#" onClick={(e) => { e.preventDefault(); setShowApkModal(true); }}>Download APK</a>
           </div>
         </div>
         <div className="footer-bottom">
@@ -468,89 +454,6 @@ export default function Landing() {
         </div>
       )}
 
-      {/* APK Download Instruction Modal */}
-      {showApkModal && (
-        <div 
-          className="modal-overlay" 
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000, 
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px', animation: 'fade-in 0.3s ease'
-          }}
-          onClick={() => setShowApkModal(false)}
-        >
-          <div 
-            className="glass-surface-deep p-6 w-full max-w-sm relative"
-            style={{ borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <button 
-              className="btn btn-ghost p-1 absolute top-4 right-4"
-              onClick={() => setShowApkModal(false)}
-            >
-              <X size={20} />
-            </button>
-
-            <div className="text-center mb-6">
-              <div 
-                className="mx-auto w-16 h-16 mb-4 flex items-center justify-center"
-                style={{ background: 'var(--color-primary-light)', borderRadius: '16px', color: 'var(--color-primary)' }}
-              >
-                <Download size={32} />
-              </div>
-              <h2 className="text-xl font-bold mb-2">Download Android APK</h2>
-              <p className="text-sm opacity-80">You can download the raw APK file and install it manually on your device.</p>
-            </div>
-
-            <div className="space-y-4 mb-8">
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-safe)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >1</div>
-                <p className="text-sm">Download the file.</p>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-safe)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >2</div>
-                <p className="text-sm">Open the downloaded file. You may need to grant permission to <strong>"Install unknown apps"</strong>.</p>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-safe)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >3</div>
-                <p className="text-sm">Follow the on-screen instructions to finish installation.</p>
-              </div>
-              
-              <div style={{ marginTop: '16px', padding: '12px', background: 'var(--color-primary-light)', borderRadius: '12px', color: 'var(--color-primary)', fontSize: '12px' }}>
-                *Note: Ensure you place the actual `breathometer.apk` file in the `public/downloads` directory of your server.
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button 
-                className="btn glass-surface-btn flex-1"
-                onClick={() => setShowApkModal(false)}
-              >
-                Cancel
-              </button>
-              <a 
-                href="/downloads/breathometer.apk"
-                download="breathometer.apk"
-                className="btn btn-primary flex-1 glow-primary"
-                style={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center' }}
-                onClick={() => setTimeout(() => setShowApkModal(false), 500)}
-              >
-                Download
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
