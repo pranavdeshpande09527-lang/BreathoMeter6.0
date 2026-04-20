@@ -80,9 +80,14 @@ export default function Landing() {
     const isAndroid = /android/.test(ua)
     setPlatform({ isIOS, isAndroid })
     
-    // Always show "Download" button on iOS if not in standalone (installed) mode
-    if (isIOS && !window.navigator.standalone) {
+    // Always show "Download" button on Mobile (Android/iOS)
+    if (isIOS || isAndroid) {
       setIsInstallable(true)
+    }
+
+    // Check if desktop but installable
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstallable(false) // Already installed
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -100,9 +105,9 @@ export default function Landing() {
       return
     }
 
-    if (!deferredPrompt) {
-      // If we don't have the prompt, it might already be installed or browser doesn't support it
-      // For simplicity, we can show a general "How to install" or just do nothing if not applicable
+    if (!deferredPrompt && !platform.isIOS) {
+      // If we don't have the native prompt on Android/Desktop, show manual instructions
+      setShowInstallModal(true)
       return
     }
 
@@ -111,7 +116,14 @@ export default function Landing() {
     if (outcome === 'accepted') {
       setIsInstallable(false)
       setDeferredPrompt(null)
+    } else {
+      // If they rejected it but we still want to show them how to do it manually if they change their mind
+      // Or just do nothing. Let's do nothing for now to avoid being annoying.
     }
+  }
+
+  const handleManualInstallClick = () => {
+    setShowInstallModal(true)
   }
 
   useEffect(() => {
@@ -234,6 +246,15 @@ export default function Landing() {
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}
               >
                 <Download size={14} /> Download App
+              </button>
+            )}
+            {!isInstallable && platform.isAndroid && (
+               <button 
+                onClick={handleManualInstallClick}
+                className="btn btn-ghost btn-sm text-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}
+              >
+                <Download size={14} /> Get App
               </button>
             )}
             <div className="nav-divider" />
@@ -388,7 +409,8 @@ export default function Landing() {
       </footer>
 
 
-      {/* iOS Installation Instruction Modal */}
+
+      {/* Installation Instruction Modal */}
       {showInstallModal && (
         <div 
           className="modal-overlay" 
@@ -424,27 +446,37 @@ export default function Landing() {
             </div>
 
             <div className="space-y-4">
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >1</div>
-                <p className="text-sm">Tap the <strong>Share</strong> button (the box with an upward arrow) at the bottom of your browser.</p>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >2</div>
-                <p className="text-sm">Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >3</div>
-                <p className="text-sm">Tap <strong>"Add"</strong> in the top right corner.</p>
-              </div>
+              {platform.isIOS ? (
+                <>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>1</div>
+                    <p className="text-sm">Tap the <strong>Share</strong> button (the box with an upward arrow) at the bottom of your browser.</p>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>2</div>
+                    <p className="text-sm">Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>3</div>
+                    <p className="text-sm">Tap <strong>"Add"</strong> in the top right corner.</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>1</div>
+                    <p className="text-sm">Tap the <strong>Three Dots</strong> or <strong>Menu</strong> icon in the top right corner of your browser.</p>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>2</div>
+                    <p className="text-sm">Select <strong>"Install App"</strong> or <strong>"Add to Home Screen"</strong> from the menu.</p>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>3</div>
+                    <p className="text-sm">Follow the prompt to finish the installation.</p>
+                  </div>
+                </>
+              )}
             </div>
 
             <button 
@@ -456,6 +488,7 @@ export default function Landing() {
           </div>
         </div>
       )}
+
     </div>
   )
 }
