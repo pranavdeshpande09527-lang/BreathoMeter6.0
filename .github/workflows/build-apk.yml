@@ -41,14 +41,15 @@ jobs:
 
       - name: Capacitor Sync
         working-directory: ./frontend
-        run: npx cap sync android
+        run: |
+          sudo apt-get install -y dos2unix
+          dos2unix android/gradlew
+          chmod +x android/gradlew
+          npx cap sync android
 
       - name: Build Android APK
         working-directory: ./frontend/android
         run: |
-          sudo apt-get install -y dos2unix
-          dos2unix ./gradlew
-          chmod +x ./gradlew
           ./gradlew assembleDebug
 
       - name: Move APK to Public Downloads
