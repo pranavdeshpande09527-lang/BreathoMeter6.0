@@ -56,6 +56,7 @@ export default function Landing() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [isInstallable, setIsInstallable] = useState(false)
   const [showInstallModal, setShowInstallModal] = useState(false)
+  const [showApkModal, setShowApkModal] = useState(false)
   const [platform, setPlatform] = useState({ isIOS: false, isAndroid: false })
 
   useEffect(() => {
@@ -80,14 +81,9 @@ export default function Landing() {
     const isAndroid = /android/.test(ua)
     setPlatform({ isIOS, isAndroid })
     
-    // Always show "Download" button on Mobile (Android/iOS)
-    if (isIOS || isAndroid) {
+    // Always show "Download" button on iOS if not in standalone (installed) mode
+    if (isIOS && !window.navigator.standalone) {
       setIsInstallable(true)
-    }
-
-    // Check if desktop but installable
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstallable(false) // Already installed
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -105,9 +101,9 @@ export default function Landing() {
       return
     }
 
-    if (!deferredPrompt && !platform.isIOS) {
-      // If we don't have the native prompt on Android/Desktop, show manual instructions
-      setShowInstallModal(true)
+    if (!deferredPrompt) {
+      // If we don't have the prompt, it might already be installed or browser doesn't support it
+      // For simplicity, we can show a general "How to install" or just do nothing if not applicable
       return
     }
 
@@ -116,14 +112,7 @@ export default function Landing() {
     if (outcome === 'accepted') {
       setIsInstallable(false)
       setDeferredPrompt(null)
-    } else {
-      // If they rejected it but we still want to show them how to do it manually if they change their mind
-      // Or just do nothing. Let's do nothing for now to avoid being annoying.
     }
-  }
-
-  const handleManualInstallClick = () => {
-    setShowInstallModal(true)
   }
 
   useEffect(() => {
@@ -248,15 +237,6 @@ export default function Landing() {
                 <Download size={14} /> Download App
               </button>
             )}
-            {!isInstallable && platform.isAndroid && (
-               <button 
-                onClick={handleManualInstallClick}
-                className="btn btn-ghost btn-sm text-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}
-              >
-                <Download size={14} /> Get App
-              </button>
-            )}
             <div className="nav-divider" />
             <Link to="/login"  className="btn btn-ghost btn-sm">Login</Link>
             <Link to="/signup" className="btn btn-primary btn-sm glow-primary">
@@ -308,7 +288,16 @@ export default function Landing() {
                   className="btn btn-ghost hover-lift"
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}
                 >
-                  <Smartphone size={18} /> Download App
+                  <Smartphone size={18} /> Install App
+                </button>
+              )}
+              {platform.isAndroid && (
+                <button 
+                  onClick={() => setShowApkModal(true)}
+                  className="btn btn-ghost hover-lift"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}
+                >
+                  <Download size={18} /> Download APK
                 </button>
               )}
             </div>
@@ -400,6 +389,7 @@ export default function Landing() {
             <Link to="/privacy-policy">Privacy</Link>
             <Link to="/terms-of-service">Terms</Link>
             <Link to="/security">Security</Link>
+            <a href="#" onClick={(e) => { e.preventDefault(); setShowApkModal(true); }}>Download APK</a>
           </div>
         </div>
         <div className="footer-bottom">
@@ -409,8 +399,7 @@ export default function Landing() {
       </footer>
 
 
-
-      {/* Installation Instruction Modal */}
+      {/* iOS Installation Instruction Modal */}
       {showInstallModal && (
         <div 
           className="modal-overlay" 
@@ -446,37 +435,27 @@ export default function Landing() {
             </div>
 
             <div className="space-y-4">
-              {platform.isIOS ? (
-                <>
-                  <div className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>1</div>
-                    <p className="text-sm">Tap the <strong>Share</strong> button (the box with an upward arrow) at the bottom of your browser.</p>
-                  </div>
-                  <div className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>2</div>
-                    <p className="text-sm">Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
-                  </div>
-                  <div className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>3</div>
-                    <p className="text-sm">Tap <strong>"Add"</strong> in the top right corner.</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>1</div>
-                    <p className="text-sm">Tap the <strong>Three Dots</strong> or <strong>Menu</strong> icon in the top right corner of your browser.</p>
-                  </div>
-                  <div className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>2</div>
-                    <p className="text-sm">Select <strong>"Install App"</strong> or <strong>"Add to Home Screen"</strong> from the menu.</p>
-                  </div>
-                  <div className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>3</div>
-                    <p className="text-sm">Follow the prompt to finish the installation.</p>
-                  </div>
-                </>
-              )}
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >1</div>
+                <p className="text-sm">Tap the <strong>Share</strong> button (the box with an upward arrow) at the bottom of your browser.</p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >2</div>
+                <p className="text-sm">Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >3</div>
+                <p className="text-sm">Tap <strong>"Add"</strong> in the top right corner.</p>
+              </div>
             </div>
 
             <button 
@@ -489,6 +468,89 @@ export default function Landing() {
         </div>
       )}
 
+      {/* APK Download Instruction Modal */}
+      {showApkModal && (
+        <div 
+          className="modal-overlay" 
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000, 
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px', animation: 'fade-in 0.3s ease'
+          }}
+          onClick={() => setShowApkModal(false)}
+        >
+          <div 
+            className="glass-surface-deep p-6 w-full max-w-sm relative"
+            style={{ borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              className="btn btn-ghost p-1 absolute top-4 right-4"
+              onClick={() => setShowApkModal(false)}
+            >
+              <X size={20} />
+            </button>
+
+            <div className="text-center mb-6">
+              <div 
+                className="mx-auto w-16 h-16 mb-4 flex items-center justify-center"
+                style={{ background: 'var(--color-primary-light)', borderRadius: '16px', color: 'var(--color-primary)' }}
+              >
+                <Download size={32} />
+              </div>
+              <h2 className="text-xl font-bold mb-2">Download Android APK</h2>
+              <p className="text-sm opacity-80">You can download the raw APK file and install it manually on your device.</p>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-safe)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >1</div>
+                <p className="text-sm">Download the file.</p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-safe)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >2</div>
+                <p className="text-sm">Open the downloaded file. You may need to grant permission to <strong>"Install unknown apps"</strong>.</p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--color-safe)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
+                >3</div>
+                <p className="text-sm">Follow the on-screen instructions to finish installation.</p>
+              </div>
+              
+              <div style={{ marginTop: '16px', padding: '12px', background: 'var(--color-primary-light)', borderRadius: '12px', color: 'var(--color-primary)', fontSize: '12px' }}>
+                *Note: Ensure you place the actual `breathometer.apk` file in the `public/downloads` directory of your server.
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                className="btn glass-surface-btn flex-1"
+                onClick={() => setShowApkModal(false)}
+              >
+                Cancel
+              </button>
+              <a 
+                href="/downloads/breathometer.apk"
+                download="breathometer.apk"
+                className="btn btn-primary flex-1 glow-primary"
+                style={{ display: 'inline-flex', justifyContent: 'center', alignItems: 'center' }}
+                onClick={() => setTimeout(() => setShowApkModal(false), 500)}
+              >
+                Download
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
