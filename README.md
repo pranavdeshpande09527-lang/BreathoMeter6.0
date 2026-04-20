@@ -20,6 +20,7 @@
 - **Hava AI Chat**: 24/7 dedicated respiratory health companion to answer user queries safely and securely.
 - **Doctor Matcher**: Spatially queries local specialists and pulmonologists based on calculated risk severity.
 - **Environmental Engine**: Real-time integration with AQICN and OpenWeather ensuring localized air quality impacts are factored into every diagnostic.
+- **Installable Mobile App (PWA)**: Full Progressive Web App support allows users to install Breathometer directly on their iOS/Android home screens for a native experience.
 
 ## 🏗️ System Architecture
 
@@ -58,8 +59,9 @@
 
 ### Frontend
 - **Framework**: React.js with Vite
-- **Styling**: Tailwind CSS, PostCSS
+- **Styling**: Vanilla CSS (Premium Design System)
 - **State/Routing**: React Router DOM
+- **Mobile**: Capacitor & PWA (Manifest, Service Workers)
 
 ### Backend & AI
 - **Framework**: FastAPI (Python 3.11+)
@@ -154,6 +156,21 @@ python backend/clinical_validator.py
 - **Military-Grade Encryption:** AES-256 for data at rest, TLS 1.3 for data in transit. 
 - **Row Level Security (RLS):** Stringent DB policies restrict data interactions securely to the authenticated JWT context.
 - **Medical Disclaimer:** Strict API-level disclaimers ensure AI reasoning does not substitute for certified clinical review or emergency services.
+
+---
+
+## 📱 Mobile Installation
+
+Breathometer is a fully functional PWA. You can install it on your device without an app store:
+
+### Android (Chrome)
+1. Open [breathometer.web.app](https://breathometer.web.app)
+2. Tap the **"Install App"** button in the browser banner or the menu.
+
+### iOS (Safari)
+1. Open [breathometer.web.app](https://breathometer.web.app) in Safari
+2. Tap the **Share** (⬆) icon.
+3. Select **"Add to Home Screen"**.
 
 ---
 <p align="center">
