@@ -1,0 +1,46 @@
+{
+  "name": "BreathoMeter — Respiratory Health Platform",
+  "short_name": "BreathoMeter",
+  "description": "AI-powered respiratory health monitoring platform for patients and clinicians.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A1628",
+  "theme_color": "#00D4AA",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View your health dashboard"
+    },
+    {
+      "name": "Health Assessment",
+      "short_name": "Assessment",
+      "url": "/assessment",
+      "description": "Take a new health assessment"
+    },
+    {
+      "name": "Air Quality",
+      "short_name": "Air Quality",
+      "url": "/air-quality",
+      "description": "Check local air quality"
+    }
+  ]
+}

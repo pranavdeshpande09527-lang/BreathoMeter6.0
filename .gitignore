@@ -46,4 +46,6 @@ push_error*.txt
 !clinical_validation_results.json
 !firebase.json
 !package.json
-!deno.json*
+!deno.json*
+!frontend/public/manifest.json
+!frontend/public/icon-*.png
