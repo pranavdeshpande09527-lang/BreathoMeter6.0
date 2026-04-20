@@ -53,10 +53,14 @@ jobs:
 
       - name: Upload Gradle Build Log
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-build-log
-          path: frontend/android/gradle_build.log
+        working-directory: ./frontend/android
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b build-logs
+          git add gradle_build.log || true
+          git commit -m "ci: push gradle build log" || true
+          git push -f origin build-logs
 
       - name: Move APK to Public Downloads
         working-directory: ./frontend
