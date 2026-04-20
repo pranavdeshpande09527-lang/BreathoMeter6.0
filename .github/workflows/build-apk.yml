@@ -34,13 +34,15 @@ jobs:
       - name: Install Dependencies & Build Frontend
         working-directory: ./frontend
         run: |
-          npm ci
+          npm install
           npm run build
           npx cap sync android
 
       - name: Build Android APK
         working-directory: ./frontend/android
         run: |
+          sudo apt-get install -y dos2unix
+          dos2unix ./gradlew
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
