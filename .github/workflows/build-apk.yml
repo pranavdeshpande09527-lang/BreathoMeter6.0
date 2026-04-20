@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
@@ -45,16 +45,7 @@ jobs:
           sudo apt-get install -y dos2unix
           dos2unix android/gradlew
           chmod +x android/gradlew
-          npx cap sync android > sync_log.txt 2>&1 || true
-
-      - name: Push Sync Log
-        working-directory: ./frontend
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add sync_log.txt
-          git commit -m "ci: push sync log for debugging" || true
-          git push || true
+          npx cap sync android
 
       - name: Build Android APK
         working-directory: ./frontend/android
