@@ -49,7 +49,17 @@ jobs:
 
       - name: Build Android APK
         working-directory: ./frontend/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug > gradle_build.log 2>&1
+
+      - name: Push Build Log
+        if: always()
+        working-directory: ./frontend/android
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add gradle_build.log || true
+          git commit -m "ci: push gradle build log" || true
+          git push || true
 
       - name: Move APK to Public Downloads
         working-directory: ./frontend
