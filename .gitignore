@@ -14,6 +14,7 @@ venv/
 
 # ML artifacts
 *.pkl
+!backend/app/ml_models/*.pkl
 catboost_info/
 
 # Build output

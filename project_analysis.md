@@ -6,28 +6,6 @@
 - **Problem it solves:** Provides immediate, highly-accessible respiratory health risk assessments by combining clinical parameters with environmental context, reducing the barrier to early preliminary diagnostics before a physical doctor visit.
 - **Target users / audience:** Individuals concerned about their respiratory health, patients with chronic conditions (Asthma, COPD), and general health-conscious users seeking accessible pulmonary capacity insights.
 
-## 🩺 What it actually does
-
-**Step 1 — You answer.**
-A 9-step clinical wizard collects your health data: symptoms, breath capacity, inhale/exhale endurance, and medical history. No wearable needed. Just you and your device.
-
-**Step 2 — The platform listens to your environment.**
-Simultaneously, Breathometer pulls real-time air quality (AQI) and weather data from external APIs — because your lungs don't exist in a vacuum. Local pollution, humidity, and temperature are factored in automatically.
-
-**Step 3 — Three engines run independently.**
-Your data hits three separate diagnostic engines at once:
-- **Gemini 1.5 Flash (AI)** → generates a clinical narrative
-- **Groq LLaMA 3 8B (AI)** → runs its own independent assessment
-- **A 6-model ML Ensemble** → trained on respiratory data, produces a risk prediction
-
-Each gives an independent result. No single point of failure. No single point of bias.
-
-**Step 4 — Results are compared.**
-If all three agree → a single, confident risk level is surfaced to you.
-If they diverge → the system intelligently blends the results (prioritizing AI reasoning at 80% weight) and raises a safety discrepancy flag. This guarantees a safe, reliable, and transparent triage result.
-
-This isn't just a form that spits out a number. It's an advanced ensemble diagnostic routing system acting as a digital triage nurse.
-
 ## 2. 🔹 Core Features
 - **9-Step Clinical Assessment Wizard:** A dynamic hardware-level simulation measuring user inhale/exhale capacities and breath-holding capability.
 - **Zero-Failure AI Diagnostics:** Implements dynamic model fallback utilizing Google Gemini 1.5 Flash (Primary) and Groq LLaMA 3 8B (Secondary) to guarantee uninterrupted diagnostic engine uptime.
@@ -109,6 +87,6 @@ This isn't just a form that spits out a number. It's an advanced ensemble diagno
 - **Use Case 2 (The Preventive Screening):** A general demographic patient consistently receiving "High Risk" estimations continuously leverages internal Doctor Matcher APIs to proactively retrieve spatial insights matching corresponding Pulmonologist facility locations near their postal zip bounds generating actionable immediate continuity.
 
 ## 16. 🔹 Assets & Links
-- **GitHub repository:** [https://github.com/pranavdeshpande09527-lang/BreathoMeter6.0](https://github.com/pranavdeshpande09527-lang/BreathoMeter6.0)
-- **Live demo link:** [https://breathometer.web.app](https://breathometer.web.app)
-- **Screenshots:** Accessible natively within E2E validation reports or internal workspace CI/CD logs.
+- **GitHub repository:** [https://github.com/pranavdeshpande09527-lang/BreathoMeter6.0]
+- **Live link:** [https://breathometer.web.app]
+

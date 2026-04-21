@@ -19,8 +19,10 @@ warnings.filterwarnings('ignore')
 # --------------------------------------------------
 # CONFIGURATION
 # --------------------------------------------------
-DATA_PATH = r"C:\Users\prana\.antigravity\breathomeater4.0\files (2)\clinical_training_data_REAL.csv"
-MODEL_OUTPUT_DIR = r"C:\Users\prana\.antigravity\breathomeater4.0\BreathoMeter5.0\backend\app\ml_models"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Check if data exists in a common relative location
+DATA_PATH = os.path.join(BASE_DIR, "app", "ml_models", "clinical_training_data_REAL.csv")
+MODEL_OUTPUT_DIR = os.path.join(BASE_DIR, "app", "ml_models")
 MODEL_PATH = os.path.join(MODEL_OUTPUT_DIR, "respiratory_risk_model.pkl")
 LABEL_ENCODER_PATH = os.path.join(MODEL_OUTPUT_DIR, "label_encoder.pkl")
 SCALER_PATH = os.path.join(MODEL_OUTPUT_DIR, "scaler.pkl")
@@ -30,7 +32,8 @@ FEATURE_ORDER_PATH = os.path.join(MODEL_OUTPUT_DIR, "feature_order.json")
 
 os.makedirs(MODEL_OUTPUT_DIR, exist_ok=True)
 
-DATA_PATH_SYNTHETIC = r"C:\Users\prana\Downloads\synthetic_clinical_data_500k (1).csv"
+DATA_PATH_SYNTHETIC = os.path.join(BASE_DIR, "app", "ml_models", "synthetic_clinical_data_500k.csv")
+
 
 from app.ml_ensemble import CustomEnsemble as OOFWeightedStacker
 from app.ml_ensemble import CustomEnsemble
