@@ -30,3 +30,4 @@ email-validator
 resend
 aiosmtplib
 sentry-sdk[fastapi]
+firebase-admin

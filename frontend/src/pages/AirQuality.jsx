@@ -16,30 +16,36 @@ const Skeleton = ({ width = '100%', height = '20px', borderRadius = '4px', margi
 function getActivityRecommendations(aqi) {
     if (aqi <= 50) return [
         { label: 'Outdoor Jogging', safe: true, note: 'Safe — excellent conditions for all activity' },
-        { label: 'Walking', safe: true, note: 'Air quality is satisfactory' },
+        { label: 'Walking', safe: true, note: 'Safe — air quality is good' },
         { label: 'Indoor Exercise', safe: true, note: 'Safe' },
         { label: 'Cycling', safe: true, note: 'Good conditions' },
     ]
     if (aqi <= 100) return [
-        { label: 'Outdoor Jogging', safe: true, note: 'Acceptable — sensitive groups should limit prolonged exertion' },
+        { label: 'Outdoor Jogging', safe: true, note: 'Satisfactory — minor discomfort for sensitive people' },
         { label: 'Walking', safe: true, note: 'Generally safe' },
-        { label: 'Indoor Exercise', safe: true, note: 'Recommended for sensitive groups' },
+        { label: 'Indoor Exercise', safe: true, note: 'Safe' },
         { label: 'Cycling', safe: true, note: 'Acceptable for healthy adults' },
     ]
-    if (aqi <= 150) return [
-        { label: 'Outdoor Jogging', safe: false, note: 'Not recommended for sensitive groups' },
-        { label: 'Walking', safe: true, note: 'Acceptable with mask' },
-        { label: 'Indoor Exercise', safe: true, note: 'Safer option — stay indoors' },
-        { label: 'Cycling', safe: false, note: 'Avoid prolonged outdoor exposure' },
-    ]
     if (aqi <= 200) return [
-        { label: 'Outdoor Jogging', safe: false, note: 'Avoid — everyone may experience health effects' },
+        { label: 'Outdoor Jogging', safe: true, note: 'Moderate — sensitive groups should limit exertion' },
+        { label: 'Walking', safe: true, note: 'Acceptable with caution' },
+        { label: 'Indoor Exercise', safe: true, note: 'Safe — stay indoors' },
+        { label: 'Cycling', safe: true, note: 'Limit prolonged outdoor exposure' },
+    ]
+    if (aqi <= 300) return [
+        { label: 'Outdoor Jogging', safe: false, note: 'Poor — avoid prolonged outdoor exertion' },
         { label: 'Walking', safe: false, note: 'Keep outdoor time minimal' },
         { label: 'Indoor Exercise', safe: true, note: 'Safe — stay indoors' },
         { label: 'Cycling', safe: false, note: 'Avoid' },
     ]
+    if (aqi <= 400) return [
+        { label: 'Outdoor Jogging', safe: false, note: 'Very Poor — respiratory illness on prolonged exposure' },
+        { label: 'Walking', safe: false, note: 'Avoid outdoors' },
+        { label: 'Indoor Exercise', safe: true, note: 'Stay indoors, keep windows closed' },
+        { label: 'Cycling', safe: false, note: 'Avoid' },
+    ]
     return [
-        { label: 'Outdoor Jogging', safe: false, note: 'Health emergency — avoid all outdoor exertion' },
+        { label: 'Outdoor Jogging', safe: false, note: 'Severe — health emergency for all' },
         { label: 'Walking', safe: false, note: 'Avoid outdoors' },
         { label: 'Indoor Exercise', safe: true, note: 'Stay indoors, keep windows closed' },
         { label: 'Cycling', safe: false, note: 'Avoid' },
@@ -48,22 +54,22 @@ function getActivityRecommendations(aqi) {
 
 // Derive AQI category label from value
 function getAqiCategory(aqi) {
-    if (aqi <= 50) return { label: 'Good', cls: 'badge-safe' }
-    if (aqi <= 100) return { label: 'Moderate', cls: 'badge-warning' }
-    if (aqi <= 150) return { label: 'Unhealthy for Sensitive', cls: 'badge-warning' }
-    if (aqi <= 200) return { label: 'Unhealthy', cls: 'badge-danger' }
-    if (aqi <= 300) return { label: 'Very Unhealthy', cls: 'badge-danger' }
-    return { label: 'Hazardous', cls: 'badge-danger' }
+    if (aqi <= 50)  return { label: 'Good',         cls: 'badge-aqi-1' }
+    if (aqi <= 100) return { label: 'Satisfactory', cls: 'badge-aqi-2' }
+    if (aqi <= 200) return { label: 'Moderate',     cls: 'badge-aqi-3' }
+    if (aqi <= 300) return { label: 'Poor',         cls: 'badge-aqi-4' }
+    if (aqi <= 400) return { label: 'Very Poor',    cls: 'badge-aqi-5' }
+    return                 { label: 'Severe',       cls: 'badge-aqi-6' }
 }
 
 // Derive health impact string
 function getHealthImpact(aqi) {
-    if (aqi <= 50) return 'Little to no risk for all groups'
-    if (aqi <= 100) return 'Sensitive groups may be affected'
-    if (aqi <= 150) return 'Sensitive groups experience health effects'
-    if (aqi <= 200) return 'Everyone may experience health effects'
-    if (aqi <= 300) return 'Health emergency for all'
-    return 'Serious health risk — hazardous conditions'
+    if (aqi <= 50) return 'Minimal Impact'
+    if (aqi <= 100) return 'Minor breathing discomfort to sensitive people'
+    if (aqi <= 200) return 'Breathing discomfort with lung/heart diseases'
+    if (aqi <= 300) return 'Breathing discomfort to most on prolonged exposure'
+    if (aqi <= 400) return 'Respiratory illness on prolonged exposure'
+    return 'Affects healthy people, serious impact on existing diseases'
 }
 
 // Derive primary pollutant from real data
@@ -209,11 +215,12 @@ export default function AirQuality() {
     const buildPollutants = (d) => {
         if (!d) return []
         const subStatus = (val) => {
-            if (val <= 50) return { status: 'Good', cls: 'badge-safe' }
-            if (val <= 100) return { status: 'Moderate', cls: 'badge-warning' }
-            if (val <= 150) return { status: 'Unhealthy (Sensitive)', cls: 'badge-warning' }
-            if (val <= 200) return { status: 'Unhealthy', cls: 'badge-danger' }
-            return { status: 'Very Unhealthy', cls: 'badge-danger' }
+            if (val <= 50)  return { status: 'Good',         cls: 'badge-aqi-1' }
+            if (val <= 100) return { status: 'Satisfactory', cls: 'badge-aqi-2' }
+            if (val <= 200) return { status: 'Moderate',     cls: 'badge-aqi-3' }
+            if (val <= 300) return { status: 'Poor',         cls: 'badge-aqi-4' }
+            if (val <= 400) return { status: 'Very Poor',    cls: 'badge-aqi-5' }
+            return                 { status: 'Severe',       cls: 'badge-aqi-6' }
         }
         return [
             d.pm25 != null && { name: 'PM2.5', value: Math.round(d.pm25), unit: 'sub-idx', safe: '≤ 50', ...subStatus(d.pm25) },
@@ -376,12 +383,12 @@ export default function AirQuality() {
                             <div className="text-card-title" style={{ marginBottom: 16 }}>AQI Level Reference</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {[
-                                    { range: '0–50', label: 'Good', cls: 'badge-safe', desc: 'Little to no risk' },
-                                    { range: '51–100', label: 'Moderate', cls: 'badge-warning', desc: 'Acceptable quality' },
-                                    { range: '101–150', label: 'Unhealthy (Sensitive)', cls: 'badge-warning', desc: 'Sensitive groups affected' },
-                                    { range: '151–200', label: 'Unhealthy', cls: 'badge-danger', desc: 'Everyone affected' },
-                                    { range: '201–300', label: 'Very Unhealthy', cls: 'badge-danger', desc: 'Health alert' },
-                                    { range: '301–500', label: 'Hazardous', cls: 'badge-danger', desc: 'Health emergency' },
+                                    { range: '0–50',   label: 'Good',         cls: 'badge-aqi-1', desc: 'Minimal Impact' },
+                                    { range: '51–100', label: 'Satisfactory', cls: 'badge-aqi-2', desc: 'Minor discomfort' },
+                                    { range: '101–200', label: 'Moderate',     cls: 'badge-aqi-3', desc: 'Breathing discomfort' },
+                                    { range: '201–300', label: 'Poor',         cls: 'badge-aqi-4', desc: 'Discomfort to most' },
+                                    { range: '301–400', label: 'Very Poor',    cls: 'badge-aqi-5', desc: 'Respiratory illness' },
+                                    { range: '401+',    label: 'Severe',       cls: 'badge-aqi-6', desc: 'Serious health impact' },
                                 ].map(r => (
                                     <div key={r.range} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
                                         <span style={{ fontWeight: 600, fontSize: 13 }}>{r.range}</span>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { initPushNotifications } from './utils/push'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -132,6 +133,14 @@ export default function App() {
             }
         }
         scheduleTokenRefresh();
+    }, []);
+
+    // Initialize Push Notifications
+    useEffect(() => {
+        const rawUser = sessionStorage.getItem('user_data') || localStorage.getItem('user_data');
+        if (rawUser && rawUser !== 'undefined') {
+            initPushNotifications();
+        }
     }, []);
 
     return (

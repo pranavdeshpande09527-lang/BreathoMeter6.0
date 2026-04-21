@@ -22,7 +22,8 @@ async def submit_health_data(request: Request, data: HealthDataCreate, user=Depe
         "smoking_history": data.smoking_history,
         "activity_level": data.activity_level,
         "respiratory_symptoms": data.respiratory_symptoms,
-        "baseline_symptoms": data.baseline_symptoms
+        "baseline_symptoms": data.baseline_symptoms,
+        "outdoor_hours": data.outdoor_hours
     }
 
     try:

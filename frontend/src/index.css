@@ -105,6 +105,14 @@
   --sidebar-width:  244px;
   --topbar-height:  64px;
 
+  /* CPCB Indian AQI — Official Color Palette (Refined) */
+  --color-aqi-1: #10B981; /* Good */
+  --color-aqi-2: #84CC16; /* Satisfactory */
+  --color-aqi-3: #FBBF24; /* Moderate */
+  --color-aqi-4: #F97316; /* Poor */
+  --color-aqi-5: #EF4444; /* Very Poor */
+  --color-aqi-6: #991B1B; /* Severe */
+
   /* Living UI — context engine defaults (overridden by JS) */
   --living-surface-brightness: 1.0;
   --living-shadow-intensity:   0.05;
@@ -632,6 +640,14 @@ button, a {
   color: var(--color-primary);
   border: 1px solid var(--color-primary-muted);
 }
+
+/* CPCB AQI Badges */
+.badge-aqi-1 { background: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.2); } /* Good */
+.badge-aqi-2 { background: rgba(132, 204, 22, 0.1); color: #84CC16; border: 1px solid rgba(132, 204, 22, 0.2); } /* Satisfactory */
+.badge-aqi-3 { background: rgba(251, 191, 36, 0.1); color: #D97706; border: 1px solid rgba(251, 191, 36, 0.2); } /* Moderate - Darker text for readability */
+.badge-aqi-4 { background: rgba(249, 115, 22, 0.1); color: #F97316; border: 1px solid rgba(249, 115, 22, 0.2); } /* Poor */
+.badge-aqi-5 { background: rgba(239, 68, 68, 0.1);  color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); }  /* Very Poor */
+.badge-aqi-6 { background: rgba(153, 27, 27, 0.1);  color: #991B1B; border: 1px solid rgba(153, 27, 27, 0.2); }  /* Severe */
 
 .badge-pill {
   border-radius: 999px;
@@ -2662,6 +2678,14 @@ body[data-risk-context="high"] .card:not(:hover) {
 .hover-glow-safe:hover    { box-shadow: 0 4px 8px rgba(15,23,42,0.04), 0 12px 28px rgba(15,23,42,0.08), 0 0 0 1px rgba(22,163,74,0.15),  0 0 20px rgba(22,163,74,0.08) !important;  }
 .hover-glow-warning:hover { box-shadow: 0 4px 8px rgba(15,23,42,0.04), 0 12px 28px rgba(15,23,42,0.08), 0 0 0 1px rgba(217,119,6,0.15),  0 0 20px rgba(217,119,6,0.08) !important;  }
 .hover-glow-danger:hover  { box-shadow: 0 4px 8px rgba(15,23,42,0.04), 0 12px 28px rgba(15,23,42,0.08), 0 0 0 1px rgba(220,38,38,0.15),  0 0 20px rgba(220,38,38,0.08) !important;  }
+
+/* CPCB AQI Hover Glows */
+.hover-glow-aqi-1:hover { box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15), 0 0 20px rgba(16, 185, 129, 0.08) !important; }
+.hover-glow-aqi-2:hover { box-shadow: 0 0 0 1px rgba(132, 204, 22, 0.15), 0 0 20px rgba(132, 204, 22, 0.08) !important; }
+.hover-glow-aqi-3:hover { box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.15), 0 0 20px rgba(251, 191, 36, 0.08) !important; }
+.hover-glow-aqi-4:hover { box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.15), 0 0 20px rgba(249, 115, 22, 0.08) !important; }
+.hover-glow-aqi-5:hover { box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15), 0 0 20px rgba(239, 68, 68, 0.08) !important; }
+.hover-glow-aqi-6:hover { box-shadow: 0 0 0 1px rgba(153, 27, 27, 0.15), 0 0 20px rgba(153, 27, 27, 0.08) !important; }
 
 /* ─── AI Ambient Pulse ──────────────────────────────────────────────────── */
 

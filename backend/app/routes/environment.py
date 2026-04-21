@@ -138,9 +138,10 @@ async def get_weather(lat: float = 0.0, lon: float = 0.0, location: str = ""):
 # ── Helper ────────────────────────────────────────────────────────────────────
 
 def _classify_aqi(aqi: int) -> str:
+    """Categorize AQI according to CPCB Indian Standards."""
     if aqi <= 50:   return "Good"
-    if aqi <= 100:  return "Moderate"
-    if aqi <= 150:  return "Unhealthy for Sensitive Groups"
-    if aqi <= 200:  return "Unhealthy"
-    if aqi <= 300:  return "Very Unhealthy"
-    return "Hazardous"
+    if aqi <= 100:  return "Satisfactory"
+    if aqi <= 200:  return "Moderate"
+    if aqi <= 300:  return "Poor"
+    if aqi <= 400:  return "Very Poor"
+    return "Severe"

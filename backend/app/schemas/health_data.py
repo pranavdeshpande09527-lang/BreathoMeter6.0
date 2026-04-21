@@ -10,6 +10,7 @@ class HealthDataCreate(BaseModel):
     activity_level: str = Field(..., min_length=2, max_length=30, description="Low, Moderate, High")
     respiratory_symptoms: Optional[str] = Field(None, max_length=1000)
     baseline_symptoms: Optional[str] = Field(None, max_length=1000)
+    outdoor_hours: Optional[float] = Field(0.0, ge=0, le=24, description="Daily hours spent outdoors")
 
 class HealthDataResponse(HealthDataCreate):
     id: str

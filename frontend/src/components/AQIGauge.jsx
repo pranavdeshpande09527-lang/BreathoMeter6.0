@@ -28,12 +28,12 @@ export default function AQIGauge({ aqi, location = 'Loading location...' }) {
     }, [aqi, circumference])
 
     const getInfo = (val) => {
-        if (val <= 50)  return { label: 'Good',                          color: 'var(--color-safe)',    cls: 'badge-safe' }
-        if (val <= 100) return { label: 'Moderate',                      color: 'var(--color-warning)', cls: 'badge-warning' }
-        if (val <= 150) return { label: 'Unhealthy for Sensitive Groups', color: '#F97316',              cls: 'badge-warning' }
-        if (val <= 200) return { label: 'Unhealthy',                      color: 'var(--color-danger)', cls: 'badge-danger' }
-        if (val <= 300) return { label: 'Very Unhealthy',                 color: '#7C3AED',              cls: 'badge-danger' }
-        return             { label: 'Hazardous',                          color: '#1F2937',              cls: 'badge-danger' }
+        if (val <= 50)  return { label: 'Good',         color: 'var(--color-aqi-1)', cls: 'badge-aqi-1' }
+        if (val <= 100) return { label: 'Satisfactory', color: 'var(--color-aqi-2)', cls: 'badge-aqi-2' }
+        if (val <= 200) return { label: 'Moderate',     color: 'var(--color-aqi-3)', cls: 'badge-aqi-3' }
+        if (val <= 300) return { label: 'Poor',         color: 'var(--color-aqi-4)', cls: 'badge-aqi-4' }
+        if (val <= 400) return { label: 'Very Poor',    color: 'var(--color-aqi-5)', cls: 'badge-aqi-5' }
+        return             { label: 'Severe',       color: 'var(--color-aqi-6)', cls: 'badge-aqi-6' }
     }
 
     const info = aqi != null
@@ -146,7 +146,7 @@ export default function AQIGauge({ aqi, location = 'Loading location...' }) {
                     fontStyle: 'italic',
                     lineHeight: 1.5,
                 }}>
-                    AQI follows the highest sub-index principle.
+                    AQI calculated using CPCB (India) standard.
                 </div>
             )}
 

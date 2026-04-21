@@ -125,6 +125,22 @@ export default function Assessment() {
             } catch (breathErr) {
                 console.error("[Assessment] Breath test save failed (non-blocking):", breathErr);
             }
+            
+            // Save Health Info (for Smart Alerts & Dynamic Risk)
+            try {
+                await api.health.submitData({
+                    age: toNumber(data.age, 30),
+                    height: toNumber(data.height, 170),
+                    weight: toNumber(data.weight, 70),
+                    smoking_history: data.smoking === 'Current',
+                    activity_level: data.activity || 'Moderate',
+                    respiratory_symptoms: activeSymptoms,
+                    baseline_symptoms: medicalHistory,
+                    outdoor_hours: toNumber(data.outdoorTimeHours || data.outdoorTime, 2.0)
+                });
+            } catch (healthErr) {
+                console.error("[Assessment] Health data save failed (non-blocking):", healthErr);
+            }
 
             // Save Risk Prediction
             try {

@@ -253,7 +253,7 @@ def debug_config():
 
 # --- Register All API Routers ---
 
-from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat, appointments, doctors, feedback, email
+from app.routes import auth, environment, health, breath, prediction, ai, chatbot, reports, inference_api, alerts, chat, appointments, doctors, feedback, email, push
 
 app.include_router(auth.router)
 app.include_router(environment.router)
@@ -270,3 +270,4 @@ app.include_router(appointments.router)
 app.include_router(doctors.router)
 app.include_router(feedback.router)
 app.include_router(email.router)
+app.include_router(push.router)

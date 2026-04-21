@@ -8,16 +8,19 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 export default function MetricCard({ label, value, unit, range, status, timestamp, icon: Icon, trend, color }) {
     const statusMap = {
-        normal:   { cls: 'badge-safe',    label: 'Normal'   },
-        low:      { cls: 'badge-warning', label: 'Low'      },
-        high:     { cls: 'badge-warning', label: 'High'     },
-        critical: { cls: 'badge-danger',  label: 'Critical' },
-        good:     { cls: 'badge-safe',    label: 'Good'     },
-        moderate: { cls: 'badge-warning', label: 'Moderate' },
-        poor:     { cls: 'badge-danger',  label: 'Poor'     },
-        warning:  { cls: 'badge-warning', label: 'Warning'  },
-        danger:   { cls: 'badge-danger',  label: 'High'     },
-        healthy:  { cls: 'badge-safe',    label: 'Healthy'  },
+        normal:       { cls: 'badge-safe',    label: 'Normal'       },
+        low:          { cls: 'badge-warning', label: 'Low'          },
+        high:         { cls: 'badge-warning', label: 'High'         },
+        critical:     { cls: 'badge-danger',  label: 'Critical'     },
+        good:         { cls: 'badge-aqi-1',   label: 'Good'         },
+        satisfactory: { cls: 'badge-aqi-2',   label: 'Satisfactory' },
+        moderate:     { cls: 'badge-aqi-3',   label: 'Moderate'     },
+        poor:         { cls: 'badge-aqi-4',   label: 'Poor'         },
+        'very poor':  { cls: 'badge-aqi-5',   label: 'Very Poor'    },
+        severe:       { cls: 'badge-aqi-6',   label: 'Severe'       },
+        warning:      { cls: 'badge-warning', label: 'Warning'      },
+        danger:       { cls: 'badge-danger',  label: 'High'         },
+        healthy:      { cls: 'badge-safe',    label: 'Healthy'      },
     }
     const st = statusMap[status?.toLowerCase()] || { cls: 'badge-primary', label: status || '—' }
 
@@ -41,16 +44,19 @@ export default function MetricCard({ label, value, unit, range, status, timestam
 
     // Derive bottom status bar color and width
     const barConfig = {
-        normal:   { color: 'var(--color-safe)',    width: '80%',  glowClass: 'hover-glow-safe'    },
-        good:     { color: 'var(--color-safe)',    width: '90%',  glowClass: 'hover-glow-safe'    },
-        healthy:  { color: 'var(--color-safe)',    width: '85%',  glowClass: 'hover-glow-safe'    },
-        low:      { color: 'var(--color-warning)', width: '40%',  glowClass: 'hover-glow-warning'  },
-        high:     { color: 'var(--color-warning)', width: '75%',  glowClass: 'hover-glow-warning'  },
-        moderate: { color: 'var(--color-warning)', width: '55%',  glowClass: 'hover-glow-warning'  },
-        warning:  { color: 'var(--color-warning)', width: '60%',  glowClass: 'hover-glow-warning'  },
-        critical: { color: 'var(--color-danger)',  width: '95%',  glowClass: 'hover-glow-danger'   },
-        poor:     { color: 'var(--color-danger)',  width: '85%',  glowClass: 'hover-glow-danger'   },
-        danger:   { color: 'var(--color-danger)',  width: '80%',  glowClass: 'hover-glow-danger'   },
+        normal:       { color: 'var(--color-safe)',    width: '80%',  glowClass: 'hover-glow-safe'    },
+        good:         { color: 'var(--color-aqi-1)',   width: '95%',  glowClass: 'hover-glow-aqi-1'  },
+        satisfactory: { color: 'var(--color-aqi-2)',   width: '85%',  glowClass: 'hover-glow-aqi-2'  },
+        moderate:     { color: 'var(--color-aqi-3)',   width: '70%',  glowClass: 'hover-glow-aqi-3'  },
+        poor:         { color: 'var(--color-aqi-4)',   width: '50%',  glowClass: 'hover-glow-aqi-4'  },
+        'very poor':  { color: 'var(--color-aqi-5)',   width: '35%',  glowClass: 'hover-glow-aqi-5'  },
+        severe:       { color: 'var(--color-aqi-6)',   width: '20%',  glowClass: 'hover-glow-aqi-6'  },
+        healthy:      { color: 'var(--color-safe)',    width: '85%',  glowClass: 'hover-glow-safe'    },
+        low:          { color: 'var(--color-warning)', width: '40%',  glowClass: 'hover-glow-warning'  },
+        high:         { color: 'var(--color-warning)', width: '75%',  glowClass: 'hover-glow-warning'  },
+        warning:      { color: 'var(--color-warning)', width: '60%',  glowClass: 'hover-glow-warning'  },
+        critical:     { color: 'var(--color-danger)',  width: '95%',  glowClass: 'hover-glow-danger'   },
+        danger:       { color: 'var(--color-danger)',  width: '80%',  glowClass: 'hover-glow-danger'   },
     }
     const barCfg = barConfig[status?.toLowerCase()] || { color: 'var(--color-primary)', width: '60%', glowClass: 'hover-glow-primary' }
 
