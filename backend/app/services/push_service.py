@@ -23,9 +23,22 @@ class PushService:
             if creds_json:
                 logger.info("Initializing Firebase Admin SDK from environment variable.")
                 cred_dict = json.loads(creds_json)
-                # Fix for literal \n in private key when loaded from environment variable
                 if "private_key" in cred_dict:
-                    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+                    original_key = cred_dict["private_key"]
+                    # Robust normalization
+                    normalized_key = original_key.replace("\\n", "\n")
+                    header = "-----BEGIN PRIVATE KEY-----"
+                    footer = "-----END PRIVATE KEY-----"
+                    
+                    if header in normalized_key and footer in normalized_key:
+                        content = normalized_key.split(header)[1].split(footer)[0]
+                        clean_content = "".join(content.split())
+                        normalized_key = f"{header}\n{clean_content}\n{footer}\n"
+                    
+                    cred_dict["private_key"] = normalized_key
+                    logger.info(f"Private key normalized. Length: {len(normalized_key)}. "
+                              f"Starts with: {normalized_key[:20]}... Ends with: ...{normalized_key[-20:].strip()}")
+
                 cred = credentials.Certificate(cred_dict)
                 firebase_admin.initialize_app(cred)
                 self._initialized = True
