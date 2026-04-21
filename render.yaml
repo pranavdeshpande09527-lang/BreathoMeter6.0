@@ -47,6 +47,15 @@ services:
       - key: SENTRY_DSN
         sync: false   # Error monitoring
 
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false   # Copy-paste full JSON content here for production push notifications
+
+      - key: SMTP_USER
+        sync: false   # Sender email address
+
+      - key: SMTP_PASSWORD
+        sync: false   # App password or SMTP API key
+
       # ── STATIC ────────────────────────────────────────────
       - key: ENVIRONMENT
         value: production
