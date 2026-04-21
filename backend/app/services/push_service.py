@@ -18,7 +18,16 @@ class PushService:
             return
 
         try:
-            # Check for JSON string in environment variable
+            # 1. Check for Secret File (most stable)
+            creds_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-service-account.json")
+            if os.path.exists(creds_path):
+                logger.info(f"Initializing Firebase Admin SDK from file: {creds_path}")
+                cred = credentials.Certificate(creds_path)
+                firebase_admin.initialize_app(cred)
+                self._initialized = True
+                return
+
+            # 2. Fallback to Environment Variable
             creds_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
             if creds_json:
                 logger.info("Initializing Firebase Admin SDK from environment variable.")
@@ -36,19 +45,9 @@ class PushService:
                         normalized_key = f"{header}\n{clean_content}\n{footer}\n"
                     
                     cred_dict["private_key"] = normalized_key
-                    logger.info(f"Private key normalized. Length: {len(normalized_key)}. "
-                              f"Starts with: {normalized_key[:20]}... Ends with: ...{normalized_key[-20:].strip()}")
+                    logger.info(f"Private key normalized. Length: {len(normalized_key)}")
 
                 cred = credentials.Certificate(cred_dict)
-                firebase_admin.initialize_app(cred)
-                self._initialized = True
-                return
-
-            # fallback to local file if exists (for local development)
-            creds_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-service-account.json")
-            if os.path.exists(creds_path):
-                logger.info(f"Initializing Firebase Admin SDK from file: {creds_path}")
-                cred = credentials.Certificate(creds_path)
                 firebase_admin.initialize_app(cred)
                 self._initialized = True
                 return
