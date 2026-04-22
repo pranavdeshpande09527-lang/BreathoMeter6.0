@@ -513,6 +513,182 @@ export default function RiskAnalysis() {
                             </div>
                         )}
 
+                        {/* ═══ Disease Prediction Summary — Hero Card ═══ */}
+                        {(prediction.primary_prediction || displayDiseases.length > 0) && (
+                            <div className="glass-primary depth-float hover-card card-enter-1" style={{
+                                padding: '28px',
+                                borderRadius: '20px',
+                                background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.06) 0%, rgba(var(--color-primary-rgb), 0.02) 100%)',
+                                border: '1px solid rgba(var(--color-primary-rgb), 0.15)',
+                                marginBottom: 20,
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                {/* Background glow */}
+                                <div style={{
+                                    position: 'absolute', top: '-40%', right: '-20%',
+                                    width: '60%', height: '180%',
+                                    background: 'radial-gradient(circle, rgba(var(--color-primary-rgb), 0.08) 0%, transparent 70%)',
+                                    pointerEvents: 'none'
+                                }} />
+
+                                <div style={{ position: 'relative', zIndex: 1 }}>
+                                    {/* Header */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                                        <div style={{
+                                            width: 44, height: 44, borderRadius: 14,
+                                            background: 'rgba(var(--color-primary-rgb), 0.12)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '0 2px 8px rgba(var(--color-primary-rgb), 0.15)'
+                                        }}>
+                                            <Activity size={22} style={{ color: 'var(--color-primary)' }} />
+                                        </div>
+                                        <div>
+                                            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
+                                                🩺 Disease Prediction
+                                            </h2>
+                                            <p className="text-meta" style={{ margin: 0, fontSize: 12 }}>
+                                                AI + ML Ensemble Diagnostic Result
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Primary Disease Highlight */}
+                                    <div style={{
+                                        padding: '20px 24px',
+                                        borderRadius: 16,
+                                        background: 'var(--glass-surface-primary)',
+                                        border: '1px solid rgba(var(--color-primary-rgb), 0.12)',
+                                        marginBottom: 16
+                                    }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-muted)', marginBottom: 8 }}>
+                                            Primary Predicted Condition
+                                        </div>
+                                        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-text)', marginBottom: 6, letterSpacing: '-0.02em' }}>
+                                            {prediction.primary_prediction || displayDiseases[0]?.disease || 'Pending Analysis'}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                                            {displayDiseases[0]?.risk_percentage != null && (
+                                                <span style={{
+                                                    padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                                                    background: displayDiseases[0].risk_percentage > 60
+                                                        ? 'rgba(239,68,68,0.1)' : displayDiseases[0].risk_percentage > 30
+                                                        ? 'rgba(245,158,11,0.1)' : 'rgba(22,163,74,0.1)',
+                                                    color: displayDiseases[0].risk_percentage > 60
+                                                        ? 'var(--color-danger)' : displayDiseases[0].risk_percentage > 30
+                                                        ? 'var(--color-warning)' : 'var(--color-safe)',
+                                                    border: `1px solid ${displayDiseases[0].risk_percentage > 60
+                                                        ? 'rgba(239,68,68,0.2)' : displayDiseases[0].risk_percentage > 30
+                                                        ? 'rgba(245,158,11,0.2)' : 'rgba(22,163,74,0.2)'}`
+                                                }}>
+                                                    {displayDiseases[0].risk_percentage}% Probability
+                                                </span>
+                                            )}
+                                            {displayDiseases[0]?.severity && (
+                                                <SeverityBadge severity={displayDiseases[0].severity} />
+                                            )}
+                                            {prediction.recommended_specialty && (
+                                                <span style={{
+                                                    padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                                                    background: 'rgba(var(--color-primary-rgb), 0.08)',
+                                                    color: 'var(--color-primary)',
+                                                    border: '1px solid rgba(var(--color-primary-rgb), 0.15)'
+                                                }}>
+                                                    👨‍⚕️ {prediction.recommended_specialty}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Urgency + Time to Action row */}
+                                    {(prediction.urgency_tier || prediction.time_to_action) && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                                            {prediction.urgency_tier && (
+                                                <div style={{
+                                                    padding: '14px 16px', borderRadius: 14,
+                                                    background: prediction.urgency_tier === 'Emergency' ? 'rgba(239,68,68,0.08)'
+                                                        : prediction.urgency_tier === 'High Risk' ? 'rgba(245,158,11,0.08)'
+                                                        : 'rgba(22,163,74,0.05)',
+                                                    border: `1px solid ${prediction.urgency_tier === 'Emergency' ? 'rgba(239,68,68,0.2)'
+                                                        : prediction.urgency_tier === 'High Risk' ? 'rgba(245,158,11,0.2)'
+                                                        : 'rgba(22,163,74,0.15)'}`
+                                                }}>
+                                                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-muted)', marginBottom: 6 }}>
+                                                        Urgency Level
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: 15, fontWeight: 800,
+                                                        color: prediction.urgency_tier === 'Emergency' ? 'var(--color-danger)'
+                                                            : prediction.urgency_tier === 'High Risk' ? 'var(--color-warning)'
+                                                            : 'var(--color-safe)'
+                                                    }}>
+                                                        {prediction.urgency_tier === 'Emergency' ? '🚨' : prediction.urgency_tier === 'High Risk' ? '⚠️' : '✅'} {prediction.urgency_tier}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {prediction.time_to_action && (
+                                                <div style={{
+                                                    padding: '14px 16px', borderRadius: 14,
+                                                    background: 'rgba(var(--color-primary-rgb), 0.04)',
+                                                    border: '1px solid rgba(var(--color-primary-rgb), 0.1)'
+                                                }}>
+                                                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-muted)', marginBottom: 6 }}>
+                                                        Recommended Action
+                                                    </div>
+                                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>
+                                                        🕐 {prediction.time_to_action}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Other predicted conditions mini-list */}
+                                    {displayDiseases.length > 1 && (
+                                        <div style={{ marginTop: 4 }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-muted)', marginBottom: 10 }}>
+                                                Other Predicted Conditions
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                                {displayDiseases.slice(1).map((d, i) => (
+                                                    <div key={i} style={{
+                                                        display: 'flex', alignItems: 'center', gap: 8,
+                                                        padding: '6px 14px', borderRadius: 12,
+                                                        background: 'var(--glass-surface-secondary)',
+                                                        border: '1px solid var(--color-border)',
+                                                        fontSize: 13
+                                                    }}>
+                                                        <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{d.disease}</span>
+                                                        <span style={{
+                                                            fontWeight: 700, fontSize: 11,
+                                                            padding: '2px 8px', borderRadius: 10,
+                                                            background: d.risk_percentage > 60 ? 'rgba(239,68,68,0.1)' : d.risk_percentage > 30 ? 'rgba(245,158,11,0.1)' : 'rgba(22,163,74,0.08)',
+                                                            color: d.risk_percentage > 60 ? 'var(--color-danger)' : d.risk_percentage > 30 ? 'var(--color-warning)' : 'var(--color-safe)'
+                                                        }}>
+                                                            {d.risk_percentage}%
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Urgency action text */}
+                                    {prediction.urgency_action && (
+                                        <div style={{
+                                            marginTop: 16, padding: '12px 16px', borderRadius: 12,
+                                            background: prediction.urgency_tier === 'Emergency' ? 'rgba(239,68,68,0.06)' : 'rgba(var(--color-primary-rgb), 0.04)',
+                                            border: `1px solid ${prediction.urgency_tier === 'Emergency' ? 'rgba(239,68,68,0.15)' : 'rgba(var(--color-primary-rgb), 0.1)'}`,
+                                            fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.6
+                                        }}>
+                                            <strong style={{ color: 'var(--color-text)' }}>Recommended: </strong>
+                                            {prediction.urgency_action}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Primary Model Predictions */}
                         {((prediction.primary_predictions?.length > 0) || (prediction.disease_risks?.length > 0) || prediction.primary_prediction) && (
                             <div className="glass-primary depth-float hover-card card-enter-1" style={{ padding: '24px', borderRadius: '20px', background: 'var(--glass-surface-primary)' }}>

@@ -249,6 +249,41 @@ export default function Assessment() {
                     if (inferenceRes) {
                         // Merge inference results into payload — inference is source of truth
                         finalPredictionPayload = { ...finalPredictionPayload, ...inferenceRes };
+
+                        // Normalize possible_conditions → disease_risks with field mapping
+                        // Backend returns: condition_name, probability, reason, severity, specialty, confidence_label
+                        // Frontend expects: disease, risk_percentage, reason, severity, specialty, confidence_label
+                        const conditions = inferenceRes.possible_conditions || [];
+                        finalPredictionPayload.disease_risks = conditions.map(c => ({
+                            disease: c.condition_name || c.disease || 'Unknown Condition',
+                            risk_percentage: c.probability ?? c.risk_percentage ?? 0,
+                            reason: c.reason || '',
+                            severity: c.severity || 'moderate',
+                            specialty: c.specialty || 'General Physician',
+                            confidence_label: c.confidence_label || null,
+                            key_factors: c.key_factors || []
+                        }));
+
+                        // Also set primary_prediction from inference
+                        if (inferenceRes.primary_prediction && !finalPredictionPayload.primary_prediction) {
+                            finalPredictionPayload.primary_prediction = inferenceRes.primary_prediction;
+                        }
+
+                        // Serialize ai_explanation to string if inference returned an object
+                        if (inferenceRes.ai_explanation && typeof inferenceRes.ai_explanation === 'object') {
+                            const expl = inferenceRes.ai_explanation;
+                            finalPredictionPayload.ai_explanation = [
+                                expl.summary,
+                                expl.symptoms_flagged ? `Symptoms: ${expl.symptoms_flagged}` : '',
+                                expl.clinical_mapping ? `Clinical Mapping: ${expl.clinical_mapping}` : ''
+                            ].filter(Boolean).join(' | ');
+                        }
+
+                        // Ensure urgency fields pass through to storage
+                        if (inferenceRes.urgency_tier) finalPredictionPayload.urgency_tier = inferenceRes.urgency_tier;
+                        if (inferenceRes.urgency_action) finalPredictionPayload.urgency_action = inferenceRes.urgency_action;
+                        if (inferenceRes.safety_flags) finalPredictionPayload.safety_flags = inferenceRes.safety_flags;
+                        if (inferenceRes.time_to_action) finalPredictionPayload.time_to_action = inferenceRes.time_to_action;
                     }
                 } catch (inferenceErr) {
                     console.error("[Assessment] Inference API failed, using fallback:", inferenceErr);
@@ -256,7 +291,8 @@ export default function Assessment() {
                 }
 
                 const predictionRes = await api.prediction.storePrediction(finalPredictionPayload);
-                payload.predictionDetails = predictionRes?.data || {};
+                // Merge inference-enriched payload with stored response so results page has full data
+                payload.predictionDetails = { ...finalPredictionPayload, ...(predictionRes?.data || {}) };
             } catch (predictionErr) {
                 console.error("[Assessment] Prediction save failed (non-blocking):", predictionErr);
             }
