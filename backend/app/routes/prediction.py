@@ -44,6 +44,7 @@ class PredictionRequest(BaseModel):
     insufficient_data: Optional[bool] = None
     recommended_doctors: Optional[List[dict]] = None
     priority_recommendation: Optional[bool] = None
+    time_to_action: Optional[str] = None
     model_config = ConfigDict(extra="forbid")
 
 @router.post("/store")
@@ -88,6 +89,7 @@ async def store_prediction(request: Request, data: PredictionRequest, user = Dep
         if data.insufficient_data is not None: payload["insufficient_data"] = data.insufficient_data
         if data.recommended_doctors is not None: payload["recommended_doctors"] = data.recommended_doctors
         if data.priority_recommendation is not None: payload["priority_recommendation"] = data.priority_recommendation
+        if data.time_to_action is not None: payload["time_to_action"] = data.time_to_action
         
         res = await supabase_request("risk_predictions", "POST", data=payload, token=user.token)
         # SUPABASE REST API returns the created object when Prefer=return=representation

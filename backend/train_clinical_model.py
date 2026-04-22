@@ -109,14 +109,14 @@ def train():
     )
 
     # 6. Model Ensemble
-    # We'll use a strong Gradient Booster for clinical accuracy
-    model = XGBClassifier(
-        n_estimators=200,
-        learning_rate=0.05,
-        max_depth=5,
-        random_state=42,
-        use_label_encoder=False,
-        eval_metric='mlogloss'
+    # We'll use a strong yet ultra-lightweight L2-Regularized Logistic Regression
+    # to perfectly handle the memory limits of Render's free tier.
+    from sklearn.linear_model import LogisticRegression
+    model = LogisticRegression(
+        penalty='l2',
+        solver='lbfgs',
+        max_iter=2000,
+        random_state=42
     )
 
     full_pipeline = Pipeline(steps=[

@@ -1,8 +1,11 @@
 import { useLocation, useNavigate, Navigate } from 'react-router-dom'
-import { ArrowLeft, Activity, Wind, Cloud, HeartPulse, AlertTriangle, CheckCircle, Download, Share2, PlusCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowLeft, Activity, Wind, Cloud, HeartPulse, AlertTriangle, CheckCircle, Download, Share2, PlusCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import LungCapacityVisualization from '../components/LungCapacityVisualization'
 import ConfidenceBadge from '../components/ConfidenceBadge'
 import { getConfidenceTier, getImprovementSuggestion } from '../utils/predictionConfidence'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { api } from '../utils/api'
 
 function riskLabel(riskCategory) {
     if (!riskCategory) return 'Unknown'
@@ -114,7 +117,11 @@ function generatePDF(report) {
       <div class="section-title">Clinical Interpretation</div>
     </div>
     <div class="analysis-box">
-      ${report.ai_explanation}
+      ${typeof report.ai_explanation === 'string' ? report.ai_explanation : `
+         <strong>Summary:</strong> ${report.ai_explanation.summary || 'N/A'}<br/><br/>
+         <strong>Symptoms Flagged:</strong> ${report.ai_explanation.symptoms_flagged || 'N/A'}<br/><br/>
+         <strong>Clinical Mapping:</strong> ${report.ai_explanation.clinical_mapping || 'N/A'}
+      `}
     </div>
   </div>
   ` : ''}
@@ -124,23 +131,24 @@ function generatePDF(report) {
       <div class="section">
         <div class="section-header">
           <div class="section-icon"></div>
-          <div class="section-title">Critical Pathogens Map</div>
+          <div class="section-title">Possible Conditions</div>
         </div>
         <div style="display: flex; flex-direction: column; gap: 10px;">
-          ${(report.disease_risks || []).map(d => {
-        const color = d.risk_percentage > 60 ? '#dc2626' : d.risk_percentage > 30 ? '#d97706' : '#16a34a'
+          ${(report.possible_conditions || []).map(d => {
+        const color = d.probability > 60 ? '#dc2626' : d.probability > 30 ? '#d97706' : '#16a34a'
         return `
             <div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px;">
-                <span class="disease-name">${d.disease}</span>
-                <span class="disease-risk-val">${d.risk_percentage}%</span>
+                <span class="disease-name">${d.condition_name}</span>
+                <span class="disease-risk-val">${d.probability}%</span>
               </div>
               <div class="risk-bar-bg">
-                <div class="risk-bar-fill" style="width: ${d.risk_percentage}%; background: ${color}"></div>
+                <div class="risk-bar-fill" style="width: ${d.probability}%; background: ${color}"></div>
               </div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">${d.reason || ''}</div>
             </div>
           `
-    }).join('') || '<p style="color:#9ca3af; font-size:11px;">Pathogen analysis not applicable for this report type.</p>'}
+    }).join('') || '<p style="color:#9ca3af; font-size:11px;">Condition analysis not applicable for this report type.</p>'}
         </div>
       </div>
     </div>
@@ -268,23 +276,50 @@ export default function AssessmentResults() {
     const navigate = useNavigate()
 
     const payload = location.state?.payload
+
+    const [history, setHistory] = useState([])
+    const [loadingHistory, setLoadingHistory] = useState(true)
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const user = JSON.parse(sessionStorage.getItem('user_data') || localStorage.getItem('user_data') || '{}')
+                if (user?.id) {
+                    const data = await api.prediction.getHistory(user.id)
+                    if (Array.isArray(data)) {
+                        const sorted = [...data].reverse().map(item => ({
+                            date: new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                            score: item.final_risk_score || 0
+                        }))
+                        setHistory(sorted)
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch history:", error)
+            } finally {
+                setLoadingHistory(false)
+            }
+        }
+        fetchHistory()
+    }, [])
+
     if (!payload) {
         return <Navigate to="/assessment" replace />
     }
 
     const { scores, timestamp, predictionDetails, formData } = payload
     const d = formData || {}
-    const diseaseRisks = predictionDetails?.disease_risks || []
+    const possibleConditions = predictionDetails?.possible_conditions || []
 
     const handleDownload = () => {
         const report = {
             id: `RPT-${predictionDetails?.id?.slice(0, 8)?.toUpperCase() || 'NEW'}`,
             title: 'Diagnostic Health Summary',
             score: scores.overallScore,
-            risk: riskLabel(predictionDetails?.risk_category),
+            risk: predictionDetails?.urgency_tier || riskLabel(predictionDetails?.risk_category),
             ai_explanation: predictionDetails?.ai_explanation,
             top_risk_factors: predictionDetails?.top_risk_factors,
-            disease_risks: predictionDetails?.disease_risks,
+            possible_conditions: predictionDetails?.possible_conditions,
             warnings: predictionDetails?.warnings,
             similar_cases_distribution: predictionDetails?.similar_cases_distribution,
             confidence: predictionDetails?.confidence_score ? `${Math.round(predictionDetails.confidence_score * 100)}%` : null
@@ -519,13 +554,41 @@ export default function AssessmentResults() {
                 )
             })()}
 
+            {/* Urgency Banner */}
+            {predictionDetails?.urgency_tier && ['Emergency', 'High Risk'].includes(predictionDetails.urgency_tier) && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '16px 20px', borderRadius: 14, marginBottom: 24,
+                    background: 'rgba(220,38,38,0.1)',
+                    border: '1px solid rgba(220,38,38,0.3)',
+                    color: '#dc2626'
+                }}>
+                    <AlertTriangle size={28} />
+                    <div>
+                        <div style={{ fontWeight: 700, fontSize: 16 }}>{predictionDetails.urgency_tier} Detected</div>
+                        <div style={{ fontSize: 13, marginTop: 4 }}>
+                            {predictionDetails.urgency_action}
+                            {predictionDetails.time_to_action && <span style={{ fontWeight: 600, marginLeft: 8 }}>• {predictionDetails.time_to_action}</span>}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* AI Explanation */}
             {predictionDetails?.ai_explanation && (
                 <div className="card" style={{ padding: '24px 32px', marginBottom: 24, background: 'var(--color-surface)', border: '1px solid var(--color-primary-light)' }}>
                     <div className="text-card-title" style={{ marginBottom: 12 }}>AI Risk Explanation</div>
-                    <p style={{ margin: 0, color: 'var(--color-text)', lineHeight: 1.5 }}>
-                        {predictionDetails.ai_explanation}
-                    </p>
+                    {typeof predictionDetails.ai_explanation === 'string' ? (
+                        <p style={{ margin: 0, color: 'var(--color-text)', lineHeight: 1.5 }}>
+                            {predictionDetails.ai_explanation}
+                        </p>
+                    ) : (
+                        <div style={{ color: 'var(--color-text)', lineHeight: 1.5, fontSize: 14 }}>
+                            <div style={{ marginBottom: 10 }}><strong>Summary:</strong> {predictionDetails.ai_explanation.summary}</div>
+                            <div style={{ marginBottom: 10 }}><strong>Symptoms Flagged:</strong> {predictionDetails.ai_explanation.symptoms_flagged}</div>
+                            <div><strong>Clinical Mapping:</strong> {predictionDetails.ai_explanation.clinical_mapping}</div>
+                        </div>
+                    )}
                     {predictionDetails.top_risk_factors && predictionDetails.top_risk_factors.length > 0 && (
                         <div style={{ marginTop: 16 }}>
                             <div className="text-meta" style={{ marginBottom: 8, fontWeight: 600 }}>Key Contributing Factors:</div>
@@ -560,32 +623,85 @@ export default function AssessmentResults() {
                 </div>
             )}
 
-            {/* Disease Risk Breakdown */}
-            {diseaseRisks.length > 0 && (
+            {/* Possible Conditions Breakdown */}
+            {possibleConditions.length > 0 && (
                 <div className="card" style={{ padding: '24px 32px', marginBottom: 24 }}>
-                    <div className="text-card-title" style={{ marginBottom: 4 }}>Condition-Specific Risk Analysis</div>
+                    <div className="text-card-title" style={{ marginBottom: 4 }}>Possible Conditions</div>
                     <div className="text-meta" style={{ marginBottom: 20 }}>Risk scores are estimates based on your reported symptoms, lifestyle, and medical history. Not a clinical diagnosis.</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-                        {diseaseRisks.map((dr, idx) => {
-                            const riskNum = dr.risk_percentage
+                        {possibleConditions.map((dr, idx) => {
+                            const riskNum = dr.probability
                             const colorVar = riskNum > 60 ? 'var(--color-danger)' : riskNum > 30 ? 'var(--color-warning)' : 'var(--color-safe)'
                             const label = riskNum > 60 ? 'High' : riskNum > 30 ? 'Moderate' : 'Low'
                             return (
                                 <div key={idx} style={{ padding: '14px 18px', border: '1px solid var(--color-border)', borderRadius: 10, background: 'var(--color-bg)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                        <span style={{ fontWeight: 600, fontSize: 14 }}>{dr.disease}</span>
-                                        <span style={{ fontWeight: 700, fontSize: 15, color: colorVar }}>{riskNum}%</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                                        <div style={{ flex: 1, paddingRight: 8 }}>
+                                            <span style={{ fontWeight: 600, fontSize: 14, display: 'block', lineHeight: 1.3 }}>{dr.condition_name}</span>
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-2)' }}>{dr.specialty}</span>
+                                        </div>
+                                        <span style={{ fontWeight: 700, fontSize: 15, color: colorVar, flexShrink: 0 }}>{riskNum}%</span>
                                     </div>
                                     <div style={{ width: '100%', height: 7, background: 'var(--color-border)', borderRadius: 4, overflow: 'hidden' }}>
                                         <div style={{ width: `${riskNum}%`, height: '100%', background: colorVar, transition: 'width 1s ease-out', borderRadius: 4 }} />
                                     </div>
-                                    <div style={{ marginTop: 6, fontSize: 11, color: colorVar, fontWeight: 600 }}>{label} Risk</div>
+                                    <div style={{ marginTop: 6, fontSize: 11, color: colorVar, fontWeight: 600, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                        <span>{label} Risk</span> • <span>{dr.severity} Severity</span>
+                                        {dr.confidence_label && (
+                                            <>
+                                                • <span style={{ padding: '2px 6px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }}>{dr.confidence_label} Confidence</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    {dr.reason && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-2)', fontStyle: 'italic', lineHeight: 1.4 }}>{dr.reason}</div>}
                                 </div>
                             )
                         })}
                     </div>
                 </div>
             )}
+
+            {/* Trend Analysis */}
+            {!loadingHistory && history.length >= 2 && (() => {
+                const current = history[history.length - 1].score;
+                const previous = history[history.length - 2].score;
+                const diff = current - previous;
+                const isWorse = diff > 0;
+                const isBetter = diff < 0;
+                const trendColor = isWorse ? 'var(--color-danger)' : isBetter ? 'var(--color-safe)' : 'var(--color-text-2)';
+                const TrendIcon = isWorse ? TrendingUp : isBetter ? TrendingDown : Minus;
+                const trendText = isWorse ? 'Risk Increased' : isBetter ? 'Risk Decreased' : 'Stable';
+
+                return (
+                    <div className="card" style={{ padding: '24px 32px', marginBottom: 24 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <div>
+                                <div className="text-card-title" style={{ marginBottom: 4 }}>Risk Score Trend</div>
+                                <div className="text-meta">Your risk score historical progression.</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: trendColor, background: 'var(--color-bg)', padding: '6px 12px', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                                <TrendIcon size={16} />
+                                <span style={{ fontWeight: 600, fontSize: 13 }}>{Math.abs(diff).toFixed(1)} ({trendText})</span>
+                            </div>
+                        </div>
+                        <div style={{ height: 260, width: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                                    <XAxis dataKey="date" stroke="var(--color-text-2)" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="var(--color-text-2)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                                    <Tooltip 
+                                        contentStyle={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', borderRadius: 8 }}
+                                        itemStyle={{ color: 'var(--color-primary)', fontWeight: 600 }}
+                                        formatter={(value) => [Math.round(value), 'Risk Score']}
+                                    />
+                                    <Line type="monotone" dataKey="score" stroke="var(--color-primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--color-surface)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                )
+            })()}
 
             {/* Personalized Recommendations */}
             <div className="card" style={{ padding: '24px 32px' }}>

@@ -300,27 +300,38 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
     {{ 
       "conditions": [ 
         {{ "name": "Exact Disease Name", "risk": 85, "reason": "Specific clinical reason..." }},
-        {{ "name": "Alternative Condition 1", "risk": 45, "reason": "Reasoning..." }},
-        {{ "name": "Alternative Condition 2", "risk": 20, "reason": "Reasoning..." }},
-        {{ "name": "...", "risk": 10, "reason": "..." }}
+        {{ "name": "Alternative Condition 1", "risk": 45, "reason": "Reasoning..." }}
       ], 
-      "explanation": "Brief overview of the patient status." 
+      "explanation": {{
+        "summary": "Brief overview of the patient status.",
+        "symptoms_flagged": ["Symptom 1", "Symptom 2"],
+        "clinical_mapping": "How the symptoms and vitals map to the conditions."
+      }}
     }}
     """
     
     ai_conditions = []
-    ai_explanation = ""
+    ai_explanation = {
+        "summary": "Reasoning analysis complete.",
+        "symptoms_flagged": [],
+        "clinical_mapping": "Conditions are identified based on clinical patterns."
+    }
     ai_primary_risk = 0.0
     
     try:
         ai_data = await chatbot_service.get_ensemble_response(ai_prompt)
         ai_conditions = ai_data.get("conditions", [])
-        ai_explanation = ai_data.get("explanation", "Reasoning analysis complete.")
+        ai_explanation_data = ai_data.get("explanation", {})
+        if isinstance(ai_explanation_data, str):
+            ai_explanation["summary"] = ai_explanation_data
+        elif isinstance(ai_explanation_data, dict):
+            ai_explanation = ai_explanation_data
+        
         if ai_conditions:
             ai_primary_risk = float(ai_conditions[0].get("risk", 0)) / 100.0
     except Exception as e:
         logger.error(f"AI Reasoning logic failed: {e}")
-        ai_explanation = "AI reasoning service temporarily unavailable. Results based on clinical ML patterns."
+        ai_explanation["summary"] = "AI reasoning service temporarily unavailable. Results based on clinical ML patterns."
 
     # --- 4. Hybrid Integration Layer ---
     integrated_map = {}
@@ -361,8 +372,8 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
         
         if blended > 0.01 or len(final_disease_risks) < 3:
             final_disease_risks.append({
-                "disease": item["disease"],
-                "risk_percentage": round(blended * 100),
+                "condition_name": item["disease"],
+                "probability": round(blended * 100),
                 "reason": item["reason"],
                 "severity": "high" if any(x in item["disease"].lower() for x in ["copd", "pneumonia", "cancer", "heart", "tuberculosis"]) else "moderate",
                 "specialty": next((v for k, v in {
@@ -380,8 +391,8 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
     if not final_disease_risks and clinical_probs:
         for m_name, m_prob in sorted(clinical_probs.items(), key=lambda x: x[1], reverse=True)[:3]:
             final_disease_risks.append({
-                "disease": m_name,
-                "risk_percentage": round(m_prob * 100),
+                "condition_name": m_name,
+                "probability": round(m_prob * 100),
                 "reason": "Identified purely by statistical clinical models.",
                 "severity": "high" if any(x in m_name.lower() for x in ["copd", "pneumonia", "cancer", "heart", "tuberculosis"]) else "moderate",
                 "specialty": "General Physician"
@@ -424,8 +435,17 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
     confidence_tier = "high" if confidence_score >= 0.70 else ("moderate" if confidence_score >= 0.45 else "low")
 
     # Dynamic disease prediction count: If confidence is low, provide more alternatives (up to 8)
-    final_disease_risks = sorted(final_disease_risks, key=lambda x: x["risk_percentage"], reverse=True)
+    final_disease_risks = sorted(final_disease_risks, key=lambda x: x["probability"], reverse=True)
     
+    for condition in final_disease_risks:
+        prob = condition.get("probability", 0)
+        if prob >= 70:
+            condition["confidence_label"] = "High"
+        elif prob >= 40:
+            condition["confidence_label"] = "Medium"
+        else:
+            condition["confidence_label"] = "Low"
+            
     if confidence_tier == "low":
         max_predictions = 8
     elif confidence_tier == "moderate":
@@ -438,23 +458,45 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
 
     # ABSOLUTE LAST RESORT — system must NEVER return empty disease_risks
     if not final_disease_risks:
-        logger.error("[InferenceAPI] Both AI and ML failed — serving hardcoded baseline disease_risks.")
+        logger.error("[InferenceAPI] Both AI and ML failed — serving hardcoded baseline possible_conditions.")
         final_disease_risks = [
             {
-                "disease": "General Respiratory Distress",
-                "risk_percentage": 40,
+                "condition_name": "General Respiratory Distress",
+                "probability": 40,
                 "reason": "Baseline respiratory risk flagged. Insufficient data or model unavailability prevented detailed analysis.",
                 "severity": "moderate",
                 "specialty": "General Physician",
             },
             {
-                "disease": "Environmental Sensitivity",
-                "risk_percentage": 25,
+                "condition_name": "Environmental Sensitivity",
+                "probability": 25,
                 "reason": "Potential AQI-related airway irritation based on submitted environmental data.",
                 "severity": "moderate",
                 "specialty": "General Physician",
             },
         ]
+
+    # Urgency Classification System
+    spo2 = _to_float(vitals.get('spo2', 100))
+    if spo2 == 0:
+        spo2 = 100 # If SpO2 is missing/0, assume healthy to avoid false emergency
+        
+    urgency_tier = "Low Risk"
+    urgency_action = "Monitor your symptoms and maintain a healthy lifestyle."
+    time_to_action = "Monitor and reassess"
+    
+    if (spo2 > 0 and spo2 < 90) or final_risk_score > 0.85 or stairs_difficulty == 'Severe breathlessness':
+        urgency_tier = "Emergency"
+        urgency_action = "Seek IMMEDIATE emergency medical attention. Call emergency services."
+        time_to_action = "Immediate action (0-1 hour)"
+    elif (spo2 > 0 and spo2 < 95) or final_risk_score >= 0.65:
+        urgency_tier = "High Risk"
+        urgency_action = "Seek medical attention promptly for a professional evaluation."
+        time_to_action = "Within 24 hours"
+    elif final_risk_score >= 0.30:
+        urgency_tier = "Moderate Risk"
+        urgency_action = "Consider a consult if symptoms persist or worsen."
+        time_to_action = "Within 2-3 days"
 
     result = {
         "model_version": "v5.0-hybrid-ensemble",
@@ -462,9 +504,11 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
         "final_risk_score": round(final_risk_score, 4),
         "confidence_score": round(confidence_score, 4),
         "confidence_tier": confidence_tier,
-        "risk_category": "High Risk" if final_risk_score >= 0.65 else ("Moderate Risk" if final_risk_score >= 0.30 else "Low Risk"),
+        "urgency_tier": urgency_tier,
+        "urgency_action": urgency_action,
+        "time_to_action": time_to_action,
         "top_risk_factors": [f for f in [
-            "Low SpO2" if patient_data.get('vitals', {}).get('spo2', 100) < 95 else None,
+            "Low SpO2" if spo2 < 95 else None,
             "Reduced Inhaling Capacity" if inhale_capacity and inhale_capacity < 4 else None,
             "Reduced Exhaling Capacity" if exhale_capacity and exhale_capacity < 3 else None,
             "Reduced Breath Hold" if patient_data.get('vitals', {}).get('breath_hold_time', 60) < 20 else None,
@@ -472,16 +516,16 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
             "High AQI Exposure" if env_dict.get('AQI', 0) > 100 else None,
             "Smoking History" if "smoker" in str(patient_data.get('lifestyle', {}).get('smoking_habits', '')).lower() else None
         ] if f],
-        "disease_risks": final_disease_risks,
-        "primary_prediction": final_disease_risks[0]["disease"] if final_disease_risks else "General Respiratory Distress",
+        "possible_conditions": final_disease_risks,
+        "primary_prediction": final_disease_risks[0]["condition_name"] if final_disease_risks else "General Respiratory Distress",
         "ai_explanation": ai_explanation,
         "input_quality_score": round(input_quality_score, 2),
         "recommended_specialty": final_disease_risks[0]["specialty"] if final_disease_risks else "General Physician",
-        "urgent_attention": any(d["severity"] == "high" for d in final_disease_risks) or final_risk_score > 0.75,
+        "urgent_attention": urgency_tier in ["Emergency", "High Risk"],
         "safety_flags": "Significant disagreement between clinical patterns and AI reasoning." if agreement < 0.4 else None,
-        "medical_disclaimer": "This system provides AI-assisted insights and is NOT a medical diagnosis. Consult a doctor.",
+        "medical_disclaimer": "This system provides AI-assisted insights and is NOT a medical diagnosis. Consult a qualified doctor.",
         "recommended_doctors": [],
-        "priority_recommendation": False
+        "priority_recommendation": urgency_tier in ["Emergency", "High Risk"]
     }
 
     # Doctor Recommendations
@@ -492,9 +536,9 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
             rec_result = get_doctors(disease=target_disease, city=user_city)
             recommended_list = rec_result.get("doctors", [])[:5]
             result["recommended_doctors"] = recommended_list
-            result["priority_recommendation"] = result["urgent_attention"]
+            # Priority connects to urgent_attention, which handles Emergency/High Risk highlighting.
     except Exception as e:
         logger.error(f"Failed to fetch doctor recommendations: {e}")
 
-    logger.info(f"Clinical Inference Completed for {user.id}: {len(result['disease_risks'])} diseases identified.")
+    logger.info(f"Clinical Inference Completed for {getattr(user, 'id', 'anonymous')}: {len(result['possible_conditions'])} conditions identified.")
     return result
