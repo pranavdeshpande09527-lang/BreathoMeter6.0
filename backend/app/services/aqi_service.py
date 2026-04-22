@@ -11,6 +11,7 @@ class AQIService:
         self.aqicn_key = settings.aqicn_api_key
         self.ow_key = settings.openweather_api_key
         self.ow_base_url = "http://api.openweathermap.org/data/2.5"
+        self.ow_geo_url = "http://api.openweathermap.org/geo/1.0"
         self.aqicn_url = "https://api.waqi.info"
 
     def _get_cpcb_category(self, aqi: int) -> str:
@@ -88,9 +89,29 @@ class AQIService:
                 w_resp = await client.get(weather_url)
                 w_data = w_resp.json() if w_resp.status_code == 200 else {}
 
-                # If in geo-mode, try to upgrade coordinates to a city name from weather data response
-                if "geo:" in location and w_data.get("name"):
-                    location_name = w_data["name"]
+                # 5. Resolve human-readable location name if in geo-mode
+                if "geo:" in location:
+                    # Priority 1: Dedicated Geocoding API (Most precise for cities)
+                    try:
+                        geo_url = f"{self.ow_geo_url}/reverse?lat={lat}&lon={lon}&limit=1&appid={self.ow_key}"
+                        geo_resp = await client.get(geo_url)
+                        if geo_resp.status_code == 200:
+                            geo_data = geo_resp.json()
+                            if geo_data and isinstance(geo_data, list) and len(geo_data) > 0:
+                                resolved_name = geo_data[0].get("name")
+                                # Include state/country for clarity if available
+                                state = geo_data[0].get("state")
+                                country = geo_data[0].get("country")
+                                if resolved_name:
+                                    location_name = f"{resolved_name}"
+                                    if state: location_name += f", {state}"
+                                    logger.info(f"Resolved geo-location to: {location_name}")
+                        
+                        # Priority 2: Fallback to weather station name
+                        if location_name.startswith("Lat:") and w_data.get("name"):
+                            location_name = w_data["name"]
+                    except Exception as geo_err:
+                        logger.warning(f"Geocoding resolution failed: {geo_err}")
                 
                 weather_list = w_data.get("weather", [])
                 weather_desc = weather_list[0].get("description") if weather_list else None

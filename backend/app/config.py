@@ -2,12 +2,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
-    gemini_api_key: str
-    groq_api_key: str
-    aqicn_api_key: str
-    openweather_api_key: str
-    supabase_url: str
-    supabase_key: str
+    gemini_api_key: Optional[str] = None
+    groq_api_key: Optional[str] = None
+    aqicn_api_key: Optional[str] = None
+    openweather_api_key: Optional[str] = None
+    supabase_url: Optional[str] = None
+    supabase_key: Optional[str] = None
     
     # New Auth & Env settings
     environment: str = "development"
