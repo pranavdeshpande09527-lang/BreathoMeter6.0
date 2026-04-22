@@ -87,6 +87,10 @@ class AQIService:
                 weather_url = f"{self.ow_base_url}/weather?lat={lat}&lon={lon}&appid={self.ow_key}&units=metric"
                 w_resp = await client.get(weather_url)
                 w_data = w_resp.json() if w_resp.status_code == 200 else {}
+
+                # If in geo-mode, try to upgrade coordinates to a city name from weather data response
+                if "geo:" in location and w_data.get("name"):
+                    location_name = w_data["name"]
                 
                 weather_list = w_data.get("weather", [])
                 weather_desc = weather_list[0].get("description") if weather_list else None
