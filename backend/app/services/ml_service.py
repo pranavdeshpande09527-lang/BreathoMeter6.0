@@ -5,7 +5,7 @@ import numpy as np
 from fastapi import HTTPException
 from app.database import supabase_request
 
-MODEL_DIR = "app/ml_models"
+MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models")
 MODEL_PATH = os.path.join(MODEL_DIR, "respiratory_risk_model.pkl")
 LABEL_ENCODER_PATH = os.path.join(MODEL_DIR, "label_encoder.pkl")
 SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
