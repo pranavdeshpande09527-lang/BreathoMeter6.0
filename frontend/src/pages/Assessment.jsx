@@ -97,6 +97,28 @@ export default function Assessment() {
         }
         const breathingMetrics = getBreathingMetrics(data)
 
+        // ── Hoist shared variables so all try-blocks below can access them ──
+        const symptomEntries = [
+            { key: 'coughSev', label: 'Cough' },
+            { key: 'breathlessnessSev', label: 'Breathlessness' },
+            { key: 'chestPain', label: 'Chest Pain' },
+            { key: 'fatigue', label: 'Fatigue' },
+            { key: 'fever', label: 'Fever' },
+            { key: 'sleepDisturbance', label: 'Sleep Disturbance' },
+            { key: 'nightCoughSev', label: 'Night Cough' },
+            { key: 'phlegmSev', label: 'Phlegm/Mucus' },
+            { key: 'wheezingSev', label: 'Wheezing' },
+            { key: 'dizzinessSev', label: 'Dizziness' },
+            { key: 'nasalCongestionSev', label: 'Nasal Congestion' }
+        ];
+        const activeSymptoms = symptomEntries
+            .filter(s => (Number(data[s.key]) || 0) > 0)
+            .map(s => `${s.label} (severity ${data[s.key]}/5${data[`${s.key}Days`] ? `, ${data[`${s.key}Days`]} days` : ''})`)
+            .join(', ') || 'None reported';
+        const medicalHistory = (data.conditions && data.conditions.length > 0)
+            ? data.conditions.join(', ')
+            : 'No known conditions';
+
         // ── All API calls are wrapped individually so a single failure
         // ── (including a 401 from an expired token) NEVER blocks the
         // ── navigate() at the end. The user always reaches the results page.
@@ -154,29 +176,7 @@ export default function Assessment() {
                     riskFactors.push("Exertional Breathlessness");
                 }
 
-                // Build a rich symptom string from Step4Symptoms severity sliders
-                const symptomEntries = [
-                    { key: 'coughSev', label: 'Cough' },
-                    { key: 'breathlessnessSev', label: 'Breathlessness' },
-                    { key: 'chestPain', label: 'Chest Pain' },
-                    { key: 'fatigue', label: 'Fatigue' },
-                    { key: 'fever', label: 'Fever' },
-                    { key: 'sleepDisturbance', label: 'Sleep Disturbance' },
-                    { key: 'nightCoughSev', label: 'Night Cough' },
-                    { key: 'phlegmSev', label: 'Phlegm/Mucus' },
-                    { key: 'wheezingSev', label: 'Wheezing' },
-                    { key: 'dizzinessSev', label: 'Dizziness' },
-                    { key: 'nasalCongestionSev', label: 'Nasal Congestion' }
-                ];
-                const activeSymptoms = symptomEntries
-                    .filter(s => (Number(data[s.key]) || 0) > 0)
-                    .map(s => `${s.label} (severity ${data[s.key]}/5${data[`${s.key}Days`] ? `, ${data[`${s.key}Days`]} days` : ''})`)
-                    .join(', ') || 'None reported';
-
-                // Build medical history string from Step5Medical conditions
-                const medicalHistory = (data.conditions && data.conditions.length > 0)
-                    ? data.conditions.join(', ')
-                    : 'No known conditions';
+                // activeSymptoms and medicalHistory are hoisted above (computed once before all try blocks)
 
                 // Build lifestyle info from Step6Lifestyle
                 const smokingStatus = data.smoking || 'Unknown';

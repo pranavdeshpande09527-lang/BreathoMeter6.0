@@ -489,6 +489,220 @@ export default function AssessmentResults() {
                 <MiniGauge title="Environmental Risk" score={scores.environmentalRisk} type="risk" icon={Cloud} />
             </div>
 
+            {/* ═══════════════════════════════════════════════════════════════
+                MOST LIKELY CONDITION — Hero Card (Primary Clinical Finding)
+                Always rendered when prediction data is available.
+            ══════════════════════════════════════════════════════════════════ */}
+            {(mostLikely || possibleConditions.length > 0) && (() => {
+                const isEmergency = predictionDetails?.urgency_tier === 'Emergency'
+                const isSingle = mode === 'single' && mostLikely
+                const agreementInfo = getAgreementDetails(agreementStatus)
+                const confScore = predictionDetails?.confidence_score
+                const confPct = confScore != null ? Math.round(confScore * 100) : null
+
+                return (
+                    <div style={{
+                        marginBottom: 28,
+                        borderRadius: 20,
+                        overflow: 'hidden',
+                        boxShadow: isEmergency
+                            ? '0 0 0 2px rgba(220,38,38,0.6), 0 8px 32px rgba(220,38,38,0.18)'
+                            : '0 8px 32px rgba(37,99,235,0.12)',
+                        border: isEmergency ? '2px solid rgba(220,38,38,0.5)' : '1px solid rgba(37,99,235,0.18)',
+                        background: isSingle
+                            ? (isEmergency
+                                ? 'linear-gradient(135deg, #1a0000 0%, #2d0505 60%, #1a0000 100%)'
+                                : 'linear-gradient(135deg, #0a1628 0%, #0d1f40 60%, #0a1628 100%)')
+                            : 'var(--color-surface)'
+                    }}>
+
+                        {/* Header strip */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            flexWrap: 'wrap', gap: 10,
+                            padding: '14px 24px',
+                            background: isEmergency ? 'rgba(220,38,38,0.15)' : 'rgba(37,99,235,0.10)',
+                            borderBottom: isEmergency ? '1px solid rgba(220,38,38,0.3)' : '1px solid rgba(37,99,235,0.15)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {isEmergency && (
+                                    <span style={{
+                                        display: 'inline-block', width: 10, height: 10,
+                                        borderRadius: '50%', background: '#dc2626',
+                                        boxShadow: '0 0 0 0 rgba(220,38,38,0.7)',
+                                        animation: 'mlc-pulse 1.4s ease-in-out infinite'
+                                    }} />
+                                )}
+                                <span style={{
+                                    fontWeight: 800, fontSize: 11,
+                                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                                    color: isEmergency ? '#fca5a5' : 'rgba(147,197,253,0.9)'
+                                }}>
+                                    🧠 AI Most Likely Condition
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                {/* Agreement badge */}
+                                {agreementInfo && (() => {
+                                    const AgreIcon = agreementInfo.icon
+                                    return (
+                                        <span style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                                            fontSize: 12, fontWeight: 700,
+                                            padding: '4px 10px', borderRadius: 20,
+                                            background: agreementInfo.bg, color: agreementInfo.color
+                                        }}>
+                                            <AgreIcon size={13} />{agreementInfo.label}
+                                        </span>
+                                    )
+                                })()}
+                                {/* Confidence pill */}
+                                {confPct != null && (
+                                    <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                                        fontSize: 12, fontWeight: 700, padding: '4px 10px',
+                                        borderRadius: 20,
+                                        background: confPct >= 70 ? 'rgba(22,163,74,0.15)' : confPct >= 50 ? 'rgba(217,119,6,0.15)' : 'rgba(220,38,38,0.15)',
+                                        color: confPct >= 70 ? '#4ade80' : confPct >= 50 ? '#fbbf24' : '#f87171'
+                                    }}>
+                                        Confidence: {confPct}%
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        {isSingle ? (
+                            /* ── SINGLE MODE: high-confidence single prediction ── */
+                            <div style={{ padding: '28px 28px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <div style={{
+                                    fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px',
+                                    lineHeight: 1.15,
+                                    color: isEmergency ? '#fca5a5' : '#93c5fd',
+                                    textShadow: isEmergency ? '0 0 24px rgba(220,38,38,0.4)' : '0 0 24px rgba(59,130,246,0.4)'
+                                }}>
+                                    {mostLikely.name || mostLikely.condition_name}
+                                </div>
+
+                                {mostLikely.reason && (
+                                    <div style={{
+                                        fontSize: 14, lineHeight: 1.65,
+                                        color: isEmergency ? 'rgba(252,165,165,0.85)' : 'rgba(147,197,253,0.8)',
+                                        maxWidth: 680
+                                    }}>
+                                        {mostLikely.reason}
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginTop: 4 }}>
+                                    <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                                        background: isEmergency ? 'rgba(220,38,38,0.2)' : 'rgba(37,99,235,0.2)',
+                                        color: isEmergency ? '#fca5a5' : '#93c5fd',
+                                        border: `1px solid ${isEmergency ? 'rgba(220,38,38,0.4)' : 'rgba(37,99,235,0.3)'}`,
+                                        borderRadius: 10, padding: '8px 16px',
+                                        fontSize: 16, fontWeight: 700
+                                    }}>
+                                        {mostLikely.probability}% Probability
+                                    </span>
+                                    {mostLikely.confidence_label && (
+                                        <span style={{
+                                            fontSize: 13, padding: '6px 12px', borderRadius: 8, fontWeight: 600,
+                                            background: 'rgba(255,255,255,0.06)',
+                                            color: 'rgba(255,255,255,0.6)',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}>
+                                            {mostLikely.confidence_label} Confidence
+                                        </span>
+                                    )}
+                                    {mostLikely.specialty && (
+                                        <span style={{
+                                            fontSize: 12, padding: '5px 10px', borderRadius: 8,
+                                            background: 'rgba(255,255,255,0.04)',
+                                            color: 'rgba(255,255,255,0.5)',
+                                            border: '1px solid rgba(255,255,255,0.08)'
+                                        }}>
+                                            🏥 {mostLikely.specialty}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Compliance disclaimer inline */}
+                                <div style={{
+                                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                                    padding: '10px 14px', borderRadius: 10, marginTop: 4,
+                                    background: 'rgba(255,255,255,0.04)',
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5
+                                }}>
+                                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                                    This is an AI-based prediction and not a confirmed medical diagnosis. Consult a qualified healthcare professional for clinical evaluation.
+                                </div>
+                            </div>
+                        ) : (
+                            /* ── MULTI MODE: models disagree, show top conditions ── */
+                            <div style={{ padding: '20px 24px 20px' }}>
+                                <div style={{ marginBottom: 14, fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                                    AI models indicate multiple possibilities. Review the top conditions identified below.
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {(possibleConditions.length > 0 ? possibleConditions : alternatives).slice(0, 4).map((cond, idx) => {
+                                        const name = cond.name || cond.condition_name
+                                        const prob = cond.probability || 0
+                                        const barColor = prob > 60 ? 'var(--color-danger)' : prob > 30 ? 'var(--color-warning)' : 'var(--color-safe)'
+                                        const isTop = idx === 0
+                                        return (
+                                            <div key={idx} style={{
+                                                display: 'flex', alignItems: 'center', gap: 14,
+                                                padding: '10px 14px', borderRadius: 10,
+                                                background: isTop ? 'rgba(37,99,235,0.07)' : 'var(--color-bg)',
+                                                border: isTop ? '1px solid rgba(37,99,235,0.2)' : '1px solid var(--color-border)'
+                                            }}>
+                                                <div style={{
+                                                    width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                                                    background: barColor, display: 'flex', alignItems: 'center',
+                                                    justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 12
+                                                }}>
+                                                    {idx + 1}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: isTop ? 700 : 500, fontSize: 14, color: 'var(--color-text)', marginBottom: 4 }}>
+                                                        {name}
+                                                        {isTop && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', borderRadius: 6, background: 'rgba(37,99,235,0.12)', color: 'var(--color-primary)' }}>Top Pick</span>}
+                                                    </div>
+                                                    <div style={{ width: '100%', height: 5, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
+                                                        <div style={{ width: `${prob}%`, height: '100%', background: barColor, borderRadius: 3, transition: 'width 0.8s ease-out' }} />
+                                                    </div>
+                                                </div>
+                                                <div style={{ fontWeight: 700, fontSize: 15, color: barColor, flexShrink: 0, minWidth: 40, textAlign: 'right' }}>
+                                                    {prob}%
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                <div style={{
+                                    marginTop: 12, fontSize: 11,
+                                    color: 'var(--color-text-2)', lineHeight: 1.5,
+                                    display: 'flex', alignItems: 'flex-start', gap: 6
+                                }}>
+                                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                                    This is an AI-based prediction and not a confirmed medical diagnosis. Consult a qualified healthcare professional.
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )
+            })()}
+            {/* Pulse animation for emergency indicator */}
+            <style>{`
+                @keyframes mlc-pulse {
+                    0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.7); }
+                    70% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+                    100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+                }
+            `}</style>
+
             {/* Anatomical Visualization */}
             <div className="card section" style={{ overflow: 'hidden', marginBottom: 24 }}>
                 <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '32px', alignItems: 'center', padding: '16px' }}>
@@ -656,38 +870,7 @@ export default function AssessmentResults() {
                 </div>
             )}
 
-            {/* Most Likely Condition (Single Mode) */}
-            {mostLikely && mode === 'single' && (
-                <div className="card" style={{ padding: '24px 32px', marginBottom: 24, borderLeft: '4px solid var(--color-primary)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-                        <div style={{ flex: '1 1 300px' }}>
-                            <div className="text-card-title" style={{ marginBottom: 4 }}>Most Likely Condition</div>
-                            <div className="text-meta" style={{ marginBottom: 16 }}>Detected with high confidence and model agreement.</div>
-                            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-primary)', marginBottom: 8 }}>
-                                {mostLikely.name || mostLikely.condition_name}
-                            </div>
-                            <div style={{ fontSize: 14, color: 'var(--color-text)', lineHeight: 1.5 }}>
-                                {mostLikely.reason}
-                            </div>
-                            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                <span className="badge badge-primary">{mostLikely.probability}% Probability</span>
-                                {mostLikely.confidence_label && <span className="badge" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>{mostLikely.confidence_label} Confidence</span>}
-                            </div>
-                        </div>
-                        {agreementStatus && (() => {
-                            const details = getAgreementDetails(agreementStatus);
-                            if (!details) return null;
-                            const Icon = details.icon;
-                            return (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: details.bg, color: details.color, padding: '8px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
-                                    <Icon size={16} />
-                                    {details.label}
-                                </div>
-                            );
-                        })()}
-                    </div>
-                </div>
-            )}
+            {/* Most Likely Condition — promoted above, removed from here to avoid duplication */}
 
             {/* Possible Conditions Breakdown */}
             {(alternatives.length > 0 || possibleConditions.length > 0) && (
