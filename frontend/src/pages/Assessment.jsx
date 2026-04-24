@@ -272,9 +272,12 @@ export default function Assessment() {
                         // Serialize ai_explanation to string if inference returned an object
                         if (inferenceRes.ai_explanation && typeof inferenceRes.ai_explanation === 'object') {
                             const expl = inferenceRes.ai_explanation;
+                            const symptomsStr = Array.isArray(expl.symptoms_flagged)
+                                ? expl.symptoms_flagged.join(', ')
+                                : (expl.symptoms_flagged || '');
                             finalPredictionPayload.ai_explanation = [
                                 expl.summary,
-                                expl.symptoms_flagged ? `Symptoms: ${expl.symptoms_flagged}` : '',
+                                symptomsStr ? `Symptoms: ${symptomsStr}` : '',
                                 expl.clinical_mapping ? `Clinical Mapping: ${expl.clinical_mapping}` : ''
                             ].filter(Boolean).join(' | ');
                         }
@@ -284,6 +287,9 @@ export default function Assessment() {
                         if (inferenceRes.urgency_action) finalPredictionPayload.urgency_action = inferenceRes.urgency_action;
                         if (inferenceRes.safety_flags) finalPredictionPayload.safety_flags = inferenceRes.safety_flags;
                         if (inferenceRes.time_to_action) finalPredictionPayload.time_to_action = inferenceRes.time_to_action;
+
+                        // Strip inference-only fields not in PredictionRequest schema — they cause 422 on /prediction/store
+                        ['timestamp', 'possible_conditions', 'medical_disclaimer'].forEach(f => delete finalPredictionPayload[f]);
                     }
                 } catch (inferenceErr) {
                     console.error("[Assessment] Inference API failed, using fallback:", inferenceErr);
