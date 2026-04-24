@@ -3,10 +3,9 @@ import logging
 from contextlib import asynccontextmanager
 
 import sentry_sdk
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from app.core.errors import setup_error_handlers
 from app.core.rate_limit import setup_rate_limiting
 from app.database import init_db_clients, close_db_clients
@@ -155,19 +154,29 @@ if ENVIRONMENT == "development":
         "http://127.0.0.1:5174",
     ])
 
+# ── CORS middleware ────────────────────────────────────────────────────────────────
+# FastAPI applies middlewares in LIFO order.
+# CORSMiddleware MUST be registered LAST so it runs FIRST on incoming
+# requests, guaranteeing OPTIONS preflight gets the correct headers.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
+# Security-hardening headers (production only).
+# NOTE: We intentionally do NOT add HTTPSRedirectMiddleware here because
+# Render terminates TLS at the load-balancer level. Adding it would cause
+# the backend to redirect its own OPTIONS preflight to HTTPS, breaking CORS.
 if ENVIRONMENT == "production":
-    app.add_middleware(HTTPSRedirectMiddleware)
-
     @app.middleware("http")
-    async def security_headers_middleware(request, call_next):
+    async def security_headers_middleware(request: Request, call_next):
+        # Pass OPTIONS preflight straight through so CORS MW handles it.
+        if request.method == "OPTIONS":
+            return await call_next(request)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
