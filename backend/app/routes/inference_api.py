@@ -239,15 +239,15 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
             raw_symptoms = " ".join([str(s).lower() for s in raw_symptoms_val]) if isinstance(raw_symptoms_val, list) else str(raw_symptoms_val).lower()
             
             input_dict = {
-                'Age': float(patient_data.get('age', 30)),
-                'Gender': patient_data.get('gender', 'Other'),
-                'Smoking': patient_data.get('lifestyle', {}).get('smoking_habits', 'Never'),
-                'AQI': float(env_dict.get('AQI', 50)),
-                'BMI': float(patient_data.get('bmi', 24.5)),
-                'SpO2': float(patient_data.get('vitals', {}).get('spo2', 98)),
-                'BreathHold': float(patient_data.get('vitals', {}).get('breath_hold_time', 45)),
-                'InhaleCapacity': float(patient_data.get('vitals', {}).get('inhale_capacity', 5)),
-                'ExhaleCapacity': float(patient_data.get('vitals', {}).get('exhale_capacity', 4))
+                'Age': _to_float(patient_data.get('age'), 30),
+                'Gender': patient_data.get('gender') or 'Other',
+                'Smoking': patient_data.get('lifestyle', {}).get('smoking_habits') or 'Never',
+                'AQI': _to_float(env_dict.get('AQI'), 50),
+                'BMI': _to_float(patient_data.get('bmi'), 24.5),
+                'SpO2': _to_float(patient_data.get('vitals', {}).get('spo2'), 98),
+                'BreathHold': _to_float(patient_data.get('vitals', {}).get('breath_hold_time'), 45),
+                'InhaleCapacity': _to_float(patient_data.get('vitals', {}).get('inhale_capacity'), 5),
+                'ExhaleCapacity': _to_float(patient_data.get('vitals', {}).get('exhale_capacity'), 4)
             }
             for sym in clinical_symptoms:
                 input_dict[f'sym_{sym}'] = 1 if sym in raw_symptoms else 0
