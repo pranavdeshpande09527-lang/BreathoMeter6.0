@@ -333,8 +333,42 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
         logger.error(f"AI Reasoning logic failed: {e}")
         ai_explanation["summary"] = "AI reasoning service temporarily unavailable. Results based on clinical ML patterns."
 
+    respiratory_strain = 0.0
+    if inhale_capacity and inhale_capacity < 4:
+        respiratory_strain += 0.08
+    elif inhale_capacity and inhale_capacity < 5:
+        respiratory_strain += 0.04
+
+    if exhale_capacity and exhale_capacity < 3:
+        respiratory_strain += 0.08
+    elif exhale_capacity and exhale_capacity < 4:
+        respiratory_strain += 0.04
+
+    if breath_hold_time and breath_hold_time < 15:
+        respiratory_strain += 0.10
+    elif breath_hold_time and breath_hold_time < 25:
+        respiratory_strain += 0.05
+
+    stairs_difficulty = str(vitals.get('stairs_difficulty', '') or '')
+    if stairs_difficulty == 'Severe breathlessness':
+        respiratory_strain += 0.10
+    elif stairs_difficulty == 'Moderate breathlessness':
+        respiratory_strain += 0.05
+
+    symptom_severity_score = min(1.0, respiratory_strain / 0.35)
+
     # --- 4. Hybrid Integration Layer ---
     integrated_map = {}
+    
+    ai_top_prediction = ai_conditions[0].get("name", "").lower().strip() if ai_conditions else ""
+    ml_top_prediction = max(clinical_probs.items(), key=lambda x: x[1])[0].lower().strip() if clinical_probs else ""
+    
+    agreement_status = "no_match"
+    if ml_top_prediction and ai_top_prediction and ml_top_prediction == ai_top_prediction:
+        agreement_status = "strong_match"
+    elif any(ml_top_prediction in ac.get("name", "").lower() or ac.get("name", "").lower() in ml_top_prediction for ac in ai_conditions):
+        agreement_status = "partial_match"
+
     for ac in ai_conditions:
         name = ac.get("name", "Unknown Condition").title()
         key = name.lower().strip()
@@ -367,13 +401,16 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
     final_disease_risks = []
     for _, item in integrated_map.items():
         ai_r, ml_r = item["ai_risk"], item["ml_risk"]
-        # WEIGHTED BLEND: 80% AI Priority (User requested higher reliance on AI)
-        blended = (0.80 * ai_r) + (0.20 * ml_r) if ai_r > 0 and ml_r > 0 else (ai_r * 0.95 if ai_r > 0 else ml_r * 0.70)
-        
+        # NEW WEIGHTED BLEND: 60% AI, 25% ML, 10% Symptom Severity, 5% Environmental AQI
+        if ai_r > 0 or ml_r > 0:
+            blended = (0.60 * ai_r) + (0.25 * ml_r) + (0.10 * symptom_severity_score) + (0.05 * env_ml_score)
+        else:
+            blended = 0.0
+
         if blended > 0.01 or len(final_disease_risks) < 3:
             final_disease_risks.append({
                 "condition_name": item["disease"],
-                "probability": round(blended * 100),
+                "probability": min(100, round(blended * 100)),
                 "reason": item["reason"],
                 "severity": "high" if any(x in item["disease"].lower() for x in ["copd", "pneumonia", "cancer", "heart", "tuberculosis"]) else "moderate",
                 "specialty": next((v for k, v in {
@@ -392,33 +429,11 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
         for m_name, m_prob in sorted(clinical_probs.items(), key=lambda x: x[1], reverse=True)[:3]:
             final_disease_risks.append({
                 "condition_name": m_name,
-                "probability": round(m_prob * 100),
+                "probability": min(100, round(m_prob * 100)),
                 "reason": "Identified purely by statistical clinical models.",
                 "severity": "high" if any(x in m_name.lower() for x in ["copd", "pneumonia", "cancer", "heart", "tuberculosis"]) else "moderate",
                 "specialty": "General Physician"
             })
-
-    respiratory_strain = 0.0
-    if inhale_capacity and inhale_capacity < 4:
-        respiratory_strain += 0.08
-    elif inhale_capacity and inhale_capacity < 5:
-        respiratory_strain += 0.04
-
-    if exhale_capacity and exhale_capacity < 3:
-        respiratory_strain += 0.08
-    elif exhale_capacity and exhale_capacity < 4:
-        respiratory_strain += 0.04
-
-    if breath_hold_time and breath_hold_time < 15:
-        respiratory_strain += 0.10
-    elif breath_hold_time and breath_hold_time < 25:
-        respiratory_strain += 0.05
-
-    stairs_difficulty = str(vitals.get('stairs_difficulty', '') or '')
-    if stairs_difficulty == 'Severe breathlessness':
-        respiratory_strain += 0.10
-    elif stairs_difficulty == 'Moderate breathlessness':
-        respiratory_strain += 0.05
 
     # Metrics & Trust
     # FINAL RISK SCORE: Scaled between 0-1
@@ -466,6 +481,7 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
                 "reason": "Baseline respiratory risk flagged. Insufficient data or model unavailability prevented detailed analysis.",
                 "severity": "moderate",
                 "specialty": "General Physician",
+                "confidence_label": "Low"
             },
             {
                 "condition_name": "Environmental Sensitivity",
@@ -473,8 +489,16 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
                 "reason": "Potential AQI-related airway irritation based on submitted environmental data.",
                 "severity": "moderate",
                 "specialty": "General Physician",
+                "confidence_label": "Low"
             },
         ]
+        
+    # Determine Output Mode
+    top_prob = final_disease_risks[0]["probability"] if final_disease_risks else 0
+    if top_prob >= 70 and agreement_status == "strong_match":
+        output_mode = "single"
+    else:
+        output_mode = "multi"
 
     # Urgency Classification System
     spo2 = _to_float(vitals.get('spo2', 100))
@@ -499,7 +523,7 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
         time_to_action = "Within 2-3 days"
 
     result = {
-        "model_version": "v5.0-hybrid-ensemble",
+        "model_version": "v6.0-agreement-ensemble",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "final_risk_score": round(final_risk_score, 4),
         "confidence_score": round(confidence_score, 4),
@@ -516,14 +540,31 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
             "High AQI Exposure" if env_dict.get('AQI', 0) > 100 else None,
             "Smoking History" if "smoker" in str(patient_data.get('lifestyle', {}).get('smoking_habits', '')).lower() else None
         ] if f],
-        "possible_conditions": final_disease_risks,
-        "primary_prediction": final_disease_risks[0]["condition_name"] if final_disease_risks else "General Respiratory Distress",
+        "mode": output_mode,
+        "agreement_status": agreement_status,
+        "most_likely_condition": {
+            "name": final_disease_risks[0]["condition_name"] if final_disease_risks else "General Respiratory Distress",
+            "confidence": final_disease_risks[0]["probability"] if final_disease_risks else 40,
+            "confidence_label": final_disease_risks[0].get("confidence_label", "Low"),
+            "agreement": agreement_status
+        },
+        "alternatives": [
+            {
+                "name": dr["condition_name"],
+                "probability": dr["probability"],
+                "severity": dr["severity"],
+                "reason": dr["reason"],
+                "specialty": dr["specialty"]
+            } for dr in (final_disease_risks if output_mode == "multi" else final_disease_risks[1:])
+        ],
+        "possible_conditions": final_disease_risks,  # Retained for backwards compatibility if needed
         "ai_explanation": ai_explanation,
         "input_quality_score": round(input_quality_score, 2),
         "recommended_specialty": final_disease_risks[0]["specialty"] if final_disease_risks else "General Physician",
         "urgent_attention": urgency_tier in ["Emergency", "High Risk"],
         "safety_flags": "Significant disagreement between clinical patterns and AI reasoning." if agreement < 0.4 else None,
-        "medical_disclaimer": "This system provides AI-assisted insights and is NOT a medical diagnosis. Consult a qualified doctor.",
+        "medical_disclaimer": "This is an AI-based prediction and not a confirmed medical diagnosis. Consult a qualified doctor.",
+        "disclaimer": "This is an AI-based prediction and not a confirmed medical diagnosis.",
         "recommended_doctors": [],
         "priority_recommendation": urgency_tier in ["Emergency", "High Risk"]
     }
@@ -531,7 +572,7 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
     # Doctor Recommendations
     try:
         user_city = patient_data.get("city") or patient_data.get("location")
-        target_disease = result["primary_prediction"]
+        target_disease = result["most_likely_condition"]["name"]
         if target_disease:
             rec_result = get_doctors(disease=target_disease, city=user_city)
             recommended_list = rec_result.get("doctors", [])[:5]

@@ -310,6 +310,22 @@ export default function AssessmentResults() {
     const { scores, timestamp, predictionDetails, formData } = payload
     const d = formData || {}
     const possibleConditions = predictionDetails?.possible_conditions || []
+    
+    // New fields from refactored inference API
+    const mode = predictionDetails?.mode || 'multi'
+    const agreementStatus = predictionDetails?.agreement_status
+    const mostLikely = predictionDetails?.most_likely_condition
+    const alternatives = predictionDetails?.alternatives || []
+    const medicalDisclaimer = predictionDetails?.medical_disclaimer
+
+    const getAgreementDetails = (status) => {
+        switch(status) {
+            case 'strong_match': return { label: 'Strong Agreement', color: '#16a34a', bg: 'rgba(22,163,74,0.1)', icon: CheckCircle };
+            case 'partial_match': return { label: 'Partial Agreement', color: '#d97706', bg: 'rgba(217,119,6,0.1)', icon: AlertTriangle };
+            case 'no_match': return { label: 'Disagreement', color: '#dc2626', bg: 'rgba(220,38,38,0.1)', icon: AlertTriangle };
+            default: return null;
+        }
+    }
 
     const handleDownload = () => {
         const report = {
@@ -574,6 +590,23 @@ export default function AssessmentResults() {
                 </div>
             )}
 
+            {/* Compliance Disclaimer */}
+            {medicalDisclaimer && (
+                <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    padding: '12px 16px', borderRadius: 10, marginBottom: 24,
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-2)',
+                    fontSize: 12, lineHeight: 1.5
+                }}>
+                    <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--color-subtle)' }} />
+                    <div>
+                        <strong>Important:</strong> {medicalDisclaimer}
+                    </div>
+                </div>
+            )}
+
             {/* AI Explanation */}
             {predictionDetails?.ai_explanation && (
                 <div className="card" style={{ padding: '24px 32px', marginBottom: 24, background: 'var(--color-surface)', border: '1px solid var(--color-primary-light)' }}>
@@ -623,13 +656,64 @@ export default function AssessmentResults() {
                 </div>
             )}
 
+            {/* Most Likely Condition (Single Mode) */}
+            {mostLikely && mode === 'single' && (
+                <div className="card" style={{ padding: '24px 32px', marginBottom: 24, borderLeft: '4px solid var(--color-primary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+                        <div style={{ flex: '1 1 300px' }}>
+                            <div className="text-card-title" style={{ marginBottom: 4 }}>Most Likely Condition</div>
+                            <div className="text-meta" style={{ marginBottom: 16 }}>Detected with high confidence and model agreement.</div>
+                            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-primary)', marginBottom: 8 }}>
+                                {mostLikely.name || mostLikely.condition_name}
+                            </div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text)', lineHeight: 1.5 }}>
+                                {mostLikely.reason}
+                            </div>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <span className="badge badge-primary">{mostLikely.probability}% Probability</span>
+                                {mostLikely.confidence_label && <span className="badge" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>{mostLikely.confidence_label} Confidence</span>}
+                            </div>
+                        </div>
+                        {agreementStatus && (() => {
+                            const details = getAgreementDetails(agreementStatus);
+                            if (!details) return null;
+                            const Icon = details.icon;
+                            return (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: details.bg, color: details.color, padding: '8px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
+                                    <Icon size={16} />
+                                    {details.label}
+                                </div>
+                            );
+                        })()}
+                    </div>
+                </div>
+            )}
+
             {/* Possible Conditions Breakdown */}
-            {possibleConditions.length > 0 && (
+            {(alternatives.length > 0 || possibleConditions.length > 0) && (
                 <div className="card" style={{ padding: '24px 32px', marginBottom: 24 }}>
-                    <div className="text-card-title" style={{ marginBottom: 4 }}>Possible Conditions</div>
-                    <div className="text-meta" style={{ marginBottom: 20 }}>Risk scores are estimates based on your reported symptoms, lifestyle, and medical history. Not a clinical diagnosis.</div>
+                    <div className="text-card-title" style={{ marginBottom: 4 }}>
+                        {mode === 'single' ? 'Differential Diagnosis' : 'Possible Conditions'}
+                    </div>
+                    <div className="text-meta" style={{ marginBottom: 20 }}>
+                        {mode === 'single' ? 'Other conditions considered by the models:' : 'Risk scores are estimates based on your reported symptoms, lifestyle, and medical history. Not a clinical diagnosis.'}
+                    </div>
+                    
+                    {mode === 'multi' && agreementStatus && (() => {
+                        const details = getAgreementDetails(agreementStatus);
+                        if (!details) return null;
+                        const Icon = details.icon;
+                        return (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: details.bg, color: details.color, padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+                                <Icon size={16} />
+                                Models show {details.label.toLowerCase()} - displaying multiple possibilities.
+                            </div>
+                        );
+                    })()}
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-                        {possibleConditions.map((dr, idx) => {
+                        {(alternatives.length > 0 ? alternatives : possibleConditions).map((dr, idx) => {
+                            const name = dr.name || dr.condition_name
                             const riskNum = dr.probability
                             const colorVar = riskNum > 60 ? 'var(--color-danger)' : riskNum > 30 ? 'var(--color-warning)' : 'var(--color-safe)'
                             const label = riskNum > 60 ? 'High' : riskNum > 30 ? 'Moderate' : 'Low'
@@ -637,8 +721,8 @@ export default function AssessmentResults() {
                                 <div key={idx} style={{ padding: '14px 18px', border: '1px solid var(--color-border)', borderRadius: 10, background: 'var(--color-bg)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                                         <div style={{ flex: 1, paddingRight: 8 }}>
-                                            <span style={{ fontWeight: 600, fontSize: 14, display: 'block', lineHeight: 1.3 }}>{dr.condition_name}</span>
-                                            <span style={{ fontSize: 11, color: 'var(--color-text-2)' }}>{dr.specialty}</span>
+                                            <span style={{ fontWeight: 600, fontSize: 14, display: 'block', lineHeight: 1.3 }}>{name}</span>
+                                            {dr.specialty && <span style={{ fontSize: 11, color: 'var(--color-text-2)' }}>{dr.specialty}</span>}
                                         </div>
                                         <span style={{ fontWeight: 700, fontSize: 15, color: colorVar, flexShrink: 0 }}>{riskNum}%</span>
                                     </div>
@@ -646,7 +730,8 @@ export default function AssessmentResults() {
                                         <div style={{ width: `${riskNum}%`, height: '100%', background: colorVar, transition: 'width 1s ease-out', borderRadius: 4 }} />
                                     </div>
                                     <div style={{ marginTop: 6, fontSize: 11, color: colorVar, fontWeight: 600, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                                        <span>{label} Risk</span> • <span>{dr.severity} Severity</span>
+                                        <span>{label} Risk</span>
+                                        {dr.severity && <> • <span>{dr.severity} Severity</span></>}
                                         {dr.confidence_label && (
                                             <>
                                                 • <span style={{ padding: '2px 6px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }}>{dr.confidence_label} Confidence</span>
