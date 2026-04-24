@@ -535,7 +535,7 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
             "Low SpO2" if spo2 < 95 else None,
             "Reduced Inhaling Capacity" if inhale_capacity and inhale_capacity < 4 else None,
             "Reduced Exhaling Capacity" if exhale_capacity and exhale_capacity < 3 else None,
-            "Reduced Breath Hold" if patient_data.get('vitals', {}).get('breath_hold_time', 60) < 20 else None,
+            "Reduced Breath Hold" if patient_data.get('vitals', {}).get('breath_hold_time') is not None and patient_data.get('vitals', {}).get('breath_hold_time') < 20 else None,
             "Exertional Breathlessness" if stairs_difficulty in {"Moderate breathlessness", "Severe breathlessness"} else None,
             "High AQI Exposure" if env_dict.get('AQI', 0) > 100 else None,
             "Smoking History" if "smoker" in str(patient_data.get('lifestyle', {}).get('smoking_habits', '')).lower() else None
