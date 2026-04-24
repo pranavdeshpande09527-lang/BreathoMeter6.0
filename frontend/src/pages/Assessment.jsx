@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import * as Sentry from '@sentry/react'
 import { api } from '../utils/api'
 import {
     calculateRespiratoryRisk,
@@ -293,6 +294,15 @@ export default function Assessment() {
                     }
                 } catch (inferenceErr) {
                     console.error("[Assessment] Inference API failed, using fallback:", inferenceErr);
+                    
+                    // Capture inference error in Sentry, tagged for ML input issues
+                    Sentry.captureException(inferenceErr, { 
+                        tags: { 
+                            error_type: inferenceErr?.response?.status === 422 ? 'ML_INVALID_INPUT' : 'INFERENCE_FAILURE' 
+                        },
+                        extra: { payload: finalPredictionPayload }
+                    });
+
                     finalPredictionPayload.ai_explanation = `Based on your assessment, you are at ${respiratoryRisk > 50 ? 'an elevated' : 'a low'} risk for respiratory distress. Key factors: ${riskFactors.join(', ')}. AI ensemble was unavailable.`;
                 }
 

@@ -54,6 +54,16 @@ function generatePDF(report) {
     
     .risk-indicator { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-top: 8px; background: ${riskBg}; color: ${riskColor}; }
 
+    .hero-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; margin-bottom: 32px; }
+    .hero-card.emergency { background: #fef2f2; border: 2px solid #dc2626; }
+    .hero-label { font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .hero-card.emergency .hero-label { color: #dc2626; }
+    .hero-title { font-size: 28px; font-weight: 800; color: #111827; margin-bottom: 12px; }
+    .hero-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid #e5e7eb; }
+    .tag-confidence { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+    .tag-emergency { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
     .section { margin-bottom: 32px; }
     .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
     .section-icon { width: 8px; height: 8px; background: #2563eb; border-radius: 2px; }
@@ -109,6 +119,18 @@ function generatePDF(report) {
       <p style="font-size: 11px; color: #9ca3af; margin-top: 12px;">Determined by AI Ensemble Model</p>
     </div>
   </div>
+
+  ${(report.primary_prediction || (report.possible_conditions && report.possible_conditions.length > 0)) ? `
+  <div class="hero-card ${report.urgency_tier === 'Emergency' ? 'emergency' : ''}">
+    <div class="hero-label">AI Primary Finding</div>
+    <div class="hero-title">${report.primary_prediction || report.possible_conditions[0]?.disease || report.possible_conditions[0]?.condition_name || 'Inconclusive'}</div>
+    <div class="hero-tags">
+      <span class="tag tag-confidence">${report.mode === 'single' ? 'High Confidence (Single Condition)' : 'Multi-Condition Risk Profile'}</span>
+      ${report.urgency_tier === 'Emergency' ? `<span class="tag tag-emergency">⚠️ EMERGENCY RESPOND</span>` : ''}
+      ${report.confidence ? `<span class="tag">${report.confidence} Confidence</span>` : ''}
+    </div>
+  </div>
+  ` : ''}
 
   ${report.ai_explanation ? `
   <div class="section">
@@ -338,7 +360,11 @@ export default function AssessmentResults() {
             possible_conditions: predictionDetails?.possible_conditions,
             warnings: predictionDetails?.warnings,
             similar_cases_distribution: predictionDetails?.similar_cases_distribution,
-            confidence: predictionDetails?.confidence_score ? `${Math.round(predictionDetails.confidence_score * 100)}%` : null
+            confidence: predictionDetails?.confidence_score ? `${Math.round(predictionDetails.confidence_score * 100)}%` : null,
+            primary_prediction: predictionDetails?.most_likely_condition,
+            mode: predictionDetails?.mode || 'multi',
+            urgency_tier: predictionDetails?.urgency_tier,
+            agreement_status: predictionDetails?.agreement_status
         };
         generatePDF(report);
     };

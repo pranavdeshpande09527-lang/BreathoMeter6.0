@@ -3,14 +3,14 @@ import fs from 'fs';
 
 async function run() {
     const signupData = {
-        username: `critical_demo`,
+        username: `critical_demo_${Date.now()}`,
         password: 'Password123!',
         full_name: 'Critical Test Patient',
         role: 'patient'
     };
     
     // 1. Signup on PROD
-    const baseURL = 'https://breathometer6-0.onrender.com';
+    const baseURL = 'http://localhost:8001';
     const signupRes = await fetch(`${baseURL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -23,7 +23,7 @@ async function run() {
     let token = '';
     if (signupRes.status === 200 || signupRes.status === 201) {
         token = signupJson.access_token || signupJson.session?.access_token;
-    } else if (signupRes.status === 400 && signupJson.detail === "Username already registered") {
+    } else if (signupRes.status === 400 && (signupJson.detail === "Username already registered" || signupJson.detail === "Username already registered.")) {
         console.log("Account already exists, logging in...");
         const loginRes = await fetch(`${baseURL}/auth/login`, {
             method: 'POST',
@@ -34,6 +34,7 @@ async function run() {
             })
         });
         const loginJson = await loginRes.json();
+        console.log("Login JSON:", loginJson);
         token = loginJson.access_token;
     } else {
         console.error("Signup failed", signupJson);
@@ -66,7 +67,19 @@ async function run() {
                 cough_severity: 5 // Max severity
             },
             medical_history: ["Asthma", "Hypertension"],
-            symptoms: ["Severe shortness of breath", "Chest pain", "High fever", "Cyanosis"]
+            symptoms: ["Severe shortness of breath", "Chest pain", "High fever", "Cyanosis"],
+            symptom_duration: "3 days",
+            age: 45,
+            gender: "Male",
+            lifestyle: {
+                smoking_habits: "Smoker",
+                activity_level: "Sedentary"
+            },
+            respiratory_metrics: {
+                pef: 300,
+                fev1: 2.5,
+                fvc: 3.5
+            }
         }
     };
     
@@ -83,6 +96,7 @@ async function run() {
     
     // Store it in history just like the frontend does
     const predData = await predRes.json();
+    console.log("Prediction Data:", JSON.stringify(predData, null, 2));
     
     const storeRes = await fetch(`${baseURL}/prediction/store`, {
         method: 'POST',
