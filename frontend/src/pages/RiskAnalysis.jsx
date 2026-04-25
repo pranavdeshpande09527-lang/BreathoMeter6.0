@@ -736,7 +736,7 @@ export default function RiskAnalysis() {
                                             >
                                                 <div className="chip-header">
                                                     <span className="chip-name">{dr.disease || 'Unknown Condition'}</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                                         <SeverityBadge severity={dr.severity} />
                                                         <span className="chip-val">{riskNum}%</span>
                                                     </div>
@@ -895,7 +895,7 @@ export default function RiskAnalysis() {
                                             >
                                                 <div className="chip-header">
                                                     <span className="chip-name">{dr.disease || 'Alternative Condition'}</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                                         <SeverityBadge severity={dr.severity} />
                                                         <span className="chip-val" style={{ color: 'var(--color-muted)' }}>{riskNum}%</span>
                                                     </div>
@@ -1398,9 +1398,9 @@ export default function RiskAnalysis() {
         }
         .ra-disease-chip:hover { border-color: rgba(var(--color-primary-rgb), 0.3); background: rgba(var(--color-primary-rgb), 0.02); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,23,42,0.06); }
         .ra-disease-chip.active { border-color: var(--risk-color); box-shadow: 0 8px 24px rgba(0,0,0,0.04); transform: translateY(-2px) scale(1.01); z-index: 2; }
-        .chip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .chip-name { font-weight: 700; font-size: 13px; color: var(--color-text); }
-        .chip-val { font-weight: 800; font-size: 14px; color: var(--risk-color); }
+        .chip-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+        .chip-name { flex: 1; min-width: 0; font-weight: 700; font-size: 13px; color: var(--color-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
+        .chip-val { font-weight: 800; font-size: 14px; color: var(--risk-color); flex-shrink: 0; white-space: nowrap; }
         .chip-progress { height: 4px; background: rgba(0,0,0,0.05); border-radius: 4px; }
         .chip-progress-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
 
