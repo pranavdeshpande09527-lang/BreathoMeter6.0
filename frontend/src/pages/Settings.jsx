@@ -434,7 +434,7 @@ export default function Settings() {
                     { label: 'Medication reminders', desc: 'Scheduled medication and check reminders' },
                     { label: 'Doctor messages', desc: 'Messages from your assigned specialist' },
                 ].map(n => (
-                    <div key={n.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 0', borderBottom: '1px solid var(--color-border)' }}>
+                    <div key={n.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 0', borderBottom: '1px solid var(--color-border)', opacity: notifLoaded ? 1 : 0.5, pointerEvents: notifLoaded ? 'auto' : 'none' }}>
                         <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>{n.label}</div>
                             <div className="text-meta">{n.desc}</div>

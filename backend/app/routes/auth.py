@@ -378,8 +378,6 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
         # Always include user_id as the conflict-resolution key.
         # Keep None values out of non-email fields, but always include contact_email
         # (even if empty string) so clearing the field is persisted.
-        profile_record: dict = {"user_id": user.id}
-
         # Fields that should only be included if non-None (avoids overwriting with nulls)
         optional_fields = {
             "first_name": sanitize_free_text(data.first_name, max_length=80, field_name="first_name") if data.first_name is not None else None,
@@ -396,6 +394,16 @@ async def update_profile(data: ProfileUpdate, user=Depends(get_current_user)):
             "activity_level": sanitize_free_text(data.activity_level, max_length=30, field_name="activity_level") if data.activity_level is not None else None,
             "aqi_threshold": data.aqi_threshold,
         }
+        
+        # Fetch existing profile to prevent overwriting other fields (e.g. notification_prefs) with NULL during UPSERT
+        hp = await supabase_request(
+            "health_profiles",
+            "GET",
+            query_params={"user_id": f"eq.{user.id}", "limit": "1"},
+            token=user.token,
+        )
+        profile_record: dict = hp[0] if hp and len(hp) > 0 else {"user_id": user.id}
+
         profile_record.update({k: v for k, v in optional_fields.items() if v is not None})
 
         # contact_email is always included so the user can set or clear it
@@ -671,11 +679,21 @@ async def update_notifications(req: NotificationPreferences, user=Depends(get_cu
     from app.database import supabase_request
     import json as _json
     try:
+        # Fetch existing profile to prevent overwriting other fields with NULL during UPSERT
+        hp = await supabase_request(
+            "health_profiles",
+            "GET",
+            query_params={"user_id": f"eq.{user.id}", "limit": "1"},
+            token=user.token,
+        )
+        profile_record = hp[0] if hp and len(hp) > 0 else {"user_id": user.id}
+        profile_record["notification_prefs"] = req.preferences
+
         # Use PostgREST UPSERT (ON CONFLICT UPDATE) — reliable on both new and existing rows
         await supabase_request(
             "health_profiles",
             "POST",
-            {"user_id": user.id, "notification_prefs": req.preferences},
+            profile_record,
             token=user.token,
             upsert=True,
         )
