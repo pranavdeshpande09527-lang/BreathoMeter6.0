@@ -1183,10 +1183,16 @@ export default function RiskAnalysis() {
                                                             </div>
                                                             
                                                             <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-                                                                <button className="btn btn-primary" style={{ flex: 1, padding: '10px 0', fontSize: 14 }}>
-                                                                    Book Appointment
-                                                                </button>
-                                                                <button className="btn" style={{ flex: 1, padding: '10px 0', fontSize: 14, background: 'var(--color-surface-2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}>
+                                                                {doc.phone ? (
+                                                                    <a href={`tel:${doc.phone}`} className="btn btn-primary" style={{ flex: 1, padding: '10px 0', fontSize: 14, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                                        Book Appointment
+                                                                    </a>
+                                                                ) : (
+                                                                    <button className="btn btn-primary" style={{ flex: 1, padding: '10px 0', fontSize: 14, opacity: 0.6, cursor: 'not-allowed' }} onClick={(e) => e.stopPropagation()} disabled title="Phone number not available">
+                                                                        No Phone Available
+                                                                    </button>
+                                                                )}
+                                                                <button className="btn" style={{ flex: 1, padding: '10px 0', fontSize: 14, background: 'var(--color-surface-2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} onClick={(e) => e.stopPropagation()}>
                                                                     View Profile
                                                                 </button>
                                                             </div>
