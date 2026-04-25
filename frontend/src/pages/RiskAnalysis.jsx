@@ -1192,7 +1192,10 @@ export default function RiskAnalysis() {
                                                                         No Phone Available
                                                                     </button>
                                                                 )}
-                                                                <button className="btn" style={{ flex: 1, padding: '10px 0', fontSize: 14, background: 'var(--color-surface-2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} onClick={(e) => e.stopPropagation()}>
+                                                                <button className="btn" style={{ flex: 1, padding: '10px 0', fontSize: 14, background: 'var(--color-surface-2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    window.open(`https://www.google.com/search?q=${encodeURIComponent(doc.doctor_name + ' ' + (doc.hospital_name || ''))}`, '_blank');
+                                                                }}>
                                                                     View Profile
                                                                 </button>
                                                             </div>
