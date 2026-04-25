@@ -288,19 +288,32 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
     -------------------------------------
     YOUR TASK (STRICT)
     -------------------------------------
-    1. Identify up to 8 of the most likely respiratory or cardiovascular conditions.
-    2. YOU MUST provide at least 3 distinct possibilities. If the symptoms are vague or confidence is low, provide up to 8.
-    3. Provide a specific risk percentage (0-100) for EACH. ensure they are realistic.
-    4. Provide reasoning for each, especially how the environmental data (AQI) plus inhale, exhale, breath-hold, and SpO2 influenced the outcome.
-    5. Output MUST be a valid JSON object.
+    1. Identify up to 8 of the most likely respiratory or cardiovascular conditions (minimum 3).
+    2. Provide a numerical risk percentage (0-100) for EACH to drive the probability engine.
+    3. Determine a qualitative risk_level (Low, Moderate, High) and urgency_level (Low, Medium, High).
+    4. Provide actionable insights in simple, non-clinical language: what_this_means, why_it_matters, what_you_should_do, when_to_escalate.
+    5. Be explicit about the key_factors (e.g., AQI, smoking, SpO2).
+    6. Ensure compliance: use phrases like 'may indicate' and 'possible condition'. Avoid definitive diagnoses.
+    7. Output MUST be a valid JSON object.
     
     -------------------------------------
     RESPONSE FORMAT (STRICT JSON)
     -------------------------------------
     {{ 
       "conditions": [ 
-        {{ "name": "Exact Disease Name", "risk": 85, "reason": "Specific clinical reason..." }},
-        {{ "name": "Alternative Condition 1", "risk": 45, "reason": "Reasoning..." }}
+        {{ 
+          "name": "Condition Name (e.g. Asthma)", 
+          "risk": 85,
+          "risk_level": "High",
+          "urgency_level": "Medium",
+          "key_factors": ["High AQI", "Wheezing"],
+          "what_this_means": "Explanation connecting cause to effect without medical jargon.",
+          "why_it_matters": "Why they should care about this.",
+          "what_you_should_do": ["Specific step 1", "Specific step 2"],
+          "when_to_escalate": ["Symptom X", "Symptom Y"],
+          "confidence_level": "High",
+          "model_reasoning": "Simplified explanation of why this condition was selected."
+        }}
       ], 
       "explanation": {{
         "summary": "Brief overview of the patient status.",
@@ -376,7 +389,15 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
             "disease": name,
             "ai_risk": float(ac.get("risk", 0)) / 100.0,
             "ml_risk": 0.0,
-            "reason": ac.get("reason", "Identified via symptom-vitals reasoning.")
+            "reason": ac.get("model_reasoning", ac.get("reason", "Identified via symptom-vitals reasoning.")),
+            "risk_level": ac.get("risk_level", "Moderate"),
+            "urgency_level": ac.get("urgency_level", "Medium"),
+            "key_factors": ac.get("key_factors", []),
+            "what_this_means": ac.get("what_this_means", "This condition may indicate an underlying respiratory or cardiovascular issue."),
+            "why_it_matters": ac.get("why_it_matters", "Early identification is key for effective management."),
+            "what_you_should_do": ac.get("what_you_should_do", ["Monitor symptoms", "Consult a healthcare professional"]),
+            "when_to_escalate": ac.get("when_to_escalate", ["If you experience severe shortness of breath", "Chest pain"]),
+            "confidence_level": ac.get("confidence_level", "Medium")
         }
         
     for m_name, m_prob in clinical_probs.items():
@@ -395,7 +416,15 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
                 "disease": m_name.title(),
                 "ai_risk": 0.0,
                 "ml_risk": float(m_prob),
-                "reason": "Identified by statistical clinical pattern analysis."
+                "reason": "Identified by statistical clinical pattern analysis.",
+                "risk_level": "Moderate",
+                "urgency_level": "Low",
+                "key_factors": ["Statistical correlation"],
+                "what_this_means": "Statistical models detected patterns matching this condition.",
+                "why_it_matters": "Early detection is important.",
+                "what_you_should_do": ["Consult a doctor"],
+                "when_to_escalate": ["If symptoms worsen"],
+                "confidence_level": "Moderate"
             }
 
     final_disease_risks = []
@@ -421,7 +450,15 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
                     "cancer": "Oncologist", 
                     "heart": "Cardiologist",
                     "tuberculosis": "Infectious Disease Specialist"
-                }.items() if k in item["disease"].lower()), "General Physician")
+                }.items() if k in item["disease"].lower()), "General Physician"),
+                "risk_level": item["risk_level"],
+                "urgency_level": item["urgency_level"],
+                "key_factors": item["key_factors"],
+                "what_this_means": item["what_this_means"],
+                "why_it_matters": item["why_it_matters"],
+                "what_you_should_do": item["what_you_should_do"],
+                "when_to_escalate": item["when_to_escalate"],
+                "confidence_level": item["confidence_level"]
             })
 
     # ENFORCED ML-ONLY FALLBACK (Absolute Guarentee)
@@ -432,7 +469,15 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
                 "probability": min(100, round(m_prob * 100)),
                 "reason": "Identified purely by statistical clinical models.",
                 "severity": "high" if any(x in m_name.lower() for x in ["copd", "pneumonia", "cancer", "heart", "tuberculosis"]) else "moderate",
-                "specialty": "General Physician"
+                "specialty": "General Physician",
+                "risk_level": "Moderate",
+                "urgency_level": "Low",
+                "key_factors": ["Statistical correlation"],
+                "what_this_means": "Statistical models detected patterns matching this condition.",
+                "why_it_matters": "Early detection is important.",
+                "what_you_should_do": ["Consult a doctor"],
+                "when_to_escalate": ["If symptoms worsen"],
+                "confidence_level": "Moderate"
             })
 
     # Metrics & Trust

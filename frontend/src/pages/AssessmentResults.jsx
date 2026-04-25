@@ -337,6 +337,7 @@ export default function AssessmentResults() {
     const mode = predictionDetails?.mode || 'multi'
     const agreementStatus = predictionDetails?.agreement_status
     const mostLikely = predictionDetails?.most_likely_condition
+    const mostLikelyDetails = possibleConditions.find(c => c.condition_name === mostLikely?.name) || possibleConditions[0] || {}
     const alternatives = predictionDetails?.alternatives || []
     const medicalDisclaimer = predictionDetails?.medical_disclaimer
 
@@ -607,16 +608,16 @@ export default function AssessmentResults() {
                                     color: isEmergency ? '#fca5a5' : '#93c5fd',
                                     textShadow: isEmergency ? '0 0 24px rgba(220,38,38,0.4)' : '0 0 24px rgba(59,130,246,0.4)'
                                 }}>
-                                    {mostLikely.name || mostLikely.condition_name}
+                                    {mostLikelyDetails.condition_name || mostLikely.name}
                                 </div>
 
-                                {mostLikely.reason && (
+                                {mostLikelyDetails.reason && (
                                     <div style={{
                                         fontSize: 14, lineHeight: 1.65,
                                         color: isEmergency ? 'rgba(252,165,165,0.85)' : 'rgba(147,197,253,0.8)',
                                         maxWidth: 680
                                     }}>
-                                        {mostLikely.reason}
+                                        {mostLikelyDetails.reason}
                                     </div>
                                 )}
 
@@ -629,41 +630,95 @@ export default function AssessmentResults() {
                                         borderRadius: 10, padding: '8px 16px',
                                         fontSize: 16, fontWeight: 700
                                     }}>
-                                        {mostLikely.probability}% Probability
+                                        {mostLikelyDetails.probability || mostLikely.confidence}% Probability
                                     </span>
-                                    {mostLikely.confidence_label && (
+                                    {mostLikelyDetails.confidence_level && (
                                         <span style={{
                                             fontSize: 13, padding: '6px 12px', borderRadius: 8, fontWeight: 600,
                                             background: 'rgba(255,255,255,0.06)',
                                             color: 'rgba(255,255,255,0.6)',
                                             border: '1px solid rgba(255,255,255,0.1)'
                                         }}>
-                                            {mostLikely.confidence_label} Confidence
+                                            {mostLikelyDetails.confidence_level} Confidence
                                         </span>
                                     )}
-                                    {mostLikely.specialty && (
+                                    {mostLikelyDetails.urgency_level && (
+                                        <span style={{
+                                            fontSize: 13, padding: '6px 12px', borderRadius: 8, fontWeight: 600,
+                                            background: mostLikelyDetails.urgency_level.toLowerCase() === 'high' ? 'rgba(220,38,38,0.2)' : 'rgba(217,119,6,0.2)',
+                                            color: mostLikelyDetails.urgency_level.toLowerCase() === 'high' ? '#fca5a5' : '#fcd34d',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}>
+                                            {mostLikelyDetails.urgency_level} Urgency
+                                        </span>
+                                    )}
+                                    {mostLikelyDetails.specialty && (
                                         <span style={{
                                             fontSize: 12, padding: '5px 10px', borderRadius: 8,
                                             background: 'rgba(255,255,255,0.04)',
                                             color: 'rgba(255,255,255,0.5)',
                                             border: '1px solid rgba(255,255,255,0.08)'
                                         }}>
-                                            🏥 {mostLikely.specialty}
+                                            🏥 {mostLikelyDetails.specialty}
                                         </span>
                                     )}
                                 </div>
 
-                                {/* Compliance disclaimer inline */}
-                                <div style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: 8,
-                                    padding: '10px 14px', borderRadius: 10, marginTop: 4,
-                                    background: 'rgba(255,255,255,0.04)',
-                                    border: '1px solid rgba(255,255,255,0.08)',
-                                    fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5
-                                }}>
-                                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                                    This is an AI-based prediction and not a confirmed medical diagnosis. Consult a qualified healthcare professional for clinical evaluation.
-                                </div>
+                                {/* Structured Assessment Fields */}
+                                {(mostLikelyDetails.what_this_means || mostLikelyDetails.what_you_should_do?.length > 0) && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 12 }}>
+                                        {mostLikelyDetails.what_this_means && (
+                                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, border: '1px solid rgba(255,255,255,0.08)' }}>
+                                                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>What This Means</div>
+                                                <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>{mostLikelyDetails.what_this_means}</div>
+                                                {mostLikelyDetails.why_it_matters && (
+                                                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
+                                                        <span style={{ fontWeight: 600 }}>Why it matters:</span> {mostLikelyDetails.why_it_matters}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                                            {mostLikelyDetails.what_you_should_do?.length > 0 && (
+                                                <div style={{ background: 'rgba(34,197,94,0.1)', borderRadius: 12, padding: 16, border: '1px solid rgba(34,197,94,0.2)' }}>
+                                                    <div style={{ fontSize: 12, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <CheckCircle size={14} /> What You Should Do
+                                                    </div>
+                                                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                        {mostLikelyDetails.what_you_should_do.map((step, i) => (
+                                                            <li key={i}>{step}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {mostLikelyDetails.when_to_escalate?.length > 0 && (
+                                                <div style={{ background: 'rgba(220,38,38,0.1)', borderRadius: 12, padding: 16, border: '1px solid rgba(220,38,38,0.2)' }}>
+                                                    <div style={{ fontSize: 12, fontWeight: 700, color: '#fca5a5', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <AlertTriangle size={14} /> When To Escalate
+                                                    </div>
+                                                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                        {mostLikelyDetails.when_to_escalate.map((step, i) => (
+                                                            <li key={i}>{step}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {mostLikelyDetails.key_factors?.length > 0 && (
+                                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Key Factors:</span>
+                                                {mostLikelyDetails.key_factors.map((factor, i) => (
+                                                    <span key={i} style={{ fontSize: 11, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 4 }}>
+                                                        {factor}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             /* ── MULTI MODE: models disagree, show top conditions ── */
@@ -696,12 +751,22 @@ export default function AssessmentResults() {
                                                         {name}
                                                         {isTop && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', borderRadius: 6, background: 'rgba(37,99,235,0.12)', color: 'var(--color-primary)' }}>Top Pick</span>}
                                                     </div>
-                                                    <div style={{ width: '100%', height: 5, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
+                                                    <div style={{ width: '100%', height: 5, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: cond.what_this_means ? 6 : 0 }}>
                                                         <div style={{ width: `${prob}%`, height: '100%', background: barColor, borderRadius: 3, transition: 'width 0.8s ease-out' }} />
                                                     </div>
+                                                    {cond.what_this_means && (
+                                                        <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.4, marginTop: 4 }}>
+                                                            {cond.what_this_means}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div style={{ fontWeight: 700, fontSize: 15, color: barColor, flexShrink: 0, minWidth: 40, textAlign: 'right' }}>
-                                                    {prob}%
+                                                <div style={{ fontWeight: 700, fontSize: 15, color: barColor, flexShrink: 0, minWidth: 40, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                    <div>{prob}%</div>
+                                                    {cond.urgency_level && (
+                                                        <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600, color: cond.urgency_level.toLowerCase() === 'high' ? 'var(--color-danger)' : 'var(--color-warning)' }}>
+                                                            {cond.urgency_level} Urgency
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )
