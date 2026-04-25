@@ -283,10 +283,12 @@ export default function RiskAnalysis() {
         confirmed_disease: '', 
         was_prediction_helpful: null 
     });
+    const [selectedDoctorIdx, setSelectedDoctorIdx] = useState(null);
 
     const predictionId = prediction?.id;
 
-    const handleDoctorClick = async (doc) => {
+    const handleDoctorClick = async (doc, idx) => {
+        setSelectedDoctorIdx(prev => prev === idx ? null : idx);
         if (!predictionId) return;
         try {
             await api.feedback.logDoctorClick(predictionId, doc.doctor_name);
@@ -1092,47 +1094,107 @@ export default function RiskAnalysis() {
                                 </div>
                                 <div className="ra-section-body" style={{ padding: '16px 0' }}>
                                     <div className="doctor-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        {(prediction.recommended_doctors || []).map((doc, idx) => (
-                                            <div key={idx} className="doctor-item-card" style={{ 
-                                                display: 'flex', 
-                                                justifyContent: 'space-between', 
-                                                alignItems: 'center',
-                                                padding: '12px 16px',
-                                                background: 'var(--color-surface)',
-                                                border: '1px solid var(--color-border)',
-                                                borderRadius: 12,
-                                                transition: 'all 0.2s ease',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={() => handleDoctorClick(doc)}>
-                                                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                                    <div className="doc-avatar" style={{ 
-                                                        width: 44, 
-                                                        height: 44, 
-                                                        borderRadius: '50%', 
-                                                        background: 'var(--color-bg)', 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center',
-                                                        border: '2px solid var(--color-white)',
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                                                    }}>
-                                                        <UserCheck size={20} color="var(--color-text-2)" />
+                                        {(prediction.recommended_doctors || []).map((doc, idx) => {
+                                            const isSelected = selectedDoctorIdx === idx;
+                                            return (
+                                                <div key={idx} style={{
+                                                    background: isSelected ? 'var(--color-surface)' : 'var(--color-surface-2)',
+                                                    border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                                                    borderRadius: 12,
+                                                    boxShadow: isSelected ? '0 8px 24px rgba(0,0,0,0.08)' : 'none',
+                                                    overflow: 'hidden',
+                                                    transition: 'all 0.3s ease'
+                                                }}>
+                                                    <div 
+                                                        className="doctor-item-card" 
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        style={{ 
+                                                            display: 'flex', 
+                                                            justifyContent: 'space-between', 
+                                                            alignItems: 'center',
+                                                            padding: '12px 16px',
+                                                            cursor: 'pointer',
+                                                            background: isSelected ? 'rgba(37,99,235,0.02)' : 'transparent',
+                                                        }}
+                                                        onClick={() => handleDoctorClick(doc, idx)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                                e.preventDefault();
+                                                                handleDoctorClick(doc, idx);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                                            <div className="doc-avatar" style={{ 
+                                                                width: 44, 
+                                                                height: 44, 
+                                                                borderRadius: '50%', 
+                                                                background: isSelected ? 'var(--color-primary)' : 'var(--color-bg)', 
+                                                                display: 'flex', 
+                                                                alignItems: 'center', 
+                                                                justifyContent: 'center',
+                                                                border: '2px solid var(--color-white)',
+                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                                                color: isSelected ? 'white' : 'var(--color-text-2)'
+                                                            }}>
+                                                                <UserCheck size={20} color="currentColor" />
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: 700, fontSize: 14 }}>{doc.doctor_name || 'Dr. Health Specialist'}</div>
+                                                                <div className="text-meta" style={{ fontSize: 12 }}>{doc.hospital_name || 'Medical Center'} • {doc.experience || 0}y exp</div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                                                                {doc.score ? `${Math.round(doc.score * 100)}% Match` : 'Consult'}
+                                                                {isSelected ? <ChevronDown size={14} style={{ transform: 'rotate(180deg)', transition: '0.3s' }} /> : <ArrowRight size={14} style={{ transition: '0.3s' }} />}
+                                                            </div>
+                                                            <div className="text-meta" style={{ fontSize: 11 }}>{doc.location || 'Maharashtra'}</div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <div style={{ fontWeight: 700, fontSize: 14 }}>{doc.doctor_name || 'Dr. Health Specialist'}</div>
-                                                        <div className="text-meta" style={{ fontSize: 12 }}>{doc.hospital_name || 'Medical Center'} • {doc.experience || 0}y exp</div>
-                                                    </div>
+
+                                                    {/* Expanded Details */}
+                                                    {isSelected && (
+                                                        <div className="anim-fade-in" style={{ padding: '0 16px 16px 16px', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
+                                                                {/* Left col */}
+                                                                <div style={{ flex: '1 1 200px' }}>
+                                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Specialization</div>
+                                                                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{recommendedSpecialty || 'Pulmonologist'}</div>
+                                                                    
+                                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Consultation</div>
+                                                                    <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                        <span style={{ display: 'inline-flex', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#16a34a', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>In-person</span>
+                                                                        <span style={{ display: 'inline-flex', padding: '2px 8px', background: 'var(--color-surface-2)', color: 'var(--color-text)', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>Online Available</span>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {/* Right col */}
+                                                                <div style={{ flex: '1 1 200px' }}>
+                                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Why Recommended</div>
+                                                                    <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.5, marginBottom: 12 }}>
+                                                                        Based on {doc.experience || 0} years handling respiratory conditions near your location. Match score: {doc.score ? Math.round(doc.score * 100) : 90}%.
+                                                                    </div>
+
+                                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Availability</div>
+                                                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>Next available slot: Today</div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                                                                <button className="btn btn-primary" style={{ flex: 1, padding: '10px 0', fontSize: 14 }}>
+                                                                    Book Appointment
+                                                                </button>
+                                                                <button className="btn" style={{ flex: 1, padding: '10px 0', fontSize: 14, background: 'var(--color-surface-2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}>
+                                                                    View Profile
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                                                        {doc.score ? `${Math.round(doc.score * 100)}% Match` : 'Consult'}
-                                                        <ArrowRight size={14} />
-                                                    </div>
-                                                    <div className="text-meta" style={{ fontSize: 11 }}>{doc.location || 'Maharashtra'}</div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                     <div style={{ marginTop: 16, textAlign: 'center' }}>
                                         <button className="btn btn-text text-meta" style={{ fontSize: 12 }} onClick={() => handleFindDoctors(recommendedSpecialty)}>
