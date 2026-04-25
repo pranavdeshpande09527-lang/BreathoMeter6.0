@@ -734,37 +734,72 @@ export default function AssessmentResults() {
                                         const isTop = idx === 0
                                         return (
                                             <div key={idx} style={{
-                                                display: 'flex', alignItems: 'center', gap: 14,
-                                                padding: '10px 14px', borderRadius: 10,
+                                                display: 'flex', alignItems: 'flex-start', gap: 14,
+                                                padding: '12px 14px', borderRadius: 10,
                                                 background: isTop ? 'rgba(37,99,235,0.07)' : 'var(--color-bg)',
                                                 border: isTop ? '1px solid rgba(37,99,235,0.2)' : '1px solid var(--color-border)'
                                             }}>
                                                 <div style={{
                                                     width: 28, height: 28, borderRadius: 8, flexShrink: 0,
                                                     background: barColor, display: 'flex', alignItems: 'center',
-                                                    justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 12
+                                                    justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 12,
+                                                    marginTop: 2
                                                 }}>
                                                     {idx + 1}
                                                 </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontWeight: isTop ? 700 : 500, fontSize: 14, color: 'var(--color-text)', marginBottom: 4 }}>
-                                                        {name}
-                                                        {isTop && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', borderRadius: 6, background: 'rgba(37,99,235,0.12)', color: 'var(--color-primary)' }}>Top Pick</span>}
+                                                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ 
+                                                                fontWeight: isTop ? 700 : 600, 
+                                                                fontSize: 14, 
+                                                                color: 'var(--color-text)', 
+                                                                display: '-webkit-box',
+                                                                WebkitLineClamp: 2,
+                                                                WebkitBoxOrient: 'vertical',
+                                                                overflow: 'hidden',
+                                                                wordBreak: 'break-word',
+                                                                overflowWrap: 'anywhere'
+                                                            }}>
+                                                                {name}
+                                                            </div>
+                                                            {isTop && <span style={{ display: 'inline-block', marginTop: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '3px 8px', borderRadius: 6, background: 'rgba(37,99,235,0.12)', color: 'var(--color-primary)' }}>Top Pick</span>}
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                                                            {cond.urgency_level && (
+                                                                <span style={{ 
+                                                                    fontSize: 11, 
+                                                                    fontWeight: 600, 
+                                                                    padding: '4px 8px', 
+                                                                    borderRadius: 6, 
+                                                                    background: cond.urgency_level.toLowerCase() === 'high' ? 'rgba(220,38,38,0.1)' : 'rgba(217,119,6,0.1)', 
+                                                                    color: cond.urgency_level.toLowerCase() === 'high' ? 'var(--color-danger)' : 'var(--color-warning)',
+                                                                    whiteSpace: 'nowrap'
+                                                                }}>
+                                                                    {cond.urgency_level}
+                                                                </span>
+                                                            )}
+                                                            <span style={{ 
+                                                                fontWeight: 700, 
+                                                                fontSize: 14, 
+                                                                color: barColor, 
+                                                                whiteSpace: 'nowrap',
+                                                                background: `${barColor}15`,
+                                                                padding: '4px 8px',
+                                                                borderRadius: 6
+                                                            }}>
+                                                                {prob}%
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div style={{ width: '100%', height: 5, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: cond.what_this_means ? 6 : 0 }}>
+                                                    
+                                                    <div style={{ width: '100%', height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
                                                         <div style={{ width: `${prob}%`, height: '100%', background: barColor, borderRadius: 3, transition: 'width 0.8s ease-out' }} />
                                                     </div>
+                                                    
                                                     {cond.what_this_means && (
-                                                        <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.4, marginTop: 4 }}>
+                                                        <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
                                                             {cond.what_this_means}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div style={{ fontWeight: 700, fontSize: 15, color: barColor, flexShrink: 0, minWidth: 40, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                    <div>{prob}%</div>
-                                                    {cond.urgency_level && (
-                                                        <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600, color: cond.urgency_level.toLowerCase() === 'high' ? 'var(--color-danger)' : 'var(--color-warning)' }}>
-                                                            {cond.urgency_level} Urgency
                                                         </div>
                                                     )}
                                                 </div>
