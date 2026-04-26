@@ -107,7 +107,7 @@ export default function Login() {
               name="username"
               type="text"
               className="form-input"
-              placeholder="johndoe123"
+              placeholder="pranav123"
               required
               autoComplete="username"
               disabled={loading}

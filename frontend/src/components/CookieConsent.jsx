@@ -7,6 +7,7 @@
  * - 'Decline' → sets flag, Sentry stays uninitialised.
  */
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { ShieldCheck, X } from 'lucide-react'
 
 const CONSENT_KEY = 'bm_cookie_consent'
@@ -17,14 +18,17 @@ export function useCookieConsent() {
 
 export default function CookieConsent() {
     const [visible, setVisible] = useState(false)
+    const location = useLocation()
 
     useEffect(() => {
         if (!localStorage.getItem(CONSENT_KEY)) {
-            // Small delay so the page paints first
-            const t = setTimeout(() => setVisible(true), 800)
+            // Delay longer on auth pages so users can read the form first
+            const isAuthPage = ['/login', '/signup'].includes(location.pathname)
+            const delay = isAuthPage ? 3000 : 800
+            const t = setTimeout(() => setVisible(true), delay)
             return () => clearTimeout(t)
         }
-    }, [])
+    }, [location.pathname])
 
     if (!visible) return null
 
@@ -36,6 +40,20 @@ export default function CookieConsent() {
     }
 
     return (
+        <>
+        {/* Full-screen backdrop so banner never merges with page text */}
+        <div
+            onClick={() => respond('declined')}
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 9998,
+                background: 'rgba(0,0,0,0.35)',
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+                animation: 'ccFadeIn 0.3s ease',
+            }}
+        />
         <div
             role="dialog"
             aria-live="polite"
@@ -50,7 +68,7 @@ export default function CookieConsent() {
                 background: 'var(--color-surface)',
                 border: '1.5px solid var(--color-border)',
                 borderRadius: 20,
-                boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.22), 0 8px 24px rgba(0,0,0,0.12)',
                 padding: '20px 24px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -62,6 +80,10 @@ export default function CookieConsent() {
                 @keyframes ccSlideUp {
                     from { opacity: 0; transform: translateX(-50%) translateY(24px); }
                     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+                @keyframes ccFadeIn {
+                    from { opacity: 0; }
+                    to   { opacity: 1; }
                 }
             `}</style>
 
@@ -119,5 +141,6 @@ export default function CookieConsent() {
                 </button>
             </div>
         </div>
+        </>
     )
 }

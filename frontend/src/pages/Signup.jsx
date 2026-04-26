@@ -124,7 +124,7 @@ export default function Signup() {
 
           <div className="form-group">
             <label className="form-label" htmlFor="su-username">Username</label>
-            <input id="su-username" name="username" type="text" className="form-input" placeholder="johndoe123" required autoComplete="username" disabled={loading} />
+            <input id="su-username" name="username" type="text" className="form-input" placeholder="pranav123" required autoComplete="username" disabled={loading} />
           </div>
 
           {role === 'Doctor' && (
