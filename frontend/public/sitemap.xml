@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://breathometer6.web.app/</loc>
+    <loc>https://breathometer.web.app/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://breathometer6.web.app/login</loc>
+    <loc>https://breathometer.web.app/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://breathometer6.web.app/signup</loc>
+    <loc>https://breathometer.web.app/signup</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://breathometer6.web.app/privacy-policy</loc>
+    <loc>https://breathometer.web.app/privacy-policy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://breathometer6.web.app/terms-of-service</loc>
+    <loc>https://breathometer.web.app/terms-of-service</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

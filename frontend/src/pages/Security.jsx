@@ -44,7 +44,7 @@ export default function Security() {
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-3">5. Finding a Vulnerability</h2>
             <p>
-              We welcome reports from the security community. If you discover a security vulnerability in our systems, please report it immediately to breathometer@gmail.com. We operate a responsible disclosure policy and are committed to resolving significant issues promptly.
+              We welcome reports from the security community. If you discover a security vulnerability in our systems, please report it immediately to pranavdeshpande@gmail.com. We operate a responsible disclosure policy and are committed to resolving significant issues promptly.
             </p>
           </section>
         </div>

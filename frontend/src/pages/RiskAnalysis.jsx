@@ -8,6 +8,7 @@ import {
 import { Activity, ArrowRight, ChevronDown, Stethoscope, AlertTriangle, Info, RefreshCw, UserCheck, PlusCircle, ShieldAlert, Tag, Zap, CheckCircle, BarChart2, XCircle, Loader2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
+import usePageTitle from '../hooks/usePageTitle'
 import {
     getConfidenceTier,
     getDisplayDiseases,
@@ -272,6 +273,7 @@ function DoctorRecBlurb({ tier, specialty, disease, onFind }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function RiskAnalysis() {
     const navigate = useNavigate()
+    usePageTitle('Risk Analysis')
     const [prediction, setPrediction] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)

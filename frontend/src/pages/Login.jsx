@@ -5,7 +5,7 @@ import { api } from '../utils/api'
 import Logo from '../components/Logo'
 
 const roles = ['Patient', 'Doctor']
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://breathometer6-0.onrender.com'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''   // always set in .env.production
 
 export default function Login() {
   const [role, setRole]             = useState('Patient')

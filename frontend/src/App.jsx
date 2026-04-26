@@ -28,6 +28,7 @@ import HavaPage from './pages/HavaPage'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 import Security from './pages/Security'
+import CookieConsent from './components/CookieConsent'
 import PatientShell from './components/PatientShell'
 import DoctorShell from './components/DoctorShell'
 import ScrollToTop from './components/ScrollToTop'
@@ -36,7 +37,7 @@ import SessionExpiryModal from './components/SessionExpiryModal'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://breathometer6-0.onrender.com'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''   // always set in .env.production
 
 function ProtectedRoute({ children, allowedRole }) {
     let userString = sessionStorage.getItem('user_data');
@@ -191,6 +192,7 @@ export default function App() {
                 </Routes>
             </ErrorBoundary>
             <SessionExpiryModal />
+            <CookieConsent />
             <ToastContainer position="bottom-right" theme="dark" />
         </BrowserRouter>
     );

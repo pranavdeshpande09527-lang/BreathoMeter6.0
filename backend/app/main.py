@@ -100,9 +100,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Breathometer 4.0 Backend",
-    description="Real-time backend API for Breathometer 4.0 health assessment platform.",
-    version="1.0.0",
+    title="Breathometer 6.0 Backend",
+    description="Real-time backend API for Breathometer 6.0 AI health assessment platform.",
+    version="6.0.0",
     lifespan=lifespan,
 )
 
@@ -183,13 +183,24 @@ if ENVIRONMENT == "production":
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        # MED-3: CSP — restricts script sources to mitigate XSS token theft
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' https://browser.sentry-cdn.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https://*.supabase.co https://breathometer6-0.onrender.com "
+            "https://*.ingest.sentry.io https://*.ingest.us.sentry.io "
+            "https://api.openweathermap.org https://api.waqi.info;"
+        )
         return response
 
 # --- Health & System Status Endpoints ---
 
 @app.get("/", tags=["System"])
 def read_root():
-    return {"message": "Welcome to the Breathometer 4.0 Backend API", "status": "healthy"}
+    return {"message": "Welcome to the Breathometer 6.0 Backend API", "status": "healthy", "version": "6.0.0"}
 
 @app.get("/health", tags=["System"])
 def health_check():

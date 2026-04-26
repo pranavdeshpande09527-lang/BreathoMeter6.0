@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO)
 async def test_background():
     print("Testing generate_report_email and sending email...")
     await _send_report_background(
-        email="pranavdeshpande09527@gmail.com", # assuming this is where he wants it, or we can use breathoometer5.0@gmail.com to test
+        email="pranavdeshpande@gmail.com", # assuming this is where he wants it
         name="Pranav Test",
         aqi=105,
         city="Pune",

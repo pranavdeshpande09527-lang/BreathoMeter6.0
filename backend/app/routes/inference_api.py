@@ -109,14 +109,14 @@ def _to_float(value, default=0.0):
         return default
 
 @router.post("/predict")
-@limiter.limit("12/minute")
+@limiter.limit("5/minute")
 async def get_risk_prediction(request: Request, environmental_data: EnvironmentalData, optional_patient_data: Optional[dict] = None, user = Depends(get_current_user), expand: bool = False):
     """
     Enhanced Hybrid Inference: Environmental + Clinical ML + AI Reasoning.
     Includes input quality scoring, insufficient-data detection, validity scoring, and confidence banding.
     """
     patient_data = optional_patient_data or {}
-    env_dict = environmental_data.dict()
+    env_dict = environmental_data.model_dump()
     vitals = patient_data.get('vitals', {})
     inhale_capacity = _to_float(vitals.get('inhale_capacity'))
     exhale_capacity = _to_float(vitals.get('exhale_capacity'))
@@ -274,7 +274,7 @@ async def get_risk_prediction(request: Request, environmental_data: Environmenta
 
     # --- 3. AI Reasoning ---
     ai_prompt = f"""
-    You are an advanced clinical diagnostic AI specializing in respiratory health for Breathometer 5.0.
+    You are an advanced clinical diagnostic AI specializing in respiratory health for Breathometer 6.0.
     -------------------------------------
     PATIENT PROFILE
     -------------------------------------

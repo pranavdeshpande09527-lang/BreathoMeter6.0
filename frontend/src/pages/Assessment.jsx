@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Sentry from '@sentry/react'
 import { api } from '../utils/api'
+import usePageTitle from '../hooks/usePageTitle'
 import {
     calculateRespiratoryRisk,
     calculateLungFunctionScore,
@@ -34,7 +35,21 @@ export default function Assessment() {
     const navigate = useNavigate()
     const [step, setStep] = useState(1)
     const [data, setData] = useState({})
+    usePageTitle('Health Assessment')
+
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [stepError, setStepError] = useState('')
+    const abortControllerRef = useRef(null)
+
+    // Cancel any in-flight requests if user navigates away
+    useEffect(() => () => abortControllerRef.current?.abort(), [])
+
+    // Warn the user if they try to leave mid-assessment
+    useEffect(() => {
+        const handler = (e) => { e.preventDefault(); e.returnValue = '' }
+        window.addEventListener('beforeunload', handler)
+        return () => window.removeEventListener('beforeunload', handler)
+    }, [])
 
     // Pre-populate data from user profile
     useEffect(() => {
@@ -64,7 +79,33 @@ export default function Assessment() {
         setData(prev => ({ ...prev, ...newData }))
     }
 
+    // Per-step validation — returns an error string or '' if valid
+    const validateStep = (currentStep, formData) => {
+        if (currentStep === 1) {
+            if (!formData.age || Number(formData.age) < 1 || Number(formData.age) > 120)
+                return 'Please enter a valid age (1–120) to continue.'
+            if (!formData.gender)
+                return 'Please select your gender to continue.'
+        }
+        if (currentStep === 4) {
+            const symptomKeys = ['coughSev','breathlessnessSev','chestPain','fatigue','fever']
+            const hasSymptom = symptomKeys.some(k => Number(formData[k]) > 0)
+            const hasSpO2 = formData.spO2 && Number(formData.spO2) > 0
+            if (!hasSymptom && !hasSpO2)
+                return 'Please rate at least one symptom or enter your SpO₂ to continue.'
+        }
+        if (currentStep === 1 && formData.spO2) {
+            const spo2 = Number(formData.spO2)
+            if (spo2 < 50 || spo2 > 100)
+                return 'SpO₂ must be between 50 and 100%.'
+        }
+        return ''
+    }
+
     const nextStep = () => {
+        const err = validateStep(step, data)
+        if (err) { setStepError(err); return }
+        setStepError('')
         if (step < totalSteps) {
             window.scrollTo(0, 0)
             setStep(s => s + 1)
@@ -72,6 +113,7 @@ export default function Assessment() {
     }
 
     const prevStep = () => {
+        setStepError('')
         if (step > 1) {
             window.scrollTo(0, 0)
             setStep(s => s - 1)
@@ -79,7 +121,11 @@ export default function Assessment() {
     }
 
     const submitForm = async () => {
+        const err = validateStep(step, data)
+        if (err) { setStepError(err); return }
+        setStepError('')
         setIsSubmitting(true)
+        abortControllerRef.current = new AbortController()
         // Calculate the scores based on the collected data
         const respiratoryRisk = calculateRespiratoryRisk(data)
         const lungFunction = calculateLungFunctionScore(data)
@@ -248,14 +294,14 @@ export default function Assessment() {
                     });
 
                     if (inferenceRes) {
-                        // Merge inference results into payload — inference is source of truth
-                        finalPredictionPayload = { ...finalPredictionPayload, ...inferenceRes };
-
-                        // Normalize possible_conditions → disease_risks with field mapping
-                        // Backend returns: condition_name, probability, reason, severity, specialty, confidence_label
-                        // Frontend expects: disease, risk_percentage, reason, severity, specialty, confidence_label
-                        const conditions = inferenceRes.possible_conditions || [];
-                        finalPredictionPayload.disease_risks = conditions.map(c => ({
+                        // CRIT-3 fix: destructure disease_risks out before spreading so the
+                        // backend's empty [] doesn't overwrite the field we're about to map.
+                        const { disease_risks: _ignored, possible_conditions, timestamp: _ts, medical_disclaimer: _md, ...inferenceRest } = inferenceRes
+                        finalPredictionPayload = { ...finalPredictionPayload, ...inferenceRest }
+                        // Normalize possible_conditions → disease_risks
+                        // Backend: condition_name, probability, reason, severity, specialty, confidence_label
+                        // Frontend: disease, risk_percentage, reason, severity, specialty, confidence_label
+                        finalPredictionPayload.disease_risks = (possible_conditions || []).map(c => ({
                             disease: c.condition_name || c.disease || 'Unknown Condition',
                             risk_percentage: c.probability ?? c.risk_percentage ?? 0,
                             reason: c.reason || '',
@@ -364,6 +410,22 @@ export default function Assessment() {
             <div className="card" style={{ padding: '32px', marginBottom: 24, minHeight: 400 }}>
                 {renderStep()}
             </div>
+
+            {/* Validation error — shown inline so users know exactly what to fix */}
+            {stepError && (
+                <div role="alert" style={{
+                    background: 'var(--color-danger-light, #fef2f2)',
+                    border: '1px solid var(--color-danger-muted, #fca5a5)',
+                    color: 'var(--color-danger, #dc2626)',
+                    borderRadius: 10,
+                    padding: '10px 16px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    marginBottom: 8
+                }}>
+                    ⚠️ {stepError}
+                </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <button

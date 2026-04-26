@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import { ArrowLeft, Phone, MapPin, Star, Briefcase, Award, Trophy, ChevronDown } from 'lucide-react'
 import { getDoctorMatchReason } from '../utils/intelligence'
+import usePageTitle from '../hooks/usePageTitle'
 
 const SORT_OPTIONS = [
     { key: 'score',      label: 'Smart Score' },
@@ -11,7 +12,7 @@ const SORT_OPTIONS = [
 ]
 
 function DoctorCard({ doctor, rank, disease }) {
-    const isTopRated   = doctor.tags?.includes('Most Experienced')
+    const isTopRated   = doctor.tags?.includes('Best Rated') || doctor.tags?.includes('Top Rated')
     const isMostExp    = doctor.tags?.includes('Most Experienced')
     const isFirst      = rank === 0
 
@@ -130,6 +131,7 @@ function DoctorCard({ doctor, rank, disease }) {
 export default function DoctorRecommendations() {
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
+    usePageTitle('Find Specialists')
 
     const disease = searchParams.get('disease') || ''
 
@@ -274,8 +276,10 @@ export default function DoctorRecommendations() {
                         {SORT_OPTIONS.map(opt => (
                             <button
                                 key={opt.key}
-                                className={`dr-sort-pill ${sortBy === opt.key ? 'active' : ''}`}
+                                className={`dr-sort-pill${sortBy === opt.key ? ' active' : ''}`}
                                 onClick={() => setSortBy(opt.key)}
+                                aria-pressed={sortBy === opt.key}
+                                aria-label={`Sort by ${opt.label}`}
                                 id={`sort-${opt.key}`}
                             >
                                 {opt.label}
@@ -286,17 +290,25 @@ export default function DoctorRecommendations() {
                 </div>
             )}
 
-            {/* Loading */}
+            {/* Loading — skeleton cards maintain grid layout to eliminate CLS */}
             {loading && (
-                <div className="card dr-loading-card">
-                    <div className="dr-pulse-icon">🏥</div>
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>
-                        Finding the right specialists for you...
-                    </div>
-                    <div className="text-meta">Matching {disease} against our clinical database — this takes just a moment.</div>
-                    <div className="dr-loading-dots">
-                        <span /><span /><span />
-                    </div>
+                <div className="dr-grid" aria-busy="true" aria-label="Loading doctors...">
+                    {[0, 1, 2].map(i => (
+                        <div key={i} className="dr-card dr-card-skeleton">
+                            <div className="sk sk-badge" />
+                            <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
+                                <div className="sk sk-avatar" />
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <div className="sk sk-line" style={{ width: '70%' }} />
+                                    <div className="sk sk-line" style={{ width: '50%', height: 10 }} />
+                                    <div className="sk sk-line" style={{ width: '60%', height: 10 }} />
+                                </div>
+                            </div>
+                            <div className="sk sk-metrics" />
+                            <div className="sk sk-line" style={{ width: '80%', marginTop: 10 }} />
+                            <div className="sk sk-btn" />
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -350,7 +362,7 @@ export default function DoctorRecommendations() {
             {!loading && !error && doctors.length > 0 && (
                 <div className="dr-grid">
                     {doctors.map((doc, idx) => (
-                        <DoctorCard key={`${doc.doctor_name}-${idx}`} doctor={doc} rank={idx} disease={isFallback ? 'Initial Consultation' : disease} />
+                        <DoctorCard key={doc.id || `${doc.doctor_name}-${doc.hospital_name}`} doctor={doc} rank={idx} disease={isFallback ? 'Initial Consultation' : disease} />
                     ))}
                 </div>
             )}
@@ -500,6 +512,29 @@ export default function DoctorRecommendations() {
                     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
                     gap: 20px;
                 }
+
+                /* ── Skeleton Cards (MED-5) ── */
+                @keyframes skShimmer {
+                    0%   { background-position: -400px 0; }
+                    100% { background-position:  400px 0; }
+                }
+                .sk {
+                    border-radius: 8px;
+                    background: linear-gradient(
+                        90deg,
+                        var(--color-border) 25%,
+                        rgba(var(--color-primary-rgb, 99,130,235), 0.06) 50%,
+                        var(--color-border) 75%
+                    );
+                    background-size: 800px 100%;
+                    animation: skShimmer 1.4s ease-in-out infinite;
+                }
+                .dr-card-skeleton { pointer-events: none; }
+                .sk-badge  { height: 18px; width: 80px; margin-bottom: 12px; }
+                .sk-avatar { width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0; }
+                .sk-line   { height: 14px; width: 100%; border-radius: 6px; }
+                .sk-metrics { height: 52px; border-radius: 12px; margin: 4px 0; }
+                .sk-btn    { height: 36px; border-radius: 10px; margin-top: 8px; }
 
                 /* ── Doctor Card ── */
                 .dr-card {

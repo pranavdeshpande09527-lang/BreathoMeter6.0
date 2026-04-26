@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "breathometer",
     "public": "dist",
     "ignore": [
       "firebase.json",

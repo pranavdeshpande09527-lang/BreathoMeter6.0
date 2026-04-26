@@ -51,7 +51,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-3">6. Contact Us</h2>
             <p>
-              If you have any questions or concerns about this Privacy Policy, your rights, or our data handling practices, please contact our Data Protection Officer at breathometer@gmail.com.
+              If you have any questions or concerns about this Privacy Policy, your rights, or our data handling practices, please contact our Data Protection Officer at <a href="mailto:breathometer.privacy@gmail.com" style={{ color: 'inherit', textDecoration: 'underline' }}>breathometer.privacy@gmail.com</a>.
             </p>
           </section>
         </div>

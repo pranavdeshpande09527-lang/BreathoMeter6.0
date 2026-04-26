@@ -60,8 +60,12 @@ class MLService:
         gender = str(health_data.get('gender', 'unknown')).lower()
         is_male = 1.0 if gender == 'male' else 0.0
         
-        smoking_history = str(health_data.get('smoking_history', 'False')).lower()
-        is_smoker = 1.0 if smoking_history in ['true', 'yes', 'current'] else 0.0
+        smoking_history = health_data.get('smoking_history', False)
+        # Accept bool True, int 1, or any of the canonical string values
+        if isinstance(smoking_history, bool):
+            is_smoker = 1.0 if smoking_history else 0.0
+        else:
+            is_smoker = 1.0 if str(smoking_history).lower() in ['true', 'yes', 'current', '1'] else 0.0
         
         symptom_duration = health_data.get('symptom_duration', 0)
         
@@ -189,8 +193,11 @@ class MLService:
             prediction_label = top_prediction['disease']
             
             age = int(health_data.get('age', 40))
-            smoking_history = str(health_data.get('smoking_history', 'False')).lower()
-            is_smoker = 1 if smoking_history in ['true', 'yes', 'current'] else 0
+            smoking_history_val = health_data.get('smoking_history', False)
+            if isinstance(smoking_history_val, bool):
+                is_smoker = 1 if smoking_history_val else 0
+            else:
+                is_smoker = 1 if str(smoking_history_val).lower() in ['true', 'yes', 'current', '1'] else 0
             severe_cough = 1 if int(breath_data.get('cough_severity', 5)) > 3 else 0
             
             sim_cases = await self.get_similar_cases(age, is_smoker, severe_cough, token=token)
@@ -198,8 +205,8 @@ class MLService:
             warnings_list = []
             # PHASE 16: FAIL-SAFE LOGIC
             if confidence < 0.6:
-                prediction_label = f"LOW CONFIDENCE - Possible {prediction_label}"
-                warnings_list.append("The model has low confidence in this specific prediction. We strongly advise consulting a General Physician.")
+                prediction_label = "Uncertain Pattern Detected"
+                warnings_list.append("Model confidence was insufficient for a specific assessment. We strongly advise consulting a General Physician.")
             
             # Check training data count roughly based on our similarity count logic or hardcode flag for this environment
             # Here we just check total rows from db if possible, or trigger it conservatively if sim_cases < 50

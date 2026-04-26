@@ -6,6 +6,7 @@ import ConfidenceBadge from '../components/ConfidenceBadge'
 import { getConfidenceTier, getImprovementSuggestion } from '../utils/predictionConfidence'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { api } from '../utils/api'
+import usePageTitle from '../hooks/usePageTitle'
 
 function riskLabel(riskCategory) {
     if (!riskCategory) return 'Unknown'
@@ -296,6 +297,7 @@ function MiniGauge({ title, score, type, icon: Icon }) {
 export default function AssessmentResults() {
     const location = useLocation()
     const navigate = useNavigate()
+    usePageTitle('Assessment Results')
 
     const payload = location.state?.payload
 

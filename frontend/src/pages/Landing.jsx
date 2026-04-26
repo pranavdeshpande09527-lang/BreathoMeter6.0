@@ -46,7 +46,6 @@ const stats = [
   { value: 'Secure',    label: 'Private Medical Data' },
 ]
 
-const API_BASE = 'https://breathometer6-0.onrender.com'
 
 export default function Landing() {
   const canvasRef = useRef(null)
@@ -233,7 +232,7 @@ export default function Landing() {
                 className="btn btn-ghost btn-sm text-primary"
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}
               >
-                <Download size={14} /> Download App
+                <Download size={14} /> Install App
               </button>
             )}
             <div className="nav-divider" />
@@ -370,7 +369,7 @@ export default function Landing() {
           <div className="footer-contact" style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '14px', color: 'var(--text-muted)' }}>
             <span style={{ fontWeight: '500', color: 'var(--text-main)' }}>Project Owner</span>
             <span>pranav deshpande</span>
-            <a href="mailto:pranavdeshpande09527@gmail.com" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>pranavdeshpande09527@gmail.com</a>
+            <a href="mailto:pranavdeshpande@gmail.com" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>pranavdeshpande@gmail.com</a>
           </div>
           <div className="footer-links">
             <Link to="/privacy-policy">Privacy</Link>
@@ -380,7 +379,7 @@ export default function Landing() {
         </div>
         <div className="footer-bottom">
           <span className="text-meta">© 2026 Breathometer. All rights reserved.</span>
-          <span className="text-meta">v5.2.0 • Safe &amp; Secure</span>
+          <span className="text-meta">v6.0.0 • Safe &amp; Secure</span>
         </div>
       </footer>
 
@@ -416,8 +415,8 @@ export default function Landing() {
               >
                 <Smartphone size={32} />
               </div>
-              <h2 className="text-xl font-bold mb-2">Install BreathoMeter</h2>
-              <p className="text-sm opacity-80">Add this app to your home screen for quick access and offline use.</p>
+              <h2 className="text-xl font-bold mb-2">Install Breathometer</h2>
+              <p className="text-sm opacity-80">Add this web app to your home screen for quick, one-tap access.</p>
             </div>
 
             <div className="space-y-4">

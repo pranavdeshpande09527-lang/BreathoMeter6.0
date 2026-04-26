@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 SMTP_HOST = settings.smtp_host or "smtp.gmail.com"
 SMTP_PORT = settings.smtp_port or 587
 
-# Your Gmail address (e.g., pranavdeshpande09527@gmail.com)
-SMTP_USER = settings.smtp_user or "pranavdeshpande09527@gmail.com"
+# Your Gmail address (e.g., pranavdeshpande@gmail.com)
+SMTP_USER = settings.smtp_user or "pranavdeshpande@gmail.com"
 # Your 16-character Google App Password
 SMTP_PASSWORD = settings.smtp_password or ""
 

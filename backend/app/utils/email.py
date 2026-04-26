@@ -13,8 +13,8 @@ async def send_verification_email(to_email: str, verify_link: str) -> bool:
         return False
 
     msg = EmailMessage()
-    msg['Subject'] = 'Verify your Breathometer 4.0 account'
-    msg['From'] = settings.smtp_from_email or "no-reply@breathometer.com"
+    msg['Subject'] = 'Verify your Breathometer account'
+    msg['From'] = settings.smtp_from_email or "breathometer.privacy@gmail.com"
     msg['To'] = to_email
 
     html_content = f"""
@@ -31,14 +31,14 @@ async def send_verification_email(to_email: str, verify_link: str) -> bool:
     </head>
     <body>
         <div class="container">
-            <div class="logo">Breathometer 4.0</div>
+            <div class="logo">Breathometer</div>
             <h2>Verify your email address</h2>
             <p>Welcome! Please click the button below to verify your email address and activate your account.</p>
             <a href="{verify_link}" class="btn">Verify Account</a>
             <p style="font-size: 14px; color: #52525b;">This link will expire in 24 hours.</p>
             <div class="footer">
                 If you didn't create an account, you can safely ignore this email.<br>
-                For support, contact support@breathometer.com
+                For support, contact breathometer.privacy@gmail.com
             </div>
         </div>
     </body>

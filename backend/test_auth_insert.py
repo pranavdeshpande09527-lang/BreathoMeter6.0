@@ -8,7 +8,7 @@ load_dotenv()
 url = os.environ.get("SUPABASE_URL", "")
 key = os.environ.get("SUPABASE_KEY", "")
 
-email = "pranavdeshpande09527@gmail.com"
+email = "pranavdeshpande@gmail.com"
 password = "Pr@131006"
 
 def login():
