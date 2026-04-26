@@ -354,7 +354,7 @@ export default function PatientDashboard() {
                         )
                     })()}
                     <div className="divider" style={{ margin: '16px 0' }} />
-                    <Link to="/breath-analysis" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                    <Link to="/assessment" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
                         Start New Analysis <ArrowRight size={14} />
                     </Link>
                     <Link to="/risk-analysis" className="btn btn-outline" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
