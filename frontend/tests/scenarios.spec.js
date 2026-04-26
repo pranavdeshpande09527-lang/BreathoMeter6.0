@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE = 'https://breathometer6-0.onrender.com';
+const API_BASE = 'https://breathometer6-0-4ago.onrender.com';
 test.describe('Breathometer Clinical Scenarios', () => {
   // Login and setup state before each test
   test.beforeEach(async ({ page, request }) => {

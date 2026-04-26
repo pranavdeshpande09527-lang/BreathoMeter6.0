@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 const API_BASE = import.meta.env.VITE_API_BASE_URL ||
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://127.0.0.1:8000'
-        : 'https://breathometer6-0.onrender.com');
+        : 'https://breathometer6-0-4ago.onrender.com');
 
 class ApiError extends Error {
     constructor(status, message) {
