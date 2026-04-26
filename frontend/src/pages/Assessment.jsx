@@ -87,13 +87,7 @@ export default function Assessment() {
             if (!formData.gender)
                 return 'Please select your gender to continue.'
         }
-        if (currentStep === 4) {
-            const symptomKeys = ['coughSev','breathlessnessSev','chestPain','fatigue','fever']
-            const hasSymptom = symptomKeys.some(k => Number(formData[k]) > 0)
-            const hasSpO2 = formData.spO2 && Number(formData.spO2) > 0
-            if (!hasSymptom && !hasSpO2)
-                return 'Please rate at least one symptom or enter your SpO₂ to continue.'
-        }
+        // Step 4 (Symptoms) is optional — users may skip if they have nothing to report
         if (currentStep === 1 && formData.spO2) {
             const spo2 = Number(formData.spO2)
             if (spo2 < 50 || spo2 > 100)
