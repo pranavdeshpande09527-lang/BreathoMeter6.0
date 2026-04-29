@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Wind, Activity, Cloud, Map,
-  Clock, FileText, Bell, Settings, LogOut, HeartPulse, Stethoscope, Moon, Sun, X
+  Clock, FileText, Bell, Settings, LogOut, HeartPulse, Stethoscope, Moon, Sun, X, HelpCircle
 } from 'lucide-react'
 import Logo from './Logo'
 import { getTopPages } from '../utils/livingUI'
@@ -36,8 +36,9 @@ const navGroups = [
   {
     label: 'System',
     items: [
-      { to: '/alerts',   icon: Bell,     label: 'Alerts' },
-      { to: '/settings', icon: Settings, label: 'Settings' },
+      { to: '/alerts',   icon: Bell,       label: 'Alerts' },
+      { to: '/settings', icon: Settings,   label: 'Settings' },
+      { to: '/manual',   icon: HelpCircle, label: 'Help & Manual' },
     ]
   }
 ]
