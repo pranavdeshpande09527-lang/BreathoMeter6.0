@@ -60,7 +60,7 @@ export default function CookieConsent() {
             aria-label="Cookie and privacy consent"
             style={{
                 position: 'fixed',
-                bottom: 24,
+                top: 24,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 zIndex: 9999,
@@ -73,12 +73,12 @@ export default function CookieConsent() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 14,
-                animation: 'ccSlideUp 0.4s cubic-bezier(0.16,1,0.3,1)',
+                animation: 'ccSlideDown 0.4s cubic-bezier(0.16,1,0.3,1)',
             }}
         >
             <style>{`
-                @keyframes ccSlideUp {
-                    from { opacity: 0; transform: translateX(-50%) translateY(24px); }
+                @keyframes ccSlideDown {
+                    from { opacity: 0; transform: translateX(-50%) translateY(-24px); }
                     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
                 }
                 @keyframes ccFadeIn {
