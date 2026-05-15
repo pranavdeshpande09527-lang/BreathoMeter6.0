@@ -1,92 +1,77 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
-import { Wind, Activity, Cloud, ShieldCheck, ArrowRight, CheckCircle2, Moon, Sun, Download, Smartphone, X } from 'lucide-react'
+import {
+  ArrowRight, Moon, Sun, Download, Smartphone, X
+} from 'lucide-react'
 import Logo from '../components/Logo'
-import { playThemeTransition } from '../utils/themeTransition'
 
-const features = [
-  {
-    icon: Wind,
-    title: 'Breath Check',
-    desc: 'Record and check how well you breathe. Get easy-to-read results in seconds.',
-    color: 'var(--color-primary)',
-    bg: 'var(--color-primary-light)',
-    border: 'var(--color-primary-muted)',
-  },
-  {
-    icon: Activity,
-    title: 'Health Risk Alert',
-    desc: 'Find out if you might have a breathing problem — early, before it gets worse.',
-    color: 'var(--color-danger)',
-    bg: 'var(--color-danger-light)',
-    border: 'var(--color-danger-muted)',
-  },
-  {
-    icon: Cloud,
-    title: 'Air Quality Check',
-    desc: 'See how clean the air is in your area and how it may affect your breathing.',
-    color: '#0891B2',
-    bg: '#E0F2FE',
-    border: '#BAE6FD',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Talk to a Doctor',
-    desc: 'Your results are checked by real, certified doctors — not just a computer.',
-    color: 'var(--color-safe)',
-    bg: 'var(--color-safe-light)',
-    border: 'var(--color-safe-muted)',
-  },
-]
+const LandingAQICard = lazy(() => import('../components/LandingAQICard'))
+const LandingBelowFold = lazy(() => import('../components/LandingBelowFold'))
 
-const stats = [
-  { value: '24/7',      label: 'Always Available' },
-  { value: 'Smart',     label: 'AI Health Assessment' },
-  { value: 'Real-time', label: 'Air Quality Tracking' },
-  { value: 'Secure',    label: 'Private Medical Data' },
-]
+/* ── Phase 5 SEO meta injection ────────────────────────────── */
+function useSEOMeta() {
+  useEffect(() => {
+    // Title
+    const prevTitle = document.title
+    document.title = 'BreathoMeter — Real-Time Respiratory Health & AQI Monitoring'
 
+    // Meta description
+    let meta = document.querySelector('meta[name="description"]')
+    const prevDesc = meta?.content || ''
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'description')
+      document.head.appendChild(meta)
+    }
+    meta.setAttribute('content',
+      'Monitor your respiratory health and local air quality in real-time. ' +
+      'BreathoMeter provides physician-audited analysis, AQI tracking, and early ' +
+      'detection tools — trusted by patients managing COPD, asthma, and chronic respiratory conditions.'
+    )
+
+    // OG tags
+    const setOG = (prop, content) => {
+      let el = document.querySelector(`meta[property="${prop}"]`)
+      if (!el) { el = document.createElement('meta'); el.setAttribute('property', prop); document.head.appendChild(el) }
+      el.setAttribute('content', content)
+    }
+    setOG('og:title', 'BreathoMeter — Clinical Respiratory Health Platform')
+    setOG('og:description', 'Real-time AQI monitoring, physician-reviewed assessments, and 30-day respiratory trend analysis. Free to start.')
+    setOG('og:type', 'website')
+
+    return () => {
+      document.title = prevTitle
+      if (meta) meta.setAttribute('content', prevDesc)
+    }
+  }, [])
+}
 
 export default function Landing() {
-  const canvasRef = useRef(null)
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
-  
-  // PWA & Installation State
+  useSEOMeta()
+  const [theme, setTheme]           = useState(localStorage.getItem('theme') || 'dark')
   const [deferredPrompt, setDeferredPrompt] = useState(null)
-  const [isInstallable, setIsInstallable] = useState(false)
+  const [isInstallable, setIsInstallable]   = useState(false)
   const [showInstallModal, setShowInstallModal] = useState(false)
-  const [platform, setPlatform] = useState({ isIOS: false, isAndroid: false })
+  const [platform, setPlatform]     = useState({ isIOS: false, isAndroid: false })
 
+  /* ── PWA install logic ────────────────────────────────────── */
   useEffect(() => {
-    // 1. Listen for PWA install prompt
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault()
       setDeferredPrompt(e)
       setIsInstallable(true)
-      console.log('PWA: deferred prompt captured')
     }
-
-    // 2. Listen for successful install
     const handleAppInstalled = () => {
       setIsInstallable(false)
       setDeferredPrompt(null)
-      console.log('PWA: app installed successfully')
     }
-
-    // 3. Detect Platform
-    const ua = window.navigator.userAgent.toLowerCase()
-    const isIOS = /iphone|ipad|ipod/.test(ua)
+    const ua      = window.navigator.userAgent.toLowerCase()
+    const isIOS   = /iphone|ipad|ipod/.test(ua)
     const isAndroid = /android/.test(ua)
     setPlatform({ isIOS, isAndroid })
-    
-    // Always show "Download" button on iOS if not in standalone (installed) mode
-    if (isIOS && !window.navigator.standalone) {
-      setIsInstallable(true)
-    }
-
+    if (isIOS && !window.navigator.standalone) setIsInstallable(true)
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     window.addEventListener('appinstalled', handleAppInstalled)
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleAppInstalled)
@@ -94,103 +79,33 @@ export default function Landing() {
   }, [])
 
   const handleInstallClick = async () => {
-    if (platform.isIOS) {
-      setShowInstallModal(true)
-      return
-    }
-
-    if (!deferredPrompt) {
-      // If we don't have the prompt, it might already be installed or browser doesn't support it
-      // For simplicity, we can show a general "How to install" or just do nothing if not applicable
-      return
-    }
-
+    if (platform.isIOS) { setShowInstallModal(true); return }
+    if (!deferredPrompt) return
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
-      setIsInstallable(false)
-      setDeferredPrompt(null)
-    }
+    if (outcome === 'accepted') { setIsInstallable(false); setDeferredPrompt(null) }
   }
 
+  /* ── Theme ───────────────────────────────────────────────── */
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
 
-  const toggleTheme = (e) => {
+  const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
     localStorage.setItem('theme', next)
     window.location.reload()
   }
 
-  // ── Always start at top (beats browser scroll-restoration timing) ──
+  /* ── Scroll to top ───────────────────────────────────────── */
   useEffect(() => {
     window.scrollTo(0, 0)
     const raf = requestAnimationFrame(() => window.scrollTo(0, 0))
     return () => cancelAnimationFrame(raf)
   }, [])
 
-  // ── Particle system ────────────────────────────────────────
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    let animId
-    let W, H
-
-    const PARTICLES = []
-    const COUNT = 55
-
-    function resize() {
-      W = canvas.width  = canvas.offsetWidth
-      H = canvas.height = canvas.offsetHeight
-    }
-
-    function spawn() {
-      return {
-        x: Math.random() * W,
-        y: Math.random() * H,
-        r: Math.random() * 1.6 + 0.4,
-        vx: (Math.random() - 0.5) * 0.18,
-        vy: (Math.random() - 0.5) * 0.18 - 0.05,
-        a: Math.random() * 0.35 + 0.08,
-        da: (Math.random() * 0.003 + 0.001) * (Math.random() > 0.5 ? 1 : -1),
-        aMin: 0.06,
-        aMax: 0.42,
-      }
-    }
-
-    resize()
-    for (let i = 0; i < COUNT; i++) PARTICLES.push(spawn())
-    window.addEventListener('resize', resize)
-
-    function draw() {
-      ctx.clearRect(0, 0, W, H)
-      for (const p of PARTICLES) {
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(99, 130, 235, ${p.a})`
-        ctx.fill()
-        p.x += p.vx
-        p.y += p.vy
-        p.a += p.da
-        if (p.a >= p.aMax || p.a <= p.aMin) p.da *= -1
-        if (p.x < -10) p.x = W + 10
-        if (p.x > W + 10) p.x = -10
-        if (p.y < -10) p.y = H + 10
-        if (p.y > H + 10) p.y = -10
-      }
-      animId = requestAnimationFrame(draw)
-    }
-    draw()
-    return () => {
-      cancelAnimationFrame(animId)
-      window.removeEventListener('resize', resize)
-    }
-  }, [])
-
-  // ── CTA ripple ────────────────────────────────────────────
+  /* ── CTA ripple ──────────────────────────────────────────── */
   const handleCtaClick = useCallback((e) => {
     const btn = e.currentTarget
     const rect = btn.getBoundingClientRect()
@@ -203,252 +118,195 @@ export default function Landing() {
   }, [])
 
   return (
-    <div className="land">
-      {/* Navbar */}
-      <nav className="land-nav glass-surface">
-        <div className="land-nav-inner">
-          <div className="land-logo">
-            <Logo height={44} width="auto" />
+    <div className="lp-root">
+      {/* Skip navigation — WCAG 2.4.1 keyboard accessibility */}
+      <a href="#main-content" className="skip-nav">Skip to main content</a>
+
+      {/* ══ NAVBAR ══════════════════════════════════════════════ */}
+      <nav className="lp-nav">
+        <div className="lp-nav-inner">
+          <div className="lp-logo">
+            <Logo height={38} width="auto" />
           </div>
-          <div className="land-nav-links">
-            <button 
-              className="btn btn-ghost btn-sm"
-              onClick={(e) => toggleTheme(e)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', padding: 0, transition: 'transform 0.2s, box-shadow 0.2s' }}
+          <div className="lp-nav-links">
+            <a href="#capabilities" className="lp-nav-link">Capabilities</a>
+            <a href="#system"       className="lp-nav-link">System</a>
+            <a href="#trust"        className="lp-nav-link">Validation</a>
+
+            <button
+              className="lp-nav-icon-btn"
+              onClick={toggleTheme}
               aria-label="Toggle theme"
-              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.15)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
             >
-              {theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
+              {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
             </button>
-            <div className="nav-divider" />
-            <a href="#features" className="land-nav-link">Features</a>
-            <a href="#stats"    className="land-nav-link">Platform</a>
-            <div className="nav-divider" />
             {isInstallable && (
-              <button 
-                onClick={handleInstallClick}
-                className="btn btn-ghost btn-sm text-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}
-              >
-                <Download size={14} /> Install App
+              <button onClick={handleInstallClick} className="lp-nav-ghost-btn">
+                <Download size={12} /> Install
               </button>
             )}
-            <div className="nav-divider" />
-            <Link to="/login"  className="btn btn-ghost btn-sm">Login</Link>
-            <Link to="/signup" className="btn btn-primary btn-sm glow-primary">
-              Get Started <ArrowRight size={12} />
+            <Link to="/login"  className="lp-nav-signin-link">Sign In</Link>
+            <Link to="/signup" className="lp-nav-primary-btn">
+              Request Access <ArrowRight size={11} />
             </Link>
           </div>
         </div>
       </nav>
 
+      {/* ══ HERO ════════════════════════════════════════════════ */}
+      <section className="lp-hero">
+        {/* Grid overlay texture */}
+        <div className="lp-grid-overlay" aria-hidden />
+        {/* Scanline overlay */}
+        <div className="lp-scanlines" aria-hidden />
+        {/* Radial vignette */}
+        <div className="lp-vignette" aria-hidden />
 
-      {/* Hero */}
-      <section className="land-hero bg-mesh-animated">
-        {/* Floating particles */}
-        <canvas ref={canvasRef} className="hero-particle-canvas" aria-hidden />
-        {/* Air-flow wave overlay */}
-        <div className="hero-airflow" aria-hidden />
+        <div className="lp-hero-inner">
 
-        <div className="land-hero-inner">
-          <div className="land-hero-content">
-            <div className="land-hero-badge stagger-1">
-              <div className="pulse-dot-safe" />
-              <span>Trusted by Doctors &amp; Patients</span>
+          {/* LEFT — Command content with structural framing */}
+          <div className="lp-hero-left">
+
+            {/* Layout rail — thin structural guide line only, no labels */}
+            <div className="lp-left-rail" aria-hidden>
+              <div className="lp-rail-line" />
             </div>
 
-            <h1 className="land-hero-title stagger-1">
-              Respiratory Health,<br />
-              Defined by{' '}
-              <span className="hero-gradient-word">Intelligence.</span>
+
+            <h1 className="lp-hero-title">
+              Respiratory<br />
+              monitoring<br />
+              <span className="lp-hero-accent">engineered for</span><br />
+              early detection.
             </h1>
 
-            <p className="land-hero-sub stagger-2">
-              Check your breathing health, track the air around you, and get guidance from real doctors — all in one simple app.
+            {/* Phase 5: Empathy-first sub-headline */}
+            <p className="lp-hero-sub">
+              Breathe easier today. Real-time alerts, physician-reviewed results,
+              and 30-day trend analysis — so you stay one step ahead of your
+              respiratory health.
             </p>
 
-            <div className="land-hero-actions stagger-3">
+
+            {/* Phase 5: Outcome-clear CTAs */}
+            <div className="lp-hero-actions">
               <Link
                 to="/signup"
-                className="btn btn-primary land-hero-cta-btn glow-primary"
+                className="lp-primary-cta"
                 onClick={handleCtaClick}
               >
-                Get Started <ArrowRight size={16} />
+                Get My Free Respiratory Report
+                <ArrowRight size={14} />
               </Link>
-              {isInstallable && (
-                <button 
-                  onClick={handleInstallClick}
-                  className="btn btn-ghost hover-lift"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}
-                >
-                  <Smartphone size={18} /> Install App
-                </button>
-              )}
+              <Link to="/login" className="lp-ghost-cta">
+                View My Dashboard →
+              </Link>
             </div>
 
-            <div className="land-hero-trust stagger-4">
-              {[
-                { text: 'Your Data is Safe', icon: ShieldCheck },
-                { text: 'Smart Health Checks', icon: Activity },
-                { text: 'Doctor Approved', icon: CheckCircle2 }
-              ].map((item, idx) => (
-                <div key={idx} className="land-trust-item">
-                  <item.icon size={13} color="var(--color-primary)" />
-                  <span>{item.text}</span>
-                </div>
-              ))}
-            </div>
+            {/* Phase 5: Authority + empathy copy */}
+            <p className="lp-hero-authority">
+              Designed for patients managing COPD, asthma, and chronic respiratory
+              conditions. Built alongside leading respiratory therapists.
+            </p>
+
+          </div>
+
+          {/* RIGHT — Live Air Quality Card */}
+          <div className="lp-hero-right">
+            <Suspense fallback={<div className="lp-monitor-panel lp-aqi-card" style={{minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5}}>Loading Air Quality Data…</div>}>
+              <LandingAQICard />
+            </Suspense>
           </div>
         </div>
-    </section>
 
-      {/* Stats Bar */}
-      <section className="land-stats" id="stats">
-        <div className="land-stats-inner">
-          {stats.map((s, i) => (
-            <div key={s.label} className={`land-stat fade-in stagger-${i + 1}`}>
-              <div className="land-stat-value">{s.value}</div>
-              <div className="land-stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
+        {/* Bottom rule */}
+        <div className="lp-hero-rule" />
       </section>
 
-      {/* Features */}
-      <section className="land-features" id="features">
-        <div className="land-section-inner">
-          <div className="land-section-header">
-            <span className="section-tag stagger-1">What We Offer</span>
-            <h2 className="land-section-title stagger-1">Everything You Need for Breathing Health</h2>
-            <p className="land-section-sub stagger-2">
-              Simple tools to help you understand and take care of your breathing — at home or with your doctor.
+      <Suspense fallback={<div style={{ minHeight: '100vh' }}></div>}>
+        <LandingBelowFold />
+      </Suspense>
+
+      {/* ══ FOOTER ══════════════════════════════════════════════ */}
+      <footer className="lp-footer">
+        <div className="lp-footer-inner">
+          <div className="lp-footer-brand">
+            <Logo height={36} width="auto" />
+            <p className="lp-footer-tagline">
+              Clinical respiratory intelligence.<br />
+              Engineered for precision.
             </p>
           </div>
-          <div className="land-features-grid">
-            {features.map((f, i) => (
-              <div key={f.title} className={`land-feature-card hover-lift stagger-${(i % 4) + 1}`}>
-                <div className="feature-card-glass" />
-                <div className="land-feature-icon" style={{ background: f.bg, border: `1px solid ${f.border}` }}>
-                  <f.icon size={22} color={f.color} strokeWidth={2} />
-                </div>
-                <h3 className="land-feature-title">{f.title}</h3>
-                <p className="land-feature-desc">{f.desc}</p>
-                <div className="feature-glow" style={{ background: `radial-gradient(circle at center, ${f.color}15 0%, transparent 70%)` }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
+          <div className="lp-footer-contact">
+            <div className="lp-footer-label">Project Owner</div>
+            <span className="lp-footer-name">Pranav Deshpande</span>
+            <a href="mailto:pranavdeshpande@gmail.com" className="lp-footer-email">
+              pranavdeshpande@gmail.com
+            </a>
+          </div>
 
-      {/* CTA */}
-      <section className="land-cta">
-        <div className="land-cta-content glass-surface-deep hover-lift stagger-1">
-          <div className="cta-sparkle" />
-          <h2 className="land-cta-title">Upgrade Your Clinical Standard</h2>
-          <p className="land-cta-sub">
-            Join thousands of people and doctors who use Breathometer to stay on top of their breathing health.
-          </p>
-          <div className="land-cta-actions">
-            <Link to="/signup" className="btn btn-primary btn-lg glow-primary">
-              Get Started Now <ArrowRight size={18} />
-            </Link>
-            <Link to="/login" className="btn btn-ghost">Already have an account? Sign In</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="land-footer">
-        <div className="footer-top">
-          <div className="land-logo">
-            <Logo size={40} />
-          </div>
-          <div className="footer-contact" style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '14px', color: 'var(--text-muted)' }}>
-            <span style={{ fontWeight: '500', color: 'var(--text-main)' }}>Project Owner</span>
-            <span>pranav deshpande</span>
-            <a href="mailto:pranavdeshpande@gmail.com" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>pranavdeshpande@gmail.com</a>
-          </div>
-          <div className="footer-links">
-            <Link to="/privacy-policy">Privacy</Link>
-            <Link to="/terms-of-service">Terms</Link>
+          <div className="lp-footer-links-col">
+            <div className="lp-footer-label">Legal & Docs</div>
+            <Link to="/privacy-policy">Privacy Policy</Link>
+            <Link to="/terms-of-service">Terms of Service</Link>
             <Link to="/security">Security</Link>
             <Link to="/manual">User Manual</Link>
           </div>
         </div>
-        <div className="footer-bottom">
-          <span className="text-meta">© 2026 Breathometer. All rights reserved.</span>
-          <span className="text-meta">v6.0.0 • Safe &amp; Secure</span>
+
+        <div className="lp-footer-bottom">
+          <span>© 2026 Breathometer. All rights reserved.</span>
+          <div className="lp-footer-system-row">
+            <span className="lp-status-dot lp-dot-sm" />
+            <span>v6.0.0 · All Systems Operational</span>
+          </div>
         </div>
       </footer>
 
-
-      {/* iOS Installation Instruction Modal */}
+      {/* ══ iOS INSTALL MODAL ═══════════════════════════════════ */}
       {showInstallModal && (
-        <div 
-          className="modal-overlay" 
+        <div
+          className="modal-overlay"
           style={{
-            position: 'fixed', inset: 0, zIndex: 1000, 
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px', animation: 'fade-in 0.3s ease'
+            padding: '20px', animation: 'lp-fadein 0.25s ease'
           }}
           onClick={() => setShowInstallModal(false)}
         >
-          <div 
+          <div
             className="glass-surface-deep p-6 w-full max-w-sm relative"
-            style={{ borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}
-            onClick={e => e.stopPropagation()}
+            style={{ borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', maxWidth: 360 }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <button 
-              className="btn btn-ghost p-1 absolute top-4 right-4"
+            <button
+              className="btn btn-ghost p-1"
+              style={{ position: 'absolute', top: 16, right: 16 }}
               onClick={() => setShowInstallModal(false)}
             >
-              <X size={20} />
+              <X size={18} />
             </button>
-
-            <div className="text-center mb-6">
-              <div 
-                className="mx-auto w-16 h-16 mb-4 flex items-center justify-center"
-                style={{ background: 'var(--color-primary-light)', borderRadius: '16px', color: 'var(--color-primary)' }}
-              >
-                <Smartphone size={32} />
+            <div style={{ marginBottom: 24 }}>
+              <div className="lp-modal-icon">
+                <Smartphone size={24} />
               </div>
-              <h2 className="text-xl font-bold mb-2">Install Breathometer</h2>
-              <p className="text-sm opacity-80">Add this web app to your home screen for quick, one-tap access.</p>
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Install Breathometer</h2>
+              <p style={{ fontSize: 13, opacity: 0.7 }}>Add to your home screen for direct access.</p>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >1</div>
-                <p className="text-sm">Tap the <strong>Share</strong> button (the box with an upward arrow) at the bottom of your browser.</p>
+            {[
+              'Tap the Share button (↑) in your browser toolbar.',
+              'Scroll down and tap "Add to Home Screen".',
+              'Tap "Add" to confirm.',
+            ].map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 16 }}>
+                <div className="lp-modal-step">{i + 1}</div>
+                <p style={{ fontSize: 13, lineHeight: 1.5 }}>{step}</p>
               </div>
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >2</div>
-                <p className="text-sm">Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                >3</div>
-                <p className="text-sm">Tap <strong>"Add"</strong> in the top right corner.</p>
-              </div>
-            </div>
-
-            <button 
-              className="btn btn-primary w-full mt-8"
-              onClick={() => setShowInstallModal(false)}
-            >
-              Got it
+            ))}
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: 24 }} onClick={() => setShowInstallModal(false)}>
+              Understood
             </button>
           </div>
         </div>

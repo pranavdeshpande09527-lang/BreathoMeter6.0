@@ -8,6 +8,7 @@ import MetricCard from '../components/MetricCard'
 import TrustTag from '../components/TrustTag'
 import AlertItem from '../components/AlertItem'
 import AQIGauge from '../components/AQIGauge'
+import HealthIntelligencePanel from '../components/HealthIntelligencePanel'
 import { Wind, Activity, Droplets, ArrowRight, Moon, Sun, Heart, Thermometer, ChevronRight, Stethoscope, ArrowUpRight } from 'lucide-react'
 import Logo from '../components/Logo'
 import { api } from '../utils/api'
@@ -377,26 +378,14 @@ export default function PatientDashboard() {
                             </div>
                         )}
                     </div>
-                    {/* AQI contextual insight */}
-                    {currentAqi != null && (() => {
-                        const ctx = getAqiContext(currentAqi)
-                        if (!ctx) return null
-                        return (
-                            <div style={{
-                                padding: '10px 14px',
-                                borderRadius: 10,
-                                background: ctx.tone === 'safe' ? 'rgba(22,163,74,0.06)'
-                                    : ctx.tone === 'moderate' ? 'rgba(245,158,11,0.06)'
-                                    : 'rgba(220,38,38,0.06)',
-                                border: `1px solid ${ctx.tone === 'safe' ? 'rgba(22,163,74,0.15)' : ctx.tone === 'moderate' ? 'rgba(245,158,11,0.15)' : 'rgba(220,38,38,0.15)'}`,
-                                marginBottom: 4,
-                            }}>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)', marginBottom: 3 }}>
-                                    {ctx.action}
-                                </div>
-                            </div>
-                        )
-                    })()}
+                    {/* Phase 7: Health Intelligence Panel */}
+                    <div style={{ marginTop: 16 }}>
+                        <HealthIntelligencePanel 
+                            aqi={currentAqi}
+                            conditions={latestPrediction?.primary_disease ? [latestPrediction.primary_disease] : []}
+                            loading={loading && currentAqi == null}
+                        />
+                    </div>
                     <div className="divider" style={{ margin: '16px 0' }} />
                     <Link to="/air-quality" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>
                         Full Air Quality Report

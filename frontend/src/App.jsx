@@ -1,42 +1,79 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { initPushNotifications } from './utils/push'
-import Landing from './pages/Landing'
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import PatientDashboard from './pages/PatientDashboard'
-import BreathAnalysis from './pages/BreathAnalysis'
-import RiskAnalysis from './pages/RiskAnalysis'
-import AirQuality from './pages/AirQuality'
-import AirQualityMap from './pages/AirQualityMap'
-import HealthHistory from './pages/HealthHistory'
-import Reports from './pages/Reports'
-import Alerts from './pages/Alerts'
-import Settings from './pages/Settings'
-import Assessment from './pages/Assessment'
-import AssessmentResults from './pages/AssessmentResults'
-import HealthProfileSetup from './pages/HealthProfileSetup'
-import DoctorDashboard from './pages/DoctorDashboard'
-import DoctorPatients from './pages/DoctorPatients'
-import DoctorPatientProfile from './pages/DoctorPatientProfile'
-import DoctorReports from './pages/DoctorReports'
-import DoctorAlerts from './pages/DoctorAlerts'
-import DoctorSettings from './pages/DoctorSettings'
-import AppointmentChat from './pages/AppointmentChat'
-import DoctorRecommendations from './pages/DoctorRecommendations'
-import HavaPage from './pages/HavaPage'
-import PrivacyPolicy from './pages/PrivacyPolicy'
-import TermsOfService from './pages/TermsOfService'
-import Security from './pages/Security'
-import UserManual from './pages/UserManual'
-import CookieConsent from './components/CookieConsent'
-import PatientShell from './components/PatientShell'
-import DoctorShell from './components/DoctorShell'
-import ScrollToTop from './components/ScrollToTop'
-import ErrorBoundary from './components/ErrorBoundary'
+
+/* ── Phase 6: Eager imports — Landing, Login, Signup for fast FCP ── */
+import Landing  from './pages/Landing'
+import Login    from './pages/Login'
+import Signup   from './pages/Signup'
+
+/* ── Phase 6: Lazy-loaded pages — code-split for smaller bundle ──── */
+const PatientDashboard    = lazy(() => import('./pages/PatientDashboard'))
+const BreathAnalysis      = lazy(() => import('./pages/BreathAnalysis'))
+const RiskAnalysis        = lazy(() => import('./pages/RiskAnalysis'))
+const AirQuality          = lazy(() => import('./pages/AirQuality'))
+const AirQualityMap       = lazy(() => import('./pages/AirQualityMap'))
+const HealthHistory       = lazy(() => import('./pages/HealthHistory'))
+const Reports             = lazy(() => import('./pages/Reports'))
+const Alerts              = lazy(() => import('./pages/Alerts'))
+const Settings            = lazy(() => import('./pages/Settings'))
+const Assessment          = lazy(() => import('./pages/Assessment'))
+const AssessmentResults   = lazy(() => import('./pages/AssessmentResults'))
+const HealthProfileSetup  = lazy(() => import('./pages/HealthProfileSetup'))
+const DoctorDashboard     = lazy(() => import('./pages/DoctorDashboard'))
+const DoctorPatients      = lazy(() => import('./pages/DoctorPatients'))
+const DoctorPatientProfile= lazy(() => import('./pages/DoctorPatientProfile'))
+const DoctorReports       = lazy(() => import('./pages/DoctorReports'))
+const DoctorAlerts        = lazy(() => import('./pages/DoctorAlerts'))
+const DoctorSettings      = lazy(() => import('./pages/DoctorSettings'))
+const AppointmentChat     = lazy(() => import('./pages/AppointmentChat'))
+const DoctorRecommendations= lazy(() => import('./pages/DoctorRecommendations'))
+const HavaPage            = lazy(() => import('./pages/HavaPage'))
+const PrivacyPolicy       = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsOfService      = lazy(() => import('./pages/TermsOfService'))
+const Security            = lazy(() => import('./pages/Security'))
+const UserManual          = lazy(() => import('./pages/UserManual'))
+
+import CookieConsent      from './components/CookieConsent'
+import PatientShell       from './components/PatientShell'
+import DoctorShell        from './components/DoctorShell'
+import ScrollToTop        from './components/ScrollToTop'
+import ErrorBoundary      from './components/ErrorBoundary'
 import SessionExpiryModal from './components/SessionExpiryModal'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+
+/* ── Phase 6: Suspense fallback — minimal CLS, matches dark theme ── */
+function PageLoader() {
+    return (
+        <div
+            role="status"
+            aria-label="Loading page"
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '60vh',
+                flexDirection: 'column',
+                gap: 16,
+                color: 'var(--color-muted)',
+                fontFamily: 'var(--font-body, Inter, sans-serif)',
+                fontSize: '0.875rem',
+            }}
+        >
+            <div style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                border: '2.5px solid var(--color-border)',
+                borderTopColor: 'var(--color-primary)',
+                animation: 'spin 0.7s linear infinite',
+            }} />
+            <span>Loading…</span>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    )
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''   // always set in .env.production
 
@@ -149,49 +186,54 @@ export default function App() {
         <BrowserRouter>
             <ScrollToTop />
             <ErrorBoundary>
-                <Routes>
-                    {/* Public Routes */}
-                    <Route path="/" element={<Landing />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                    <Route path="/terms-of-service" element={<TermsOfService />} />
-                    <Route path="/security" element={<Security />} />
-                    <Route path="/manual" element={<UserManual />} />
-                    <Route path="/profile-setup" element={<ProtectedRoute allowedRole="patient"><HealthProfileSetup /></ProtectedRoute>} />
+                {/* Phase 6: Suspense wrapper — single boundary for all lazy routes */}
+                <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                        {/* Public Routes — eager */}
+                        <Route path="/" element={<Landing />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/signup" element={<Signup />} />
 
-                    {/* Patient System */}
-                    <Route element={<ProtectedRoute allowedRole="patient"><PatientShell /></ProtectedRoute>}>
-                        <Route path="/dashboard" element={<PatientDashboard />} />
-                        <Route path="/breath-analysis" element={<BreathAnalysis />} />
-                        <Route path="/risk-analysis" element={<RiskAnalysis />} />
-                        <Route path="/air-quality" element={<AirQuality />} />
-                        <Route path="/air-quality-map" element={<AirQualityMap />} />
-                        <Route path="/assessment" element={<Assessment />} />
-                        <Route path="/assessment-results" element={<AssessmentResults />} />
-                        <Route path="/health-history" element={<HealthHistory />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="/alerts" element={<Alerts />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/doctors" element={<DoctorRecommendations />} />
-                        <Route path="/hava" element={<HavaPage />} />
-                    </Route>
+                        {/* Public Routes — lazy (low-traffic, no FCP impact) */}
+                        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                        <Route path="/terms-of-service" element={<TermsOfService />} />
+                        <Route path="/security" element={<Security />} />
+                        <Route path="/manual" element={<UserManual />} />
+                        <Route path="/profile-setup" element={<ProtectedRoute allowedRole="patient"><HealthProfileSetup /></ProtectedRoute>} />
 
-                    {/* Doctor System */}
-                    <Route element={<ProtectedRoute allowedRole="doctor"><DoctorShell /></ProtectedRoute>}>
-                        <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-                        <Route path="/doctor/patients" element={<DoctorPatients />} />
-                        <Route path="/doctor/patient-profile/:id" element={<DoctorPatientProfile />} />
-                        <Route path="/doctor/alerts" element={<DoctorAlerts />} />
-                        <Route path="/doctor/reports" element={<DoctorReports />} />
-                        <Route path="/doctor/settings" element={<DoctorSettings />} />
-                    </Route>
+                        {/* Patient System — all lazy */}
+                        <Route element={<ProtectedRoute allowedRole="patient"><PatientShell /></ProtectedRoute>}>
+                            <Route path="/dashboard"          element={<PatientDashboard />} />
+                            <Route path="/breath-analysis"    element={<BreathAnalysis />} />
+                            <Route path="/risk-analysis"      element={<RiskAnalysis />} />
+                            <Route path="/air-quality"        element={<AirQuality />} />
+                            <Route path="/air-quality-map"    element={<AirQualityMap />} />
+                            <Route path="/assessment"         element={<Assessment />} />
+                            <Route path="/assessment-results" element={<AssessmentResults />} />
+                            <Route path="/health-history"     element={<HealthHistory />} />
+                            <Route path="/reports"            element={<Reports />} />
+                            <Route path="/alerts"             element={<Alerts />} />
+                            <Route path="/settings"           element={<Settings />} />
+                            <Route path="/doctors"            element={<DoctorRecommendations />} />
+                            <Route path="/hava"               element={<HavaPage />} />
+                        </Route>
 
-                    {/* Standalone Features */}
-                    <Route path="/chat/:id" element={<ProtectedRoute><AppointmentChat /></ProtectedRoute>} />
-                    
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                        {/* Doctor System — all lazy */}
+                        <Route element={<ProtectedRoute allowedRole="doctor"><DoctorShell /></ProtectedRoute>}>
+                            <Route path="/doctor/dashboard"           element={<DoctorDashboard />} />
+                            <Route path="/doctor/patients"            element={<DoctorPatients />} />
+                            <Route path="/doctor/patient-profile/:id" element={<DoctorPatientProfile />} />
+                            <Route path="/doctor/alerts"              element={<DoctorAlerts />} />
+                            <Route path="/doctor/reports"             element={<DoctorReports />} />
+                            <Route path="/doctor/settings"            element={<DoctorSettings />} />
+                        </Route>
+
+                        {/* Standalone Features — lazy */}
+                        <Route path="/chat/:id" element={<ProtectedRoute><AppointmentChat /></ProtectedRoute>} />
+
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </Suspense>
             </ErrorBoundary>
             <SessionExpiryModal />
             <CookieConsent />

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import PatientSidebar from './Sidebar'
 import Topbar from './Topbar'
 import HavaChatbot from './HavaChatbot'
+import TelemedicineFAB from './TelemedicineFAB'
 import { SidebarProvider, useSidebar } from './SidebarContext'
 import { applyLivingContext, recordPageVisit, getPersonalizedInsight } from '../utils/livingUI'
 
@@ -11,6 +12,23 @@ function PatientShellInner() {
     const contextInterval = useRef(null)
     const [insight, setInsight] = useState(null)
     const { isOpen, close } = useSidebar()
+
+    // ── Phase 3: Default dashboard to dark theme ──────────────────────────────
+    useEffect(() => {
+        const root = document.documentElement
+        const previous = root.getAttribute('data-theme') || localStorage.getItem('theme') || 'light'
+        // Only auto-switch if user has not explicitly chosen light
+        const userPref = localStorage.getItem('theme')
+        if (!userPref || userPref === 'dark') {
+            root.setAttribute('data-theme', 'dark')
+            localStorage.setItem('theme', 'dark')
+        }
+        return () => {
+            // Restore landing page theme on navigation away from dashboard
+            root.setAttribute('data-theme', previous)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     // ── Apply Living UI context on mount and every 5 min ─────────────────────
     useEffect(() => {
@@ -37,6 +55,7 @@ function PatientShellInner() {
         contextInterval.current = setInterval(initContext, 5 * 60 * 1000)
         return () => clearInterval(contextInterval.current)
     }, [])
+
 
     // ── Track page visits for personalization ─────────────────────────────────
     useEffect(() => {
@@ -82,6 +101,9 @@ function PatientShellInner() {
                     <Outlet />
                 </div>
             </div>
+            {/* Phase 7: Telemedicine FAB — persistent across all patient pages */}
+            <TelemedicineFAB />
+            <HavaChatbot />
         </div>
     )
 }
