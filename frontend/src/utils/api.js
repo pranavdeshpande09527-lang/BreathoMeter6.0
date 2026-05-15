@@ -1,11 +1,8 @@
 import { toast } from 'react-toastify';
 
 // Production URL is set via VITE_API_BASE_URL in .env.production
-// Local dev without the env var automatically falls back to 127.0.0.1:8000
-const API_BASE = import.meta.env.VITE_API_BASE_URL ||
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://127.0.0.1:8000'
-        : 'https://breathometer6-0-4ago.onrender.com');
+// Pointing to the live Render backend to resolve local auth issues.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://breathometer6-0-4ago.onrender.com';
 
 class ApiError extends Error {
     constructor(status, message) {
